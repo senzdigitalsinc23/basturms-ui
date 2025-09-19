@@ -31,17 +31,12 @@ const menuItems: Partial<Record<Role, { href: string; label: string; icon: React
   ],
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '#', label: 'My Students', icon: Users },
-    { href: '#', label: 'Grades', icon: GraduationCap },
-  ],
-  Student: [
-    { href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '#', label: 'My Grades', icon: GraduationCap },
-    { href: '#', label: 'Assignments', icon: BookUser },
+    { href: '/#', label: 'My Students', icon: Users },
+    { href: '/#', label: 'Grades', icon: GraduationCap },
   ],
   Parent: [
     { href: '/dashboard/parent', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '#', label: 'Child Grades', icon: GraduationCap },
+    { href: '/#', label: 'Child Grades', icon: GraduationCap },
   ],
 };
 

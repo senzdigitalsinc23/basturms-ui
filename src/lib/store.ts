@@ -51,11 +51,11 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
     },
     {
       id: '3',
-      name: 'Student Johnson',
-      username: 'studentjohnson',
-      email: 'student@campus.com',
+      name: 'Headmaster Brown',
+      username: 'headmasterbrown',
+      email: 'headmaster@campus.com',
       password: 'password',
-      role_id: getRoleId('Student'),
+      role_id: getRoleId('Headmaster'),
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
       created_at: now,
@@ -126,7 +126,7 @@ const mapUser = (user: UserStorage): User => {
     const role = roles.find(r => r.id === user.role_id);
     return {
         ...user,
-        role: role ? role.name : 'Student', // Default to student if role not found
+        role: role!.name,
     };
 }
 
@@ -149,7 +149,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     ...user,
     id: (users.length + 1).toString(),
     username: user.name.replace(/\s/g, '').toLowerCase(),
-    role_id: role ? role.id : '3', // Default to student
+    role_id: role!.id,
     is_super_admin: false,
     avatarUrl: `https://picsum.photos/seed/avatar${users.length + 1}/40/40`,
     created_at: now,
