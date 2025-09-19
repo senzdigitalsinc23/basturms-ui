@@ -90,6 +90,8 @@ type NavItem = {
 const menuItems: Record<Role, NavItem[]> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/users', label: 'User Management', icon: Users },
+    { href: '/audit-logs', label: 'Audit Logs', icon: History },
     {
       label: 'Student Management',
       icon: GraduationCap,
@@ -109,7 +111,6 @@ const menuItems: Record<Role, NavItem[]> = {
       ],
     },
     { href: '/#', label: 'Attendance', icon: Calendar },
-    { href: '/audit-logs', label: 'Timetable', icon: History },
     {
       label: 'Announcements',
       icon: Megaphone,
