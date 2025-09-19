@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, UserX, UserCheck, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { User, Role } from '@/lib/types';
 import { Badge } from '../ui/badge';
@@ -18,6 +19,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger
 } from '../ui/dialog';
 import { UserForm } from './user-form';
 import { useState } from 'react';
@@ -33,15 +35,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
+import { ResetPasswordForm } from './reset-password-form';
+import { useToast } from '@/hooks/use-toast';
+
 
 type ColumnsProps = {
   onUpdate: (user: User) => void;
-  onDelete: (userId: string) => void;
+  onToggleStatus: (userId: string) => void;
+  onResetPassword: (userId: string, newPassword: string) => boolean;
 };
 
 export const columns = ({
   onUpdate,
-  onDelete,
+  onToggleStatus,
+  onResetPassword,
 }: ColumnsProps): ColumnDef<User>[] => [
   {
     accessorKey: 'name',
@@ -98,71 +105,123 @@ export const columns = ({
     },
   },
   {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => {
+      const status = row.getValue('status') as string;
+      return (
+        <Badge variant={status === 'active' ? 'secondary' : 'destructive'}>
+          {status}
+        </Badge>
+      );
+    },
+  },
+  {
     id: 'actions',
     cell: function Cell({ row }) {
       const user = row.original;
-      const [isFormOpen, setIsFormOpen] = useState(false);
+      const { toast } = useToast();
+      const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+      const [isResetPasswordFormOpen, setIsResetPasswordFormOpen] = useState(false);
 
       return (
         <div className="text-right">
-          <AlertDialog>
-            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <span className="sr-only">Open menu</span>
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setIsFormOpen(true)}>
-                    Edit
-                  </DropdownMenuItem>
-                  <AlertDialogTrigger asChild>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                    >
-                      Delete
+          <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+            <Dialog open={isResetPasswordFormOpen} onOpenChange={setIsResetPasswordFormOpen}>
+              <AlertDialog>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setIsEditFormOpen(true)}>
+                      Edit Profile
                     </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuItem onClick={() => setIsResetPasswordFormOpen(true)}>
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      Reset Password
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem
+                        className={user.status === 'active' ? 'text-destructive focus:text-destructive' : ''}
+                      >
+                        {user.status === 'active' ? (
+                          <UserX className="mr-2 h-4 w-4" />
+                        ) : (
+                          <UserCheck className="mr-2 h-4 w-4" />
+                        )}
+                        <span>{user.status === 'active' ? 'Freeze' : 'Unfreeze'} Account</span>
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Edit User</DialogTitle>
+                    <DialogDescription>
+                      Make changes to the user's profile.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <UserForm
+                    isEditMode={true}
+                    defaultValues={user}
+                    onSubmit={(values) => {
+                      onUpdate({ ...user, ...values });
+                      setIsEditFormOpen(false);
+                    }}
+                  />
+                </DialogContent>
+
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will {user.status === 'active' ? 'freeze' : 'unfreeze'} the user's account.
+                      Frozen accounts cannot be used to log in.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onToggleStatus(user.id)}>
+                      Continue
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Edit User</DialogTitle>
+                  <DialogTitle>Reset Password</DialogTitle>
                   <DialogDescription>
-                    Make changes to the user's profile.
+                    Enter a new password for {user.name}.
                   </DialogDescription>
                 </DialogHeader>
-                <UserForm
-                  isEditMode={true}
-                  defaultValues={user}
+                <ResetPasswordForm 
                   onSubmit={(values) => {
-                    onUpdate({ ...user, ...values });
-                    setIsFormOpen(false);
-                  }}
+                    const success = onResetPassword(user.id, values.password);
+                    if (success) {
+                       toast({
+                        title: 'Password Reset',
+                        description: `Password for ${user.name} has been reset successfully.`,
+                      });
+                      setIsResetPasswordFormOpen(false);
+                    } else {
+                       toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: 'Failed to reset password.',
+                      });
+                    }
+                  }} 
                 />
               </DialogContent>
             </Dialog>
-
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the
-                  user account and remove their data from our servers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(user.id)}>
-                  Continue
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          </Dialog>>
         </div>
       );
     },

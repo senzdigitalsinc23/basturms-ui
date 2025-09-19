@@ -34,6 +34,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       role_id: getRoleId('Admin'),
       is_super_admin: true,
       avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
+      status: 'active',
       created_at: now,
       updated_at: now,
     },
@@ -46,6 +47,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       role_id: getRoleId('Teacher'),
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
+      status: 'active',
       created_at: now,
       updated_at: now,
     },
@@ -58,6 +60,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       role_id: getRoleId('Headmaster'),
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
+      status: 'active',
       created_at: now,
       updated_at: now,
     },
@@ -70,6 +73,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       role_id: getRoleId('Parent'),
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar4/40/40',
+      status: 'active',
       created_at: now,
       updated_at: now,
     },
@@ -134,12 +138,17 @@ export const getUsers = (): User[] => {
     return getUsersInternal().map(mapUser);
 };
 
+export const getUserById = (userId: string): User | undefined => {
+  const user = getUsersInternal().find((user) => user.id === userId);
+  return user ? mapUser(user) : undefined;
+};
+
 export const getUserByEmail = (email: string): User | undefined => {
   const user = getUsersInternal().find((user) => user.email === email);
   return user ? mapUser(user) : undefined;
 }
 
-export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id'> & { role: Role }): User => {
+export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'status'> & { role: Role }): User => {
   const users = getUsersInternal();
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
@@ -152,6 +161,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     role_id: role!.id,
     is_super_admin: false,
     avatarUrl: `https://picsum.photos/seed/avatar${users.length + 1}/40/40`,
+    status: 'active',
     created_at: now,
     updated_at: now,
   };
@@ -178,11 +188,30 @@ export const updateUser = (updatedUser: User): User => {
   return updatedUser;
 };
 
-export const deleteUser = (userId: string): void => {
-  const users = getUsersInternal();
-  const updatedUsers = users.filter((u) => u.id !== userId);
-  saveToStorage(USERS_KEY, updatedUsers);
+export const toggleUserStatus = (userId: string): User | undefined => {
+    const users = getUsersInternal();
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+        const user = users[userIndex];
+        user.status = user.status === 'active' ? 'frozen' : 'active';
+        user.updated_at = new Date().toISOString();
+        saveToStorage(USERS_KEY, users);
+        return mapUser(user);
+    }
+    return undefined;
 };
+
+export const resetPassword = (userId: string, newPassword: string): boolean => {
+    const users = getUsersInternal();
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+        users[userIndex].password = newPassword;
+        users[userIndex].updated_at = new Date().toISOString();
+        saveToStorage(USERS_KEY, users);
+        return true;
+    }
+    return false;
+}
 
 // Audit Log Functions
 export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KEY, []);

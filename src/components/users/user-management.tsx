@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getUsers, addUser, updateUser, deleteUser, addAuditLog } from '@/lib/store';
+import { getUsers, addUser, updateUser, addAuditLog, toggleUserStatus, resetPassword as resetUserPassword } from '@/lib/store';
 import { User, Role } from '@/lib/types';
 import { UserDataTable } from './data-table';
 import { columns } from './columns';
@@ -14,7 +14,7 @@ export function UserManagement() {
     setUsers(getUsers());
   }, []);
 
-  const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id'> & { role: Role }) => {
+  const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'status'> & { role: Role }) => {
     const newUser = addUser(user);
     setUsers((prev) => [...prev, newUser]);
     if(currentUser) {
@@ -38,24 +38,39 @@ export function UserManagement() {
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    const userToDelete = users.find(u => u.id === userId);
-    deleteUser(userId);
-    setUsers((prev) => prev.filter((u) => u.id !== userId));
-     if(currentUser && userToDelete) {
-        addAuditLog({
-            user: currentUser.email,
-            action: 'Delete User',
-            details: `Deleted user ${userToDelete.email}`,
-        });
+  const handleToggleStatus = (userId: string) => {
+    const updatedUser = toggleUserStatus(userId);
+    if (updatedUser) {
+        setUsers((prev) => prev.map((u) => (u.id === userId ? updatedUser : u)));
+        if (currentUser) {
+            addAuditLog({
+                user: currentUser.email,
+                action: 'Toggle User Status',
+                details: `User ${updatedUser.email} status changed to ${updatedUser.status}`,
+            });
+        }
     }
   };
+
+  const handleResetPassword = (userId: string, newPassword: string): boolean => {
+    const success = resetUserPassword(userId, newPassword);
+    if (success && currentUser) {
+        const user = users.find(u => u.id === userId);
+        addAuditLog({
+            user: currentUser.email,
+            action: 'Reset Password',
+            details: `Reset password for user ${user?.email}`,
+        });
+    }
+    return success;
+  }
 
   return (
     <UserDataTable
       columns={columns({
         onUpdate: handleUpdateUser,
-        onDelete: handleDeleteUser,
+        onToggleStatus: handleToggleStatus,
+        onResetPassword: handleResetPassword,
       })}
       data={users}
       onAdd={handleAddUser}

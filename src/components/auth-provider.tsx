@@ -41,6 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const foundUser = getUserByEmail(email);
 
       if (foundUser && foundUser.password === password) {
+        if (foundUser.status === 'frozen') {
+          console.warn(`Login attempt for frozen account: ${email}`);
+          return false;
+        }
         const { password: _, ...userToStore } = foundUser;
         setUser(userToStore);
         localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userToStore));

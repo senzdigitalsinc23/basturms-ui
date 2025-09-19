@@ -39,6 +39,7 @@ export interface User {
   role_id: string;
   avatarUrl: string;
   is_super_admin: boolean;
+  status: 'active' | 'frozen';
   created_at: string;
   updated_at: string;
   password?: string;

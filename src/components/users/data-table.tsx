@@ -7,6 +7,8 @@ import {
   getFilteredRowModel,
   useReactTable,
   ColumnFiltersState,
+  getSortedRowModel,
+  SortingState
 } from '@tanstack/react-table';
 
 import {
@@ -35,10 +37,11 @@ import { PlusCircle } from 'lucide-react';
 interface UserDataTableProps {
   columns: ColumnDef<User>[];
   data: User[];
-  onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password'> & { role: User['role'], password?: string }) => void;
+  onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string }) => void;
 }
 
 export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -47,9 +50,12 @@ export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     state: {
+      sorting,
       columnFilters,
     },
   });
