@@ -51,7 +51,7 @@ export default function DashboardLayout({
       <div className="sm:ml-[var(--sidebar-width-icon)]">
         <SidebarInset>
           <DashboardHeader />
-          <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background">
+          <main className="flex-1 p-4 md:p-6 bg-background">
             {children}
           </main>
         </SidebarInset>

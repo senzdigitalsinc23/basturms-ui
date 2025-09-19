@@ -56,7 +56,7 @@ const SidebarAccordionTrigger = React.forwardRef<
   <AccordionTrigger
     ref={ref}
     className={cn(
-      'flex w-full items-center gap-2 rounded-md p-2 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus:outline-none [&[data-state=open]>svg:last-child]:rotate-180',
+      'flex w-full items-center gap-2 rounded-md p-2 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus:outline-none',
       className
     )}
     {...props}
@@ -217,7 +217,6 @@ export function SidebarNav() {
                 <SidebarAccordionTrigger>
                   <item.icon className="h-5 w-5" />
                   <span className="text-base">{item.label}</span>
-                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ml-auto" />
                 </SidebarAccordionTrigger>
                 <SidebarAccordionContent>
                   {item.items.map((subItem) => (
