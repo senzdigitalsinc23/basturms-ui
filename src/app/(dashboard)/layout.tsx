@@ -24,7 +24,7 @@ export default function DashboardLayout({
       user &&
       (pathname === '/dashboard' || pathname === '/dashboard/')
     ) {
-      const roleDashboard = `/dashboard/${user.role.toLowerCase()}`;
+      const roleDashboard = `/dashboard/${user.role.toLowerCase().replace(/\s/g, '-')}`;
       router.replace(roleDashboard);
     }
   }, [isLoading, user, router, pathname]);

@@ -17,6 +17,13 @@ import {
   BookUser,
   LogOut,
   Settings,
+  Shield,
+  Book,
+  Building,
+  Truck,
+  Warehouse,
+  Briefcase,
+  Laptop
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -38,19 +45,59 @@ const menuItems: Partial<Record<Role, { href: string; label: string; icon: React
     { href: '/dashboard/parent', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/#', label: 'Child Grades', icon: GraduationCap },
   ],
+  Headmaster: [
+      { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'Staff', icon: Users },
+      { href: '/#', label: 'Curriculum', icon: BookUser },
+  ],
+  Librarian: [
+      { href: '/dashboard/librarian', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'Book Catalogue', icon: Book },
+      { href: '/#', label: 'Checkouts', icon: History },
+  ],
+  Security: [
+      { href: '/dashboard/security', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'Campus Alerts', icon: Shield },
+      { href: '/#', label: 'Visitor Logs', icon: BookUser },
+  ],
+  'Procurement Manager': [
+      { href: '/dashboard/procurement-manager', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'Purchase Orders', icon: Truck },
+      { href: '/#', label: 'Suppliers', icon: Building },
+  ],
+  'Stores Manager': [
+      { href: '/dashboard/stores-manager', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'Inventory', icon: Warehouse },
+      { href: '/#', label: 'Requisitions', icon: History },
+  ],
+  Proprietor: [
+      { href: '/dashboard/proprietor', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'Financials', icon: Briefcase },
+      { href: '/#', label: 'School Analytics', icon: History },
+  ],
+  'I.T Manager': [
+      { href: '/dashboard/i.t-manager', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'System Status', icon: Laptop },
+      { href: '/#', label: 'User Support', icon: Users },
+  ],
+  'I.T Support': [
+      { href: '/dashboard/i.t-support', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/#', label: 'Open Tickets', icon: Laptop },
+      { href: '/#', label: 'Knowledge Base', icon: Book },
+  ],
 };
 
 const getRoleNavItems = (role: Role) => {
-    // Directly check if the role exists as a key in menuItems
-    if (role in menuItems && menuItems[role]) {
-        return menuItems[role]!;
+    const roleKey = role as keyof typeof menuItems;
+    if (menuItems[roleKey]) {
+        return menuItems[roleKey]!;
     }
-    // Default for other roles not explicitly defined in menuItems
+    // Fallback for roles without explicit menu items
+    const formattedRole = role.toLowerCase().replace(/\s/g, '-');
     return [
-        { href: `/dashboard/${role.toLowerCase()}`, label: 'Dashboard', icon: LayoutDashboard },
+        { href: `/dashboard/${formattedRole}`, label: 'Dashboard', icon: LayoutDashboard },
     ];
 }
-
 
 export function SidebarNav() {
   const { user, logout } = useAuth();
