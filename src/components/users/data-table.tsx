@@ -35,7 +35,7 @@ import { PlusCircle } from 'lucide-react';
 interface UserDataTableProps {
   columns: ColumnDef<User>[];
   data: User[];
-  onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id'> & { role: User['role'] }) => void;
+  onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password'> & { role: User['role'], password?: string }) => void;
 }
 
 export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
