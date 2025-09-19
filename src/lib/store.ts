@@ -22,29 +22,16 @@ const getInitialRoles = (): RoleStorage[] => {
 
 const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
   const now = new Date().toISOString();
-  const getRoleId = (name: Role) => roles.find((r) => r.name === name)!.id;
+  const getRoleId = (name: Role) => roles.find((r) => r.name === name)?.id;
 
   return [
-    {
-      id: '1',
-      name: 'Admin User',
-      username: 'adminuser',
-      email: 'admin@campus.com',
-      password: 'password',
-      role_id: getRoleId('Admin'),
-      is_super_admin: true,
-      avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
     {
       id: '2',
       name: 'Teacher Smith',
       username: 'teachersmith',
       email: 'teacher@campus.com',
       password: 'password',
-      role_id: getRoleId('Teacher'),
+      role_id: getRoleId('Teacher')!,
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
       status: 'active',
@@ -57,7 +44,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       username: 'headmasterbrown',
       email: 'headmaster@campus.com',
       password: 'password',
-      role_id: getRoleId('Headmaster'),
+      role_id: getRoleId('Headmaster')!,
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
       status: 'active',
@@ -70,7 +57,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       username: 'parentdoe',
       email: 'parent@campus.com',
       password: 'password',
-      role_id: getRoleId('Parent'),
+      role_id: getRoleId('Parent')!,
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar4/40/40',
       status: 'active',
@@ -83,9 +70,22 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       username: 'studentjohnson',
       email: 'student@campus.com',
       password: 'password',
-      role_id: getRoleId('Student'),
+      role_id: getRoleId('Student')!,
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar5/40/40',
+      status: 'active',
+      created_at: now,
+      updated_at: now,
+    },
+     {
+      id: '1',
+      name: 'Admin User',
+      username: 'adminuser',
+      email: 'admin@campus.com',
+      password: 'password',
+      role_id: getRoleId('Admin')!,
+      is_super_admin: true,
+      avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
       status: 'active',
       created_at: now,
       updated_at: now,
