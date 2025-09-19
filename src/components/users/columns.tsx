@@ -32,7 +32,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '../ui/alert-dialog';
 import { ResetPasswordForm } from './reset-password-form';
 import { useToast } from '@/hooks/use-toast';
@@ -91,8 +90,9 @@ export const columns = ({
       const variants = {
         Admin: 'default',
         Teacher: 'secondary',
+        Student: 'secondary',
         Parent: 'outline',
-        Headmaster: 'destructive', // Changed for better visibility
+        Headmaster: 'destructive',
         Librarian: 'secondary',
         Security: 'destructive',
       };

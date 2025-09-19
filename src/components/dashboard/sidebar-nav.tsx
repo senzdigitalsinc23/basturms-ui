@@ -23,7 +23,8 @@ import {
   Truck,
   Warehouse,
   Briefcase,
-  Laptop
+  Laptop,
+  PenSquare
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -40,6 +41,12 @@ const menuItems: Partial<Record<Role, { href: string; label: string; icon: React
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/#', label: 'My Students', icon: Users },
     { href: '/#', label: 'Grades', icon: GraduationCap },
+  ],
+  Student: [
+    { href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/#', label: 'My Courses', icon: BookCopy },
+    { href: '/#', label: 'My Grades', icon: GraduationCap },
+    { href: '/#', label: 'Assignments', icon: PenSquare },
   ],
   Parent: [
     { href: '/dashboard/parent', label: 'Dashboard', icon: LayoutDashboard },

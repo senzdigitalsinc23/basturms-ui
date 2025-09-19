@@ -77,6 +77,19 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       created_at: now,
       updated_at: now,
     },
+    {
+      id: '5',
+      name: 'Student Johnson',
+      username: 'studentjohnson',
+      email: 'student@campus.com',
+      password: 'password',
+      role_id: getRoleId('Student'),
+      is_super_admin: false,
+      avatarUrl: 'https://picsum.photos/seed/avatar5/40/40',
+      status: 'active',
+      created_at: now,
+      updated_at: now,
+    },
   ];
 };
 
