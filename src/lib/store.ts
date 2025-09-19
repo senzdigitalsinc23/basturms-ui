@@ -1,44 +1,80 @@
 'use client';
 
-import { User, AuditLog, Role } from './types';
+import {
+  User,
+  AuditLog,
+  Role,
+  ALL_ROLES,
+  RoleStorage,
+  UserStorage,
+} from './types';
 
 const USERS_KEY = 'campusconnect_users';
+const ROLES_KEY = 'campusconnect_roles';
 const LOGS_KEY = 'campusconnect_logs';
 
-const getInitialUsers = (): User[] => [
-  {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@campus.com',
-    password: 'password',
-    role: 'Admin',
-    avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
-  },
-  {
-    id: '2',
-    name: 'Teacher Smith',
-    email: 'teacher@campus.com',
-    password: 'password',
-    role: 'Teacher',
-    avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
-  },
-  {
-    id: '3',
-    name: 'Student Johnson',
-    email: 'student@campus.com',
-    password: 'password',
-    role: 'Student',
-    avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
-  },
-  {
-    id: '4',
-    name: 'Parent Doe',
-    email: 'parent@campus.com',
-    password: 'password',
-    role: 'Parent',
-    avatarUrl: 'https://picsum.photos/seed/avatar4/40/40',
-  },
-];
+const getInitialRoles = (): RoleStorage[] => {
+  return ALL_ROLES.map((role, index) => ({
+    id: (index + 1).toString(),
+    name: role,
+  }));
+};
+
+const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
+  const now = new Date().toISOString();
+  const getRoleId = (name: Role) => roles.find((r) => r.name === name)!.id;
+
+  return [
+    {
+      id: '1',
+      name: 'Admin User',
+      username: 'adminuser',
+      email: 'admin@campus.com',
+      password: 'password',
+      role_id: getRoleId('Admin'),
+      is_super_admin: true,
+      avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: '2',
+      name: 'Teacher Smith',
+      username: 'teachersmith',
+      email: 'teacher@campus.com',
+      password: 'password',
+      role_id: getRoleId('Teacher'),
+      is_super_admin: false,
+      avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: '3',
+      name: 'Student Johnson',
+      username: 'studentjohnson',
+      email: 'student@campus.com',
+      password: 'password',
+      role_id: getRoleId('Student'),
+      is_super_admin: false,
+      avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: '4',
+      name: 'Parent Doe',
+      username: 'parentdoe',
+      email: 'parent@campus.com',
+      password: 'password',
+      role_id: getRoleId('Parent'),
+      is_super_admin: false,
+      avatarUrl: 'https://picsum.photos/seed/avatar4/40/40',
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+};
 
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') {
@@ -66,8 +102,12 @@ const saveToStorage = <T>(key: string, value: T) => {
 
 export const initializeStore = () => {
   if (typeof window !== 'undefined') {
+    if (!window.localStorage.getItem(ROLES_KEY)) {
+      saveToStorage(ROLES_KEY, getInitialRoles());
+    }
+    const roles = getRoles();
     if (!window.localStorage.getItem(USERS_KEY)) {
-      saveToStorage(USERS_KEY, getInitialUsers());
+      saveToStorage(USERS_KEY, getInitialUsers(roles));
     }
     if (!window.localStorage.getItem(LOGS_KEY)) {
       saveToStorage(LOGS_KEY, []);
@@ -75,31 +115,71 @@ export const initializeStore = () => {
   }
 };
 
+// Role Functions
+export const getRoles = (): RoleStorage[] => getFromStorage<RoleStorage[]>(ROLES_KEY, []);
+
 // User Functions
-export const getUsers = (): User[] => getFromStorage<User[]>(USERS_KEY, []);
-export const getUserByEmailAndRole = (email: string, role: Role): User | undefined =>
-  getUsers().find((user) => user.email === email && user.role === role);
-export const addUser = (user: Omit<User, 'id' | 'avatarUrl'>): User => {
-  const users = getUsers();
-  const newUser: User = {
+const getUsersInternal = (): UserStorage[] => getFromStorage<UserStorage[]>(USERS_KEY, []);
+
+const mapUser = (user: UserStorage): User => {
+    const roles = getRoles();
+    const role = roles.find(r => r.id === user.role_id);
+    return {
+        ...user,
+        role: role ? role.name : 'Student', // Default to student if role not found
+    };
+}
+
+export const getUsers = (): User[] => {
+    return getUsersInternal().map(mapUser);
+};
+
+export const getUserByEmail = (email: string): User | undefined => {
+  const user = getUsersInternal().find((user) => user.email === email);
+  return user ? mapUser(user) : undefined;
+}
+
+export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id'> & { role: Role }): User => {
+  const users = getUsersInternal();
+  const roles = getRoles();
+  const role = roles.find(r => r.name === user.role);
+  const now = new Date().toISOString();
+
+  const newUser: UserStorage = {
     ...user,
     id: (users.length + 1).toString(),
+    username: user.name.replace(/\s/g, '').toLowerCase(),
+    role_id: role ? role.id : '3', // Default to student
+    is_super_admin: false,
     avatarUrl: `https://picsum.photos/seed/avatar${users.length + 1}/40/40`,
+    created_at: now,
+    updated_at: now,
   };
   saveToStorage(USERS_KEY, [...users, newUser]);
-  return newUser;
+  return mapUser(newUser);
 };
+
 export const updateUser = (updatedUser: User): User => {
-  const users = getUsers();
+  const users = getUsersInternal();
   const userIndex = users.findIndex((u) => u.id === updatedUser.id);
   if (userIndex !== -1) {
-    users[userIndex] = { ...users[userIndex], ...updatedUser };
+    const roles = getRoles();
+    const role = roles.find(r => r.name === updatedUser.role);
+    const { role: _, ...userToStore } = updatedUser;
+
+    users[userIndex] = {
+        ...users[userIndex],
+        ...userToStore,
+        role_id: role ? role.id : users[userIndex].role_id,
+        updated_at: new Date().toISOString(),
+    };
     saveToStorage(USERS_KEY, users);
   }
   return updatedUser;
 };
+
 export const deleteUser = (userId: string): void => {
-  const users = getUsers();
+  const users = getUsersInternal();
   const updatedUsers = users.filter((u) => u.id !== userId);
   saveToStorage(USERS_KEY, updatedUsers);
 };

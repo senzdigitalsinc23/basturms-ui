@@ -13,15 +13,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { Role, ROLES } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
@@ -33,9 +25,6 @@ const FormSchema = z.object({
   }),
   password: z.string().min(1, {
     message: 'Password is required.',
-  }),
-  role: z.enum(ROLES, {
-    errorMap: () => ({ message: 'Please select a role.' }),
   }),
 });
 
@@ -56,7 +45,7 @@ export function LoginForm() {
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     setIsLoading(true);
-    const success = await login(data.email, data.password, data.role);
+    const success = await login(data.email, data.password);
     setIsLoading(false);
 
     if (success) {
@@ -65,7 +54,7 @@ export function LoginForm() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'Invalid email, password, or role. Please try again.',
+        description: 'Invalid email or password. Please try again.',
       });
     }
   }
@@ -73,30 +62,6 @@ export function LoginForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Role</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="email"

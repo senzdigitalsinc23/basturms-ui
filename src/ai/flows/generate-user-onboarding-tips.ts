@@ -9,10 +9,11 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { ALL_ROLES } from '@/lib/types';
 
 const GenerateUserOnboardingTipsInputSchema = z.object({
   role: z
-    .enum(['Admin', 'Teacher', 'Student', 'Parent'])
+    .enum(ALL_ROLES)
     .describe('The role of the user for whom onboarding tips are needed.'),
 });
 export type GenerateUserOnboardingTipsInput = z.infer<

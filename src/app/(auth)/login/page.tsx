@@ -12,7 +12,7 @@ export default function LoginPage() {
           <div className="grid gap-2 text-center">
             <h1 className="text-3xl font-bold font-headline">Login</h1>
             <p className="text-balance text-muted-foreground">
-              Select your role and enter your credentials to access your account
+              Enter your credentials to access your account
             </p>
           </div>
           <LoginForm />

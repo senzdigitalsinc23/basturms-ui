@@ -2,13 +2,13 @@
 
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Role } from '@/lib/types';
-import { getUserByEmailAndRole, initializeStore } from '@/lib/store';
+import { User } from '@/lib/types';
+import { getUserByEmail, initializeStore } from '@/lib/store';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, role: Role) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string, role: Role): Promise<boolean> => {
-      const foundUser = getUserByEmailAndRole(email, role);
+    async (email: string, password: string): Promise<boolean> => {
+      const foundUser = getUserByEmail(email);
 
       if (foundUser && foundUser.password === password) {
         const { password: _, ...userToStore } = foundUser;

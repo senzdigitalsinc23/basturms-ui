@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ROLES, Role, User } from '@/lib/types';
+import { ALL_ROLES, Role, User } from '@/lib/types';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -27,14 +27,14 @@ import { useToast } from '@/hooks/use-toast';
 const createSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   email: z.string().email('Invalid email address.'),
-  role: z.enum(ROLES, { required_error: 'Please select a role.' }),
+  role: z.enum(ALL_ROLES, { required_error: 'Please select a role.' }),
   password: z.string().min(8, 'Password must be at least 8 characters.'),
 });
 
 const editSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.').optional(),
   email: z.string().email('Invalid email address.').optional(),
-  role: z.enum(ROLES).optional(),
+  role: z.enum(ALL_ROLES).optional(),
 });
 
 type UserFormProps = {
@@ -119,7 +119,7 @@ export function UserForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {ROLES.map((role: Role) => (
+                  {ALL_ROLES.map((role: Role) => (
                     <SelectItem key={role} value={role}>
                       {role}
                     </SelectItem>

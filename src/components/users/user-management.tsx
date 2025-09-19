@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { getUsers, addUser, updateUser, deleteUser, addAuditLog } from '@/lib/store';
-import { User } from '@/lib/types';
+import { User, Role } from '@/lib/types';
 import { UserDataTable } from './data-table';
 import { columns } from './columns';
 import { useAuth } from '@/hooks/use-auth';
@@ -14,7 +14,7 @@ export function UserManagement() {
     setUsers(getUsers());
   }, []);
 
-  const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl'>) => {
+  const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id'> & { role: Role }) => {
     const newUser = addUser(user);
     setUsers((prev) => [...prev, newUser]);
     if(currentUser) {

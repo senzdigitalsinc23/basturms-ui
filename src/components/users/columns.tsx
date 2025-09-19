@@ -82,13 +82,19 @@ export const columns = ({
     header: 'Role',
     cell: ({ row }) => {
       const role = row.getValue('role') as Role;
-      const variant: { [key in Role]: 'default' | 'secondary' | 'outline' } = {
+      const variants = {
         Admin: 'default',
         Teacher: 'secondary',
         Student: 'outline',
         Parent: 'outline',
+        Headmaster: 'default',
+        Librarian: 'secondary',
+        Security: 'destructive',
       };
-      return <Badge variant={variant[role]}>{role}</Badge>;
+      
+      const variant = variants[role as keyof typeof variants] || 'outline';
+
+      return <Badge variant={variant as any}>{role}</Badge>;
     },
   },
   {
