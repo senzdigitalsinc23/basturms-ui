@@ -24,7 +24,8 @@ import {
   Warehouse,
   Briefcase,
   Laptop,
-  PenSquare
+  PenSquare,
+  BookCopy
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
