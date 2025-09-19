@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const FormSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters.'),
@@ -29,6 +29,7 @@ type ResetPasswordFormProps = {
 
 export function ResetPasswordForm({ onSubmit }: ResetPasswordFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -55,7 +56,18 @@ export function ResetPasswordForm({ onSubmit }: ResetPasswordFormProps) {
             <FormItem>
               <FormLabel>New Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <div className="relative">
+                  <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                   <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -68,7 +80,18 @@ export function ResetPasswordForm({ onSubmit }: ResetPasswordFormProps) {
             <FormItem>
               <FormLabel>Confirm New Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <div className="relative">
+                  <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                   <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>

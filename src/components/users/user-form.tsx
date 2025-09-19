@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { ALL_ROLES, Role, User } from '@/lib/types';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const createSchema = z.object({
@@ -49,6 +49,7 @@ export function UserForm({
   onSubmit,
 }: UserFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   
   const form = useForm({
@@ -138,7 +139,18 @@ export function UserForm({
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <div className="relative">
+                    <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

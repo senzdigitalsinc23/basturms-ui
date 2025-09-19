@@ -47,7 +47,6 @@ export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onGlobalFilterChange: setGlobalFilter,
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
       columnFilters,

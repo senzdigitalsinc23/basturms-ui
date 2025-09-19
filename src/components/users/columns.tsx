@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, UserX, UserCheck, KeyRound } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, UserX, UserCheck, KeyRound, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,7 +19,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from '../ui/dialog';
 import { UserForm } from './user-form';
 import { useState } from 'react';
@@ -92,9 +91,8 @@ export const columns = ({
       const variants = {
         Admin: 'default',
         Teacher: 'secondary',
-        Student: 'outline',
         Parent: 'outline',
-        Headmaster: 'default',
+        Headmaster: 'destructive', // Changed for better visibility
         Librarian: 'secondary',
         Security: 'destructive',
       };
@@ -123,61 +121,92 @@ export const columns = ({
       const { toast } = useToast();
       const [isEditFormOpen, setIsEditFormOpen] = useState(false);
       const [isResetPasswordFormOpen, setIsResetPasswordFormOpen] = useState(false);
+      const [isFreezeAlertOpen, setIsFreezeAlertOpen] = useState(false);
+
 
       return (
         <div className="text-right">
-          <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-            <Dialog open={isResetPasswordFormOpen} onOpenChange={setIsResetPasswordFormOpen}>
-              <AlertDialog>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setIsEditFormOpen(true)}>
-                      Edit Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsResetPasswordFormOpen(true)}>
-                      <KeyRound className="mr-2 h-4 w-4" />
-                      Reset Password
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem
-                        className={user.status === 'active' ? 'text-destructive focus:text-destructive' : ''}
-                      >
-                        {user.status === 'active' ? (
-                          <UserX className="mr-2 h-4 w-4" />
-                        ) : (
-                          <UserCheck className="mr-2 h-4 w-4" />
-                        )}
-                        <span>{user.status === 'active' ? 'Freeze' : 'Unfreeze'} Account</span>
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setIsEditFormOpen(true)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsResetPasswordFormOpen(true)}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Reset Password
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setIsFreezeAlertOpen(true)}
+                    className={user.status === 'active' ? 'text-destructive focus:text-destructive' : ''}
+                  >
+                    {user.status === 'active' ? (
+                      <UserX className="mr-2 h-4 w-4" />
+                    ) : (
+                      <UserCheck className="mr-2 h-4 w-4" />
+                    )}
+                    <span>{user.status === 'active' ? 'Freeze' : 'Unfreeze'} Account</span>
+                  </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
+            <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
                 <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
+                    <DialogHeader>
                     <DialogTitle>Edit User</DialogTitle>
                     <DialogDescription>
-                      Make changes to the user's profile.
+                        Make changes to the user's profile.
                     </DialogDescription>
-                  </DialogHeader>
-                  <UserForm
+                    </DialogHeader>
+                    <UserForm
                     isEditMode={true}
                     defaultValues={user}
                     onSubmit={(values) => {
-                      onUpdate({ ...user, ...values });
-                      setIsEditFormOpen(false);
+                        onUpdate({ ...user, ...values });
+                        setIsEditFormOpen(false);
                     }}
-                  />
+                    />
                 </DialogContent>
+            </Dialog>
+            
+            <Dialog open={isResetPasswordFormOpen} onOpenChange={setIsResetPasswordFormOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                    <DialogTitle>Reset Password</DialogTitle>
+                    <DialogDescription>
+                        Enter a new password for {user.name}.
+                    </DialogDescription>
+                    </DialogHeader>
+                    <ResetPasswordForm 
+                    onSubmit={(values) => {
+                        const success = onResetPassword(user.id, values.password);
+                        if (success) {
+                        toast({
+                            title: 'Password Reset',
+                            description: `Password for ${user.name} has been reset successfully.`,
+                        });
+                        setIsResetPasswordFormOpen(false);
+                        } else {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Error',
+                            description: 'Failed to reset password.',
+                        });
+                        }
+                    }} 
+                    />
+                </DialogContent>
+            </Dialog>
 
+            <AlertDialog open={isFreezeAlertOpen} onOpenChange={setIsFreezeAlertOpen}>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -193,35 +222,7 @@ export const columns = ({
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
-              </AlertDialog>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Reset Password</DialogTitle>
-                  <DialogDescription>
-                    Enter a new password for {user.name}.
-                  </DialogDescription>
-                </DialogHeader>
-                <ResetPasswordForm 
-                  onSubmit={(values) => {
-                    const success = onResetPassword(user.id, values.password);
-                    if (success) {
-                       toast({
-                        title: 'Password Reset',
-                        description: `Password for ${user.name} has been reset successfully.`,
-                      });
-                      setIsResetPasswordFormOpen(false);
-                    } else {
-                       toast({
-                        variant: 'destructive',
-                        title: 'Error',
-                        description: 'Failed to reset password.',
-                      });
-                    }
-                  }} 
-                />
-              </DialogContent>
-            </Dialog>
-          </Dialog>>
+            </AlertDialog>
         </div>
       );
     },

@@ -57,7 +57,7 @@ export const columns: ColumnDef<AuditLog>[] = [
               {details}
             </div>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>Log Details</DialogTitle>
               <DialogDescription>
