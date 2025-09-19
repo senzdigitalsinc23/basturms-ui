@@ -10,10 +10,10 @@ export default function StudentDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={['Student']}>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Welcome, {user?.name.split(' ')[0]}!</h1>
-          <p className="text-muted-foreground">This is your Student Dashboard.</p>
+          <h1 className="text-3xl font-bold font-headline">Student Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {user?.name.split(' ')[0]}!</p>
         </div>
 
         <OnboardingTips />
@@ -24,7 +24,7 @@ export default function StudentDashboardPage() {
               <CardTitle className="text-sm font-medium">
                 My Courses
               </CardTitle>
-              <BookCopy className="h-4 w-4 text-muted-foreground" />
+              <BookCopy className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">6</div>
@@ -38,7 +38,7 @@ export default function StudentDashboardPage() {
               <CardTitle className="text-sm font-medium">
                 Overall Grade
               </CardTitle>
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              <GraduationCap className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">A-</div>
@@ -52,7 +52,7 @@ export default function StudentDashboardPage() {
               <CardTitle className="text-sm font-medium">
                 Assignments Due
               </CardTitle>
-              <PenSquare className="h-4 w-4 text-muted-foreground" />
+              <PenSquare className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">3</div>

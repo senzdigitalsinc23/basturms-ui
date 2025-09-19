@@ -10,17 +10,17 @@ export default function ITSupportDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={['I.T Support']}>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">I.T Support Dashboard</h1>
-          <p className="text-muted-foreground">Welcome, {user?.name.split(' ')[0]}.</p>
+          <p className="text-muted-foreground">Welcome, {user?.name?.split(' ')[0]}. Here are your open tickets.</p>
         </div>
         <OnboardingTips />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
-              <Laptop className="h-4 w-4 text-muted-foreground" />
+              <Laptop className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">3</div>
@@ -30,7 +30,7 @@ export default function ITSupportDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Knowledge Base</CardTitle>
-              <Book className="h-4 w-4 text-muted-foreground" />
+              <Book className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">12 articles</div>
@@ -40,7 +40,7 @@ export default function ITSupportDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ticket History</CardTitle>
-              <History className="h-4 w-4 text-muted-foreground" />
+              <History className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">2 resolved</div>

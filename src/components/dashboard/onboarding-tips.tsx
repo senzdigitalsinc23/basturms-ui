@@ -11,32 +11,32 @@ import { AnimatePresence, motion } from 'framer-motion';
 export function OnboardingTips() {
   const { user } = useAuth();
   const [tips, setTips] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isVisible, setIsVisible] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    const dismissed = sessionStorage.getItem('onboarding-tips-dismissed');
+    if (dismissed === 'true' || !user?.role) {
+      setIsVisible(false);
+      return;
+    }
+    
+    setIsVisible(true);
+    setLoading(true);
+
     const fetchTips = async () => {
-      if (user?.role) {
-        try {
-          const response = await generateUserOnboardingTips({ role: user.role });
-          setTips(response.tips);
-        } catch (error) {
-          console.error("Failed to fetch onboarding tips:", error);
-          setTips(["Could not load tips at this moment. Please check your connection or try again later."]);
-        } finally {
-          setLoading(false);
-        }
+      try {
+        const response = await generateUserOnboardingTips({ role: user.role });
+        setTips(response.tips);
+      } catch (error) {
+        console.error("Failed to fetch onboarding tips:", error);
+        setTips(["Could not load tips at this moment. Please check your connection or try again later."]);
+      } finally {
+        setLoading(false);
       }
     };
     
-    // Check if tips were already fetched and dismissed from session storage
-    const dismissed = sessionStorage.getItem('onboarding-tips-dismissed');
-    if(dismissed === 'true') {
-        setIsVisible(false);
-        setLoading(false);
-    } else {
-        fetchTips();
-    }
+    fetchTips();
     
   }, [user?.role]);
 

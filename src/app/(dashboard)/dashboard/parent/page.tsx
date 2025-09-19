@@ -10,10 +10,10 @@ export default function ParentDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={['Parent']}>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Welcome, {user?.name}!</h1>
-          <p className="text-muted-foreground">This is your Parent Dashboard.</p>
+          <h1 className="text-3xl font-bold font-headline">Parent Dashboard</h1>
+          <p className="text-muted-foreground">Welcome, {user?.name}.</p>
         </div>
 
         <OnboardingTips />
@@ -24,7 +24,7 @@ export default function ParentDashboardPage() {
               <CardTitle className="text-sm font-medium">
                 My Child
               </CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
+              <User className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">Student Johnson</div>
@@ -38,7 +38,7 @@ export default function ParentDashboardPage() {
               <CardTitle className="text-sm font-medium">
                 Child's Grades
               </CardTitle>
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              <GraduationCap className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">B+</div>
@@ -52,7 +52,7 @@ export default function ParentDashboardPage() {
               <CardTitle className="text-sm font-medium">
                 Attendance
               </CardTitle>
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <ShieldCheck className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">98%</div>

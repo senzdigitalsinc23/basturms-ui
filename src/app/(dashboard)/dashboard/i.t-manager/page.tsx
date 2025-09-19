@@ -10,17 +10,17 @@ export default function ITManagerDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={['I.T Manager']}>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">I.T Manager Dashboard</h1>
-          <p className="text-muted-foreground">System health and operations overview.</p>
+          <p className="text-muted-foreground">System health and operations overview for {user?.name}.</p>
         </div>
         <OnboardingTips />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">System Status</CardTitle>
-              <Laptop className="h-4 w-4 text-muted-foreground" />
+              <Laptop className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">All Systems Go</div>
@@ -30,7 +30,7 @@ export default function ITManagerDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">3 Open</div>
@@ -40,7 +40,7 @@ export default function ITManagerDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Security Patch</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <ShieldCheck className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">Up to Date</div>

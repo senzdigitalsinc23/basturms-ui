@@ -22,8 +22,7 @@ export default function LoginPage() {
         <Image
           src={loginBg?.imageUrl || "https://picsum.photos/seed/loginbg/1920/1080"}
           alt="Abstract background"
-          width="1920"
-          height="1080"
+          fill
           className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
           data-ai-hint={loginBg?.imageHint}
         />

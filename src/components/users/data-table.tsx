@@ -76,12 +76,12 @@ export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add User
+              Create User
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
+              <DialogTitle>Create User</DialogTitle>
               <DialogDescription>
                 Fill in the details to create a new user account.
               </DialogDescription>

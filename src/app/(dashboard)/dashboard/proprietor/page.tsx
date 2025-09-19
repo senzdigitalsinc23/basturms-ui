@@ -10,17 +10,17 @@ export default function ProprietorDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={['Proprietor']}>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">Proprietor's Dashboard</h1>
-          <p className="text-muted-foreground">High-level school overview.</p>
+          <p className="text-muted-foreground">High-level school overview for {user?.name}.</p>
         </div>
         <OnboardingTips />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Financials</CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              <Briefcase className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">+5% Revenue</div>
@@ -30,7 +30,7 @@ export default function ProprietorDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Enrollment</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">650 Students</div>
@@ -40,7 +40,7 @@ export default function ProprietorDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">School Analytics</CardTitle>
-              <History className="h-4 w-4 text-muted-foreground" />
+              <History className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">View Report</div>

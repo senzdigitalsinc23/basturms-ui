@@ -26,6 +26,19 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
 
   return [
     {
+      id: '1',
+      name: 'Admin User',
+      username: 'adminuser',
+      email: 'admin@campus.com',
+      password: 'password',
+      role_id: getRoleId('Admin')!,
+      is_super_admin: true,
+      avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
+      status: 'active',
+      created_at: now,
+      updated_at: now,
+    },
+    {
       id: '2',
       name: 'Teacher Smith',
       username: 'teachersmith',
@@ -73,19 +86,6 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       role_id: getRoleId('Student')!,
       is_super_admin: false,
       avatarUrl: 'https://picsum.photos/seed/avatar5/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
-     {
-      id: '1',
-      name: 'Admin User',
-      username: 'adminuser',
-      email: 'admin@campus.com',
-      password: 'password',
-      role_id: getRoleId('Admin')!,
-      is_super_admin: true,
-      avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
       status: 'active',
       created_at: now,
       updated_at: now,
@@ -166,14 +166,15 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
   const now = new Date().toISOString();
+  const nextId = users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id))) + 1).toString() : '1';
 
   const newUser: UserStorage = {
     ...user,
-    id: (users.length + 1).toString(),
+    id: nextId,
     username: user.name.replace(/\s/g, '').toLowerCase(),
     role_id: role!.id,
     is_super_admin: false,
-    avatarUrl: `https://picsum.photos/seed/avatar${users.length + 1}/40/40`,
+    avatarUrl: `https://picsum.photos/seed/avatar${nextId}/40/40`,
     status: 'active',
     created_at: now,
     updated_at: now,
@@ -230,9 +231,10 @@ export const resetPassword = (userId: string, newPassword: string): boolean => {
 export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KEY, []);
 export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>): void => {
   const logs = getAuditLogs();
+  const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id))) + 1).toString() : '1';
   const newLog: AuditLog = {
     ...log,
-    id: (logs.length + 1).toString(),
+    id: nextId,
     timestamp: new Date().toISOString(),
   };
   saveToStorage(LOGS_KEY, [newLog, ...logs]);
