@@ -6,16 +6,29 @@ import { useEffect, useState } from 'react';
 import { getUsers } from '@/lib/store';
 import { User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 export function RecentUsers() {
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const allUsers = getUsers();
-    const sortedUsers = [...allUsers].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const sortedUsers = [...allUsers].sort((a, b) => {
+        const dateA = a.created_at ? parseISO(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? parseISO(b.created_at).getTime() : 0;
+        return dateB - dateA;
+    });
     setRecentUsers(sortedUsers.slice(0, 5));
   }, []);
+
+  const formatRelativeTime = (dateString: string | undefined) => {
+    if (!dateString) return 'date unknown';
+    const date = parseISO(dateString);
+    if (isValid(date)) {
+        return formatDistanceToNow(date, { addSuffix: true });
+    }
+    return 'invalid date';
+  }
 
   return (
     <Card>
@@ -39,7 +52,7 @@ export function RecentUsers() {
               </div>
               <div className='text-right'>
                 <Badge variant='outline'>{user.role}</Badge>
-                <p className='text-sm text-muted-foreground mt-1'>{formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}</p>
+                <p className='text-sm text-muted-foreground mt-1'>{formatRelativeTime(user.created_at)}</p>
               </div>
             </li>
           ))}
