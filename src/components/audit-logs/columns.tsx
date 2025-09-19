@@ -34,8 +34,8 @@ export const columns: ColumnDef<AuditLog>[] = [
     },
   },
   {
-    accessorKey: 'username',
-    header: 'Username',
+    accessorKey: 'name',
+    header: 'User',
   },
   {
     accessorKey: 'user',

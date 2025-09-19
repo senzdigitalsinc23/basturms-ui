@@ -51,7 +51,7 @@ export interface AuditLog {
   id: string;
   timestamp: string;
   user: string; // user email
-  username: string;
+  name: string; // user's full name
   action: string;
   details: string;
 }
