@@ -46,11 +46,12 @@ const menuItems: Partial<Record<Role, { href: string; label: string; icon: React
 };
 
 const getRoleNavItems = (role: Role) => {
-    const items = menuItems[role];
-    if (items) {
-        return items;
+    // Directly check if the role exists as a key in menuItems
+    if (role in menuItems) {
+        const items = menuItems[role];
+        if(items) return items;
     }
-    // Default for other roles
+    // Default for other roles not explicitly defined in menuItems
     return [
         { href: `/dashboard/${role.toLowerCase()}`, label: 'Dashboard', icon: LayoutDashboard },
     ];

@@ -6,7 +6,6 @@ import React, { useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/dashboard/sidebar-nav';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardLayout({
   children,
@@ -20,18 +19,27 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login');
-    } else if (!isLoading && user && pathname === '/dashboard') {
-        const roleDashboard = `/dashboard/${user.role.toLowerCase()}`;
-        router.replace(roleDashboard);
+    } else if (
+      !isLoading &&
+      user &&
+      (pathname === '/dashboard' || pathname === '/dashboard/')
+    ) {
+      const roleDashboard = `/dashboard/${user.role.toLowerCase()}`;
+      router.replace(roleDashboard);
     }
   }, [isLoading, user, router, pathname]);
 
-  if (isLoading || !user || pathname === '/dashboard') {
+  if (
+    isLoading ||
+    !user ||
+    pathname === '/dashboard' ||
+    pathname === '/dashboard/'
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex items-center space-x-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-           <p>Loading dashboard...</p>
+          <p>Loading dashboard...</p>
         </div>
       </div>
     );
