@@ -21,8 +21,9 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { Role } from '@/lib/types';
 
-const menuItems = {
+const menuItems: Partial<Record<Role, { href: string; label: string; icon: React.ElementType }[]>> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/users', label: 'User Management', icon: Users },
@@ -44,9 +45,10 @@ const menuItems = {
   ],
 };
 
-const getRoleNavItems = (role: string) => {
-    if (role in menuItems) {
-        return menuItems[role as keyof typeof menuItems];
+const getRoleNavItems = (role: Role) => {
+    const items = menuItems[role];
+    if (items) {
+        return items;
     }
     // Default for other roles
     return [
