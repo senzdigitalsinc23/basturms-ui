@@ -1,7 +1,6 @@
 export type Role =
   | 'Admin'
   | 'Teacher'
-  | 'Student'
   | 'Parent'
   | 'Headmaster'
   | 'Librarian'
@@ -15,7 +14,6 @@ export type Role =
 export const ALL_ROLES: Role[] = [
   'Admin',
   'Teacher',
-  'Student',
   'Parent',
   'Headmaster',
   'Librarian',
