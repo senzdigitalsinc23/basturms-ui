@@ -8,6 +8,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -25,18 +30,91 @@ import {
   Briefcase,
   Laptop,
   PenSquare,
-  BookCopy
+  BookCopy,
+  ChevronDown,
+  Building2,
+  Calendar,
+  Megaphone,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Role } from '@/lib/types';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
+import React from 'react';
 
-const menuItems: Partial<Record<Role, { href: string; label: string; icon: React.ElementType }[]>> = {
+const SidebarAccordionTrigger = React.forwardRef<
+  React.ElementRef<typeof AccordionTrigger>,
+  React.ComponentPropsWithoutRef<typeof AccordionTrigger>
+>(({ className, children, ...props }, ref) => (
+  <AccordionTrigger
+    ref={ref}
+    className={cn(
+      'flex w-full items-center gap-2 rounded-md p-2 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus:outline-none [&[data-state=open]>svg:last-child]:rotate-180',
+      className
+    )}
+    {...props}
+  >
+    {children}
+  </AccordionTrigger>
+));
+SidebarAccordionTrigger.displayName = AccordionTrigger.displayName;
+
+const SidebarAccordionContent = React.forwardRef<
+  React.ElementRef<typeof AccordionContent>,
+  React.ComponentPropsWithoutRef<typeof AccordionContent>
+>(({ className, children, ...props }, ref) => (
+  <AccordionContent
+    ref={ref}
+    className={cn('overflow-hidden text-sm transition-all', className)}
+    {...props}
+  >
+    <div className="pl-8 flex flex-col gap-1 py-1">{children}</div>
+  </AccordionContent>
+));
+SidebarAccordionContent.displayName = AccordionContent.displayName;
+
+type NavItem = {
+  href?: string;
+  label: string;
+  icon: React.ElementType;
+  items?: Omit<NavItem, 'items' | 'icon'>[];
+};
+
+const menuItems: Record<Role, NavItem[]> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/users', label: 'User Management', icon: Users },
-    { href: '/audit-logs', label: 'Audit Logs', icon: History },
+    {
+      label: 'Student Management',
+      icon: GraduationCap,
+      items: [
+        { href: '/#', label: 'Students' },
+        { href: '/#', label: 'Add Student' },
+        { href: '/#', label: 'Classes' },
+      ],
+    },
+    {
+      label: 'Staff Management',
+      icon: Briefcase,
+      items: [
+        { href: '/users', label: 'Staff List' },
+        { href: '/#', label: 'Add Staff' },
+        { href: '/#', label: 'Staff Attendance' },
+      ],
+    },
+    { href: '/#', label: 'Attendance', icon: Calendar },
+    { href: '/audit-logs', label: 'Timetable', icon: History },
+    {
+      label: 'Announcements',
+      icon: Megaphone,
+      items: [{ href: '/#', label: 'Generate Notice' }],
+    },
   ],
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
@@ -54,58 +132,69 @@ const menuItems: Partial<Record<Role, { href: string; label: string; icon: React
     { href: '/#', label: 'Child Grades', icon: GraduationCap },
   ],
   Headmaster: [
-      { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'Staff', icon: Users },
-      { href: '/#', label: 'Curriculum', icon: BookUser },
+    { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/#', label: 'Staff', icon: Users },
+    { href: '/#', label: 'Curriculum', icon: BookUser },
   ],
   Librarian: [
-      { href: '/dashboard/librarian', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'Book Catalogue', icon: Book },
-      { href: '/#', label: 'Checkouts', icon: History },
+    { href: '/dashboard/librarian', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/#', label: 'Book Catalogue', icon: Book },
+    { href: '/#', label: 'Checkouts', icon: History },
   ],
   Security: [
-      { href: '/dashboard/security', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'Campus Alerts', icon: Shield },
-      { href: '/#', label: 'Visitor Logs', icon: BookUser },
+    { href: '/dashboard/security', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/#', label: 'Campus Alerts', icon: Shield },
+    { href: '/#', label: 'Visitor Logs', icon: BookUser },
   ],
   'Procurement Manager': [
-      { href: '/dashboard/procurement-manager', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'Purchase Orders', icon: Truck },
-      { href: '/#', label: 'Suppliers', icon: Building },
+    {
+      href: '/dashboard/procurement-manager',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+    },
+    { href: '/#', label: 'Purchase Orders', icon: Truck },
+    { href: '/#', label: 'Suppliers', icon: Building },
   ],
   'Stores Manager': [
-      { href: '/dashboard/stores-manager', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'Inventory', icon: Warehouse },
-      { href: '/#', label: 'Requisitions', icon: History },
+    {
+      href: '/dashboard/stores-manager',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+    },
+    { href: '/#', label: 'Inventory', icon: Warehouse },
+    { href: '/#', label: 'Requisitions', icon: History },
   ],
   Proprietor: [
-      { href: '/dashboard/proprietor', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'Financials', icon: Briefcase },
-      { href: '/#', label: 'School Analytics', icon: History },
+    { href: '/dashboard/proprietor', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/#', label: 'Financials', icon: Briefcase },
+    { href: '/#', label: 'School Analytics', icon: History },
   ],
   'I.T Manager': [
-      { href: '/dashboard/i.t-manager', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'System Status', icon: Laptop },
-      { href: '/#', label: 'User Support', icon: Users },
+    { href: '/dashboard/i.t-manager', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/#', label: 'System Status', icon: Laptop },
+    { href: '/#', label: 'User Support', icon: Users },
   ],
   'I.T Support': [
-      { href: '/dashboard/i.t-support', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/#', label: 'Open Tickets', icon: Laptop },
-      { href: '/#', label: 'Knowledge Base', icon: Book },
+    { href: '/dashboard/i.t-support', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/#', label: 'Open Tickets', icon: Laptop },
+    { href: '/#', label: 'Knowledge Base', icon: Book },
   ],
 };
 
 const getRoleNavItems = (role: Role) => {
-    const roleKey = role as keyof typeof menuItems;
-    if (menuItems[roleKey]) {
-        return menuItems[roleKey]!;
-    }
-    // Fallback for roles without explicit menu items
-    const formattedRole = role.toLowerCase().replace(/\s/g, '-');
-    return [
-        { href: `/dashboard/${formattedRole}`, label: 'Dashboard', icon: LayoutDashboard },
-    ];
-}
+  const roleKey = role as keyof typeof menuItems;
+  if (menuItems[roleKey]) {
+    return menuItems[roleKey]!;
+  }
+  const formattedRole = role.toLowerCase().replace(/\s/g, '-');
+  return [
+    {
+      href: `/dashboard/${formattedRole}`,
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+    },
+  ];
+};
 
 export function SidebarNav() {
   const { user, logout } = useAuth();
@@ -114,31 +203,51 @@ export function SidebarNav() {
   const navItems = user ? getRoleNavItems(user.role) : [];
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center gap-2 p-2">
-          <GraduationCap className="w-8 h-8 text-sidebar-primary" />
-          <span className="text-lg font-headline font-semibold text-sidebar-foreground">
-            CampusConnect
-          </span>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={`${item.href}-${item.label}`}>
+    <Sidebar
+      collapsible="icon"
+      variant="sidebar"
+      className="border-r"
+    >
+      <SidebarContent className="p-2">
+        <Accordion type="multiple" className="w-full">
+          {navItems.map((item, index) =>
+            item.items ? (
+              <AccordionItem value={`item-${index}`} key={index} className="border-b-0">
+                <SidebarAccordionTrigger>
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-base">{item.label}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ml-auto" />
+                </SidebarAccordionTrigger>
+                <SidebarAccordionContent>
+                  {item.items.map((subItem) => (
+                    <SidebarMenuButton
+                      key={subItem.label}
+                      as={Link}
+                      href={subItem.href || '#'}
+                      className="h-auto justify-start p-2 text-base font-normal"
+                      isActive={pathname === subItem.href}
+                      variant="ghost"
+                    >
+                      {subItem.label}
+                    </SidebarMenuButton>
+                  ))}
+                </SidebarAccordionContent>
+              </AccordionItem>
+            ) : (
               <SidebarMenuButton
+                key={item.label}
                 as={Link}
-                href={item.href}
+                href={item.href || '#'}
+                className="h-auto justify-start p-2 text-base"
                 isActive={pathname === item.href}
-                tooltip={{ children: item.label, side: 'right' }}
+                variant={pathname === item.href ? 'default' : 'ghost'}
               >
-                <item.icon />
-                <span>{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span className="text-base">{item.label}</span>
               </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+            )
+          )}
+        </Accordion>
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -147,13 +256,14 @@ export function SidebarNav() {
               as={Link}
               href="#"
               tooltip={{ children: 'Settings', side: 'right' }}
+              variant="ghost"
             >
               <Settings />
               <span>Settings</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={logout} tooltip={{ children: 'Logout', side: 'right' }}>
+            <SidebarMenuButton onClick={logout} tooltip={{ children: 'Logout', side: 'right' }} variant="ghost">
               <LogOut />
               <span>Logout</span>
             </SidebarMenuButton>
