@@ -1,0 +1,65 @@
+'use client';
+
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { User, Role } from '@/lib/types';
+import { getUserByEmailAndRole, initializeStore } from '@/lib/store';
+
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  login: (email: string, password: string, role: Role) => Promise<boolean>;
+  logout: () => void;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const USER_SESSION_KEY = 'campusconnect_session';
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    initializeStore();
+    try {
+      const storedUser = localStorage.getItem(USER_SESSION_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error('Failed to parse user session from localStorage', error);
+      localStorage.removeItem(USER_SESSION_KEY);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const login = useCallback(
+    async (email: string, password: string, role: Role): Promise<boolean> => {
+      const foundUser = getUserByEmailAndRole(email, role);
+
+      if (foundUser && foundUser.password === password) {
+        const { password: _, ...userToStore } = foundUser;
+        setUser(userToStore);
+        localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userToStore));
+        return true;
+      }
+      return false;
+    },
+    []
+  );
+
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem(USER_SESSION_KEY);
+    router.push('/login');
+  }, [router]);
+
+  return (
+    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
