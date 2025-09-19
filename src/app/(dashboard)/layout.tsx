@@ -3,9 +3,28 @@
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/dashboard/sidebar-nav';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { useSidebar } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
+
+function DashboardMain({ children }: { children: React.ReactNode }) {
+  const { state } = useSidebar();
+  return (
+    <div
+      className={cn(
+        'relative flex min-h-svh flex-1 flex-col bg-background transition-[margin-left] duration-200',
+        state === 'expanded'
+          ? 'md:ml-[--sidebar-width]'
+          : 'md:ml-[--sidebar-width-icon]'
+      )}
+    >
+      <DashboardHeader />
+      <main className="flex-1 p-4 md:p-6 bg-background/95">{children}</main>
+    </div>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -24,7 +43,9 @@ export default function DashboardLayout({
       user &&
       (pathname === '/dashboard' || pathname === '/dashboard/')
     ) {
-      const roleDashboard = `/dashboard/${user.role.toLowerCase().replace(/\s/g, '-')}`;
+      const roleDashboard = `/dashboard/${user.role
+        .toLowerCase()
+        .replace(/\s/g, '-')}`;
       router.replace(roleDashboard);
     }
   }, [isLoading, user, router, pathname]);
@@ -48,12 +69,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <SidebarNav />
-      <SidebarInset>
-        <DashboardHeader />
-        <main className="flex-1 p-4 md:p-6 bg-background">
-          {children}
-        </main>
-      </SidebarInset>
+      <DashboardMain>{children}</DashboardMain>
     </SidebarProvider>
   );
 }
