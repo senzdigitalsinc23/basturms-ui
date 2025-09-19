@@ -24,31 +24,42 @@ import Link from 'next/link';
 
 const menuItems = {
   Admin: [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/users', label: 'User Management', icon: Users },
     { href: '/audit-logs', label: 'Audit Logs', icon: History },
   ],
   Teacher: [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
     { href: '#', label: 'My Students', icon: Users },
     { href: '#', label: 'Grades', icon: GraduationCap },
   ],
   Student: [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard },
     { href: '#', label: 'My Grades', icon: GraduationCap },
     { href: '#', label: 'Assignments', icon: BookUser },
   ],
   Parent: [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/parent', label: 'Dashboard', icon: LayoutDashboard },
     { href: '#', label: 'Child Grades', icon: GraduationCap },
   ],
 };
+
+const getRoleNavItems = (role: string) => {
+    if (role in menuItems) {
+        return menuItems[role as keyof typeof menuItems];
+    }
+    // Default for other roles
+    return [
+        { href: `/dashboard/${role.toLowerCase()}`, label: 'Dashboard', icon: LayoutDashboard },
+    ];
+}
+
 
 export function SidebarNav() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
 
-  const navItems = user ? menuItems[user.role] : [];
+  const navItems = user ? getRoleNavItems(user.role) : [];
 
   return (
     <Sidebar collapsible="icon">

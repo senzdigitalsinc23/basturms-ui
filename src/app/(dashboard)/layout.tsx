@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/dashboard/sidebar-nav';
@@ -15,22 +15,23 @@ export default function DashboardLayout({
 }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login');
+    } else if (!isLoading && user && pathname === '/dashboard') {
+        const roleDashboard = `/dashboard/${user.role.toLowerCase()}`;
+        router.replace(roleDashboard);
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, router, pathname]);
 
-  if (isLoading || !user) {
+  if (isLoading || !user || pathname === '/dashboard') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex items-center space-x-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-[250px]" />
-            <Skeleton className="h-4 w-[200px]" />
-          </div>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+           <p>Loading dashboard...</p>
         </div>
       </div>
     );
