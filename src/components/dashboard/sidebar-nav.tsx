@@ -63,7 +63,7 @@ export function SidebarNav() {
       <SidebarContent>
         <SidebarMenu>
           {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
+            <SidebarMenuItem key={`${item.href}-${item.label}`}>
               <SidebarMenuButton
                 as={Link}
                 href={item.href}
