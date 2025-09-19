@@ -126,7 +126,7 @@ const mapUser = (user: UserStorage): User => {
     const role = roles.find(r => r.id === user.role_id);
     return {
         ...user,
-        role: role!.name,
+        role: role?.name || 'Admin', // Safely default to Admin role
     };
 }
 
