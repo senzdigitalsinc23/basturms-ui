@@ -8,11 +8,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -209,6 +204,12 @@ export function SidebarNav() {
       variant="sidebar"
       className="border-r"
     >
+        <SidebarHeader>
+            <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
+                <Building2 className="h-6 w-6 text-primary"/>
+                <span className="">Metoxi</span>
+            </Link>
+        </SidebarHeader>
       <SidebarContent className="p-2">
         <Accordion type="multiple" className="w-full">
           {navItems.map((item, index) =>

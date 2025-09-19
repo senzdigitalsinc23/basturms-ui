@@ -48,14 +48,12 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <SidebarNav />
-      <div className="sm:ml-[var(--sidebar-width-icon)]">
-        <SidebarInset>
-          <DashboardHeader />
-          <main className="flex-1 p-4 md:p-6 bg-background">
-            {children}
-          </main>
-        </SidebarInset>
-      </div>
+      <SidebarInset>
+        <DashboardHeader />
+        <main className="flex-1 p-4 md:p-6 bg-background">
+          {children}
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }

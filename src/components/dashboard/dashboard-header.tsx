@@ -2,7 +2,7 @@
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserNav } from './user-nav';
 import { Input } from '../ui/input';
-import { Search, Bell, Building2 } from 'lucide-react';
+import { Search, Bell, LayoutDashboard } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 
@@ -11,10 +11,10 @@ export function DashboardHeader() {
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden"/>
-        <Link href="/dashboard" className="hidden items-center gap-2 font-bold text-lg md:flex">
-            <Building2 className="h-6 w-6 text-primary"/>
-            <span className="">Metoxi</span>
-        </Link>
+        <div className="hidden items-center gap-2 font-bold text-lg md:flex">
+            <LayoutDashboard className="h-6 w-6 text-primary"/>
+            <span className="">Dashboard</span>
+        </div>
       </div>
 
       <div className="flex-1 flex justify-center">
