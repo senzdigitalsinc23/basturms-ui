@@ -20,6 +20,7 @@ export function UserManagement() {
     if(currentUser) {
         addAuditLog({
             user: currentUser.email,
+            username: currentUser.username,
             action: 'Create User',
             details: `Created user ${newUser.email} with role ${newUser.role}`,
         });
@@ -32,6 +33,7 @@ export function UserManagement() {
     if(currentUser) {
         addAuditLog({
             user: currentUser.email,
+            username: currentUser.username,
             action: 'Update User',
             details: `Updated user ${updated.email}`,
         });
@@ -45,6 +47,7 @@ export function UserManagement() {
         if (currentUser) {
             addAuditLog({
                 user: currentUser.email,
+                username: currentUser.username,
                 action: 'Toggle User Status',
                 details: `User ${updatedUser.email} status changed to ${updatedUser.status}`,
             });
@@ -58,6 +61,7 @@ export function UserManagement() {
         const user = users.find(u => u.id === userId);
         addAuditLog({
             user: currentUser.email,
+            username: currentUser.username,
             action: 'Reset Password',
             details: `Reset password for user ${user?.email}`,
         });

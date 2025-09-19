@@ -34,6 +34,8 @@ export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'timestamp', desc: true },
   ]);
+  const [globalFilter, setGlobalFilter] = useState('');
+
 
   const table = useReactTable({
     data,
@@ -44,9 +46,12 @@ export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
+    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
       columnFilters,
+      globalFilter,
     },
   });
 
@@ -54,10 +59,10 @@ export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Input
-          placeholder="Filter by user email..."
-          value={(table.getColumn('user')?.getFilterValue() as string) ?? ''}
+          placeholder="Filter by user, email, or action..."
+          value={globalFilter ?? ''}
           onChange={(event) =>
-            table.getColumn('user')?.setFilterValue(event.target.value)
+            setGlobalFilter(event.target.value)
           }
           className="max-w-sm"
         />

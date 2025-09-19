@@ -50,7 +50,8 @@ export interface UserStorage extends Omit<User, 'role'> {}
 export interface AuditLog {
   id: string;
   timestamp: string;
-  user: string;
+  user: string; // user email
+  username: string;
   action: string;
   details: string;
 }
