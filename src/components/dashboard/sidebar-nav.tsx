@@ -64,18 +64,15 @@ export function SidebarNav() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={{ children: item.label, side: 'right' }}
-                >
-                  <a>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </a>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton
+                as={Link}
+                href={item.href}
+                isActive={pathname === item.href}
+                tooltip={{ children: item.label, side: 'right' }}
+              >
+                <item.icon />
+                <span>{item.label}</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -83,14 +80,14 @@ export function SidebarNav() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-             <Link href="#" passHref legacyBehavior>
-                <SidebarMenuButton asChild tooltip={{ children: 'Settings', side: 'right' }}>
-                  <a>
-                    <Settings />
-                    <span>Settings</span>
-                  </a>
-                </SidebarMenuButton>
-              </Link>
+            <SidebarMenuButton
+              as={Link}
+              href="#"
+              tooltip={{ children: 'Settings', side: 'right' }}
+            >
+              <Settings />
+              <span>Settings</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={logout} tooltip={{ children: 'Logout', side: 'right' }}>
