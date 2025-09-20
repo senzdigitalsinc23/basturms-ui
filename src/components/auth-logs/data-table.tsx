@@ -25,7 +25,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useState } from 'react';
 import { AuthLog } from '@/lib/types';
-import { X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 
 interface AuthLogDataTableProps {
@@ -145,23 +145,35 @@ export function AuthLogDataTable({ columns, data }: AuthLogDataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
+      <div className="flex items-center justify-between py-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {table.getRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of {table.getFilteredRowModel().rows.length} logs
+        </div>
+        <div className="flex items-center space-x-4">
+            <span className="text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+            </span>
+            <div className="flex items-center space-x-2">
+                <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+                </Button>
+                <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                >
+                Next
+                <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
       </div>
     </div>
   );
