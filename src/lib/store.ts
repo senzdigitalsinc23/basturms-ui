@@ -166,7 +166,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
   const now = new Date().toISOString();
-  const nextId = users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id))) + 1).toString() : '1';
+  const nextId = users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1).toString() : '1';
 
   const newUser: UserStorage = {
     ...user,
@@ -231,7 +231,7 @@ export const resetPassword = (userId: string, newPassword: string): boolean => {
 export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KEY, []);
 export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>): void => {
   const logs = getAuditLogs();
-  const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id))) + 1).toString() : '1';
+  const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
   const newLog: AuditLog = {
     ...log,
     id: nextId,
