@@ -91,6 +91,7 @@ const menuItems: Record<Role, NavItem[]> = {
       icon: GraduationCap,
       items: [
         { href: '/student-management/students', label: 'Students' },
+        { href: '/student-management/promotions', label: 'Promotion/Graduation' },
         { href: '/#', label: 'Add Student' },
         { href: '/#', label: 'Classes' },
       ],

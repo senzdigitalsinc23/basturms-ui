@@ -561,3 +561,43 @@ export const updateHealthRecords = (studentId: string, healthRecords: HealthReco
     }
     return null;
 }
+
+export const promoteStudents = (studentIds: string[], newClassId: string, editorId: string): number => {
+    const profiles = getStudentProfiles();
+    let updatedCount = 0;
+    const now = new Date().toISOString();
+
+    profiles.forEach(profile => {
+        if (studentIds.includes(profile.student.student_no)) {
+            profile.admissionDetails.class_assigned = newClassId;
+            profile.student.updated_at = now;
+            profile.student.updated_by = editorId;
+            updatedCount++;
+        }
+    });
+
+    if (updatedCount > 0) {
+        saveToStorage(STUDENTS_KEY, profiles);
+    }
+    return updatedCount;
+}
+
+export const graduateStudents = (studentIds: string[], editorId: string): number => {
+    const profiles = getStudentProfiles();
+    let updatedCount = 0;
+    const now = new Date().toISOString();
+
+    profiles.forEach(profile => {
+        if (studentIds.includes(profile.student.student_no)) {
+            profile.admissionDetails.admission_status = 'Graduated';
+            profile.student.updated_at = now;
+            profile.student.updated_by = editorId;
+            updatedCount++;
+        }
+    });
+
+    if (updatedCount > 0) {
+        saveToStorage(STUDENTS_KEY, profiles);
+    }
+    return updatedCount;
+}
