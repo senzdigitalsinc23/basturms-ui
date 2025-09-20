@@ -65,8 +65,8 @@ export function HealthRecordsForm({ onSubmit, defaultValues }: HealthRecordsForm
           render={({ field }) => (
             <FormItem>
               <FormLabel>Blood Group</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
-                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Select Blood Group" /></SelectTrigger></FormControl>
                 <SelectContent>
                   {ALL_BLOOD_GROUPS.map(group => <SelectItem key={group} value={group}>{group}</SelectItem>)}
                 </SelectContent>
