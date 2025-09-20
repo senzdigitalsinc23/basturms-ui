@@ -55,15 +55,27 @@ export function StudentManagement() {
     if (!currentUser) return;
     try {
         let createdCount = 0;
-        importedData.forEach(row => {
+        importedData.forEach((row, index) => {
             // Very basic validation
             if (row.first_name && row.last_name && row.enrollment_date && row.class_assigned) {
+                const enrollmentDate = new Date(row.enrollment_date);
+                const dobDate = new Date(row.dob);
+
+                if (isNaN(enrollmentDate.getTime())) {
+                    console.error(`Skipping row ${index + 2} due to invalid enrollment_date:`, row.enrollment_date);
+                    return;
+                }
+                 if (isNaN(dobDate.getTime())) {
+                    console.error(`Skipping row ${index + 2} due to invalid dob:`, row.dob);
+                    return;
+                }
+
                 const profileData: Parameters<typeof handleAddStudent>[0] = {
                     student: {
                         first_name: row.first_name,
                         last_name: row.last_name,
                         other_name: row.other_name,
-                        dob: new Date(row.dob).toISOString(),
+                        dob: dobDate.toISOString(),
                         gender: row.gender,
                     },
                     contactDetails: {
@@ -87,7 +99,7 @@ export function StudentManagement() {
                         emergency_email: row.emergency_email,
                     },
                     admissionDetails: {
-                        enrollment_date: new Date(row.enrollment_date).toISOString(),
+                        enrollment_date: enrollmentDate.toISOString(),
                         class_assigned: row.class_assigned,
                         admission_status: row.admission_status || 'Admitted',
                     }
