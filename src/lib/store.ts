@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -100,22 +101,23 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
 };
 
 const getInitialStudentProfiles = (): StudentProfile[] => {
-    const now = new Date().toISOString();
-    const adminUser = '1'; // Assuming Admin User with ID '1' creates these
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const adminUser = '1'; 
     return [
         {
-            student: { student_no: 'STU001', first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now, created_by: adminUser, updated_at: now, updated_by: adminUser },
-            contactDetails: { student_no: 'STU001', email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
-            guardianInfo: { student_no: 'STU001', guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother' },
-            emergencyContact: { student_no: 'STU001', emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
-            admissionDetails: { student_no: 'STU001', admission_no: 'ADM001', enrollment_date: now, class_assigned: 'Grade 5', admission_status: 'Admitted' }
+            student: { student_no: `WR-TK001-LBA${year}001`, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
+            contactDetails: { student_no: `WR-TK001-LBA${year}001`, email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
+            guardianInfo: { student_no: `WR-TK001-LBA${year}001`, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother' },
+            emergencyContact: { student_no: `WR-TK001-LBA${year}001`, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
+            admissionDetails: { student_no: `WR-TK001-LBA${year}001`, admission_no: `ADM${year}001`, enrollment_date: now.toISOString(), class_assigned: 'Grade 5', admission_status: 'Admitted' }
         },
         {
-            student: { student_no: 'STU002', first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now, created_by: adminUser, updated_at: now, updated_by: adminUser },
-            contactDetails: { student_no: 'STU002', email: 'mary.smith@example.com', phone: '123-456-7891', country_id: '1', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa' },
-            guardianInfo: { student_no: 'STU002', guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father' },
-            emergencyContact: { student_no: 'STU002', emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
-            admissionDetails: { student_no: 'STU002', admission_no: 'ADM002', enrollment_date: now, class_assigned: 'Grade 4', admission_status: 'Admitted' }
+            student: { student_no: `WR-TK001-LBA${year}002`, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
+            contactDetails: { student_no: `WR-TK001-LBA${year}002`, email: 'mary.smith@example.com', phone: '123-456-7891', country_id: '1', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa' },
+            guardianInfo: { student_no: `WR-TK001-LBA${year}002`, guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father' },
+            emergencyContact: { student_no: `WR-TK001-LBA${year}002`, emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
+            admissionDetails: { student_no: `WR-TK001-LBA${year}002`, admission_no: `ADM${year}002`, enrollment_date: now.toISOString(), class_assigned: 'Grade 4', admission_status: 'Admitted' }
         }
     ]
 }
@@ -293,22 +295,30 @@ export const getStudentProfiles = (): StudentProfile[] => getFromStorage<Student
 
 export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>, creatorId: string): StudentProfile => {
     const profiles = getStudentProfiles();
-    const now = new Date().toISOString();
+    const now = new Date();
     
-    // Generate a new student number
-    const lastStudentNo = profiles.length > 0 ? Math.max(...profiles.map(p => parseInt(p.student.student_no.replace('STU', ''), 10))) : 0;
-    const newStudentNo = `STU${(lastStudentNo + 1).toString().padStart(3, '0')}`;
+    // Determine admission year and format it
+    const admissionYear = new Date(profile.admissionDetails.enrollment_date).getFullYear();
+    const yearYY = admissionYear.toString().slice(-2);
 
-    // Generate a new admission number
-    const lastAdmissionNo = profiles.length > 0 ? Math.max(...profiles.map(p => parseInt(p.admissionDetails.admission_no.replace('ADM', ''), 10))) : 0;
-    const newAdmissionNo = `ADM${(lastAdmissionNo + 1).toString().padStart(3, '0')}`;
+    // Find the number of students already admitted in that year
+    const studentsInYear = profiles.filter(p => {
+        const pYear = new Date(p.admissionDetails.enrollment_date).getFullYear();
+        return pYear === admissionYear;
+    });
+    const nextInYear = studentsInYear.length + 1;
+    const nextNumberPadded = nextInYear.toString().padStart(3, '0');
+
+    // Generate the new student and admission numbers
+    const newStudentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
+    const newAdmissionNo = `ADM${yearYY}${nextNumberPadded}`;
     
     const newProfile: StudentProfile = {
         student: {
             ...profile.student,
             student_no: newStudentNo,
-            created_at: now,
-            updated_at: now,
+            created_at: now.toISOString(),
+            updated_at: now.toISOString(),
             created_by: creatorId,
             updated_by: creatorId,
         },
@@ -344,3 +354,6 @@ export const updateStudentProfile = (updatedProfile: StudentProfile, editorId: s
     }
     return updatedProfile;
 };
+
+
+    
