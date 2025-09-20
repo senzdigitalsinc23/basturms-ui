@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -12,6 +13,10 @@ import {
   StudentProfile,
   Class,
   AdmissionStatus,
+  AcademicRecord,
+  DisciplinaryRecord,
+  CommunicationLog,
+  UploadedDocument,
 } from './types';
 
 const USERS_KEY = 'campusconnect_users';
@@ -406,24 +411,44 @@ export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student
     return newProfile;
 };
 
-export const updateStudentProfile = (updatedProfile: StudentProfile, editorId: string): StudentProfile => {
+export const updateStudentProfile = (studentId: string, updatedData: Partial<StudentProfile>, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === updatedProfile.student.student_no);
-    const now = new Date().toISOString();
-
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    
     if (profileIndex !== -1) {
-        profiles[profileIndex] = {
-            ...updatedProfile,
+        const now = new Date().toISOString();
+        const existingProfile = profiles[profileIndex];
+
+        const newProfile: StudentProfile = {
+            ...existingProfile,
+            ...updatedData,
             student: {
-                ...updatedProfile.student,
+                ...existingProfile.student,
+                ...updatedData.student,
                 updated_at: now,
                 updated_by: editorId,
-            }
+            },
+            contactDetails: {
+                ...existingProfile.contactDetails,
+                ...updatedData.contactDetails,
+            },
+            guardianInfo: {
+                ...existingProfile.guardianInfo,
+                ...updatedData.guardianInfo,
+            },
+             admissionDetails: {
+                ...existingProfile.admissionDetails,
+                ...updatedData.admissionDetails,
+            },
         };
+        
+        profiles[profileIndex] = newProfile;
         saveToStorage(STUDENTS_KEY, profiles);
+        return newProfile;
     }
-    return updatedProfile;
+    return null;
 };
+
 
 export const updateStudentStatus = (studentId: string, status: AdmissionStatus, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfiles();

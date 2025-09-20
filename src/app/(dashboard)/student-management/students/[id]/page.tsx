@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument } from '@/lib/types';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog } from '@/lib/store';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument, Class } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,10 @@ import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shie
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { EditStudentForm } from '@/components/student-management/profile/edit-student-form';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 const statusColors: Record<string, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -92,22 +97,52 @@ export default function StudentProfilePage() {
     const params = useParams();
     const studentId = params.id as string;
     const [profile, setProfile] = useState<StudentProfile | null>(null);
+    const [classes, setClasses] = useState<Class[]>([]);
     const [className, setClassName] = useState('');
     const [age, setAge] = useState<number | null>(null);
+    const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+    const { user: currentUser } = useAuth();
+    const { toast } = useToast();
 
-    useEffect(() => {
+    const fetchProfile = () => {
         if (studentId) {
             const studentProfile = getStudentProfileById(studentId);
             setProfile(studentProfile || null);
+            const allClasses = getClasses();
+            setClasses(allClasses);
 
             if(studentProfile) {
-                const classes = getClasses();
-                const studentClass = classes.find(c => c.id === studentProfile.admissionDetails.class_assigned);
+                const studentClass = allClasses.find(c => c.id === studentProfile.admissionDetails.class_assigned);
                 setClassName(studentClass?.name || 'N/A');
                 setAge(differenceInYears(new Date(), new Date(studentProfile.student.dob)));
             }
         }
+    }
+
+    useEffect(() => {
+        fetchProfile();
     }, [studentId]);
+
+    const handleUpdateProfile = (values: Partial<StudentProfile>) => {
+        if (!currentUser || !profile) return;
+        const updatedProfile = updateStudentProfile(profile.student.student_no, values, currentUser.id);
+        if (updatedProfile) {
+            setProfile(updatedProfile);
+            fetchProfile(); // re-fetch to ensure all derived state is updated
+            addAuditLog({
+                user: currentUser.email,
+                name: currentUser.name,
+                action: 'Update Student Profile',
+                details: `Updated details for student ${updatedProfile.student.first_name} ${updatedProfile.student.last_name}`,
+            });
+            toast({
+                title: 'Profile Updated',
+                description: "The student's profile has been successfully updated.",
+            });
+            setIsEditFormOpen(false);
+        }
+    };
+
 
     if (!profile) {
         return (
@@ -137,11 +172,26 @@ export default function StudentProfilePage() {
                         <p className="text-muted-foreground">Class: {className}</p>
                     </div>
                     <div>
-                        <Button asChild>
-                            <Link href="#">
-                                <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                            </Link>
-                        </Button>
+                         <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                            <DialogTrigger asChild>
+                                <Button>
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>Edit Student Profile</DialogTitle>
+                                    <DialogDescription>
+                                        Update the details for {fullName}.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <EditStudentForm
+                                    defaultValues={profile}
+                                    classes={classes}
+                                    onSubmit={handleUpdateProfile}
+                                />
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </CardHeader>
             </Card>
