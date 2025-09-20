@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -8,12 +9,15 @@ import {
   RoleStorage,
   UserStorage,
   AuthLog,
+  StudentProfile,
 } from './types';
 
 const USERS_KEY = 'campusconnect_users';
 const ROLES_KEY = 'campusconnect_roles';
 const LOGS_KEY = 'campusconnect_logs';
 const AUTH_LOGS_KEY = 'campusconnect_auth_logs';
+const STUDENTS_KEY = 'campusconnect_students';
+
 
 const getInitialRoles = (): RoleStorage[] => {
   return ALL_ROLES.map((role, index) => ({
@@ -95,6 +99,27 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
   ];
 };
 
+const getInitialStudentProfiles = (): StudentProfile[] => {
+    const now = new Date().toISOString();
+    const adminUser = '1'; // Assuming Admin User with ID '1' creates these
+    return [
+        {
+            student: { student_no: 'STU001', first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now, created_by: adminUser, updated_at: now, updated_by: adminUser },
+            contactDetails: { student_no: 'STU001', email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
+            guardianInfo: { student_no: 'STU001', guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother' },
+            emergencyContact: { student_no: 'STU001', emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
+            admissionDetails: { student_no: 'STU001', admission_no: 'ADM001', enrollment_date: now, class_assigned: 'Grade 5', admission_status: 'Admitted' }
+        },
+        {
+            student: { student_no: 'STU002', first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now, created_by: adminUser, updated_at: now, updated_by: adminUser },
+            contactDetails: { student_no: 'STU002', email: 'mary.smith@example.com', phone: '123-456-7891', country_id: '1', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa' },
+            guardianInfo: { student_no: 'STU002', guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father' },
+            emergencyContact: { student_no: 'STU002', emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
+            admissionDetails: { student_no: 'STU002', admission_no: 'ADM002', enrollment_date: now, class_assigned: 'Grade 4', admission_status: 'Admitted' }
+        }
+    ]
+}
+
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') {
     return defaultValue;
@@ -133,6 +158,9 @@ export const initializeStore = () => {
     }
      if (!window.localStorage.getItem(AUTH_LOGS_KEY)) {
       saveToStorage(AUTH_LOGS_KEY, []);
+    }
+    if (!window.localStorage.getItem(STUDENTS_KEY)) {
+        saveToStorage(STUDENTS_KEY, getInitialStudentProfiles());
     }
   }
 };
@@ -259,3 +287,60 @@ export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>
     };
     saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
 }
+
+// Student Management Functions
+export const getStudentProfiles = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
+
+export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>, creatorId: string): StudentProfile => {
+    const profiles = getStudentProfiles();
+    const now = new Date().toISOString();
+    
+    // Generate a new student number
+    const lastStudentNo = profiles.length > 0 ? Math.max(...profiles.map(p => parseInt(p.student.student_no.replace('STU', ''), 10))) : 0;
+    const newStudentNo = `STU${(lastStudentNo + 1).toString().padStart(3, '0')}`;
+
+    // Generate a new admission number
+    const lastAdmissionNo = profiles.length > 0 ? Math.max(...profiles.map(p => parseInt(p.admissionDetails.admission_no.replace('ADM', ''), 10))) : 0;
+    const newAdmissionNo = `ADM${(lastAdmissionNo + 1).toString().padStart(3, '0')}`;
+    
+    const newProfile: StudentProfile = {
+        student: {
+            ...profile.student,
+            student_no: newStudentNo,
+            created_at: now,
+            updated_at: now,
+            created_by: creatorId,
+            updated_by: creatorId,
+        },
+        contactDetails: { ...profile.contactDetails, student_no: newStudentNo },
+        guardianInfo: { ...profile.guardianInfo, student_no: newStudentNo },
+        emergencyContact: { ...profile.emergencyContact, student_no: newStudentNo },
+        admissionDetails: { 
+            ...profile.admissionDetails, 
+            student_no: newStudentNo,
+            admission_no: newAdmissionNo 
+        },
+    };
+
+    saveToStorage(STUDENTS_KEY, [...profiles, newProfile]);
+    return newProfile;
+};
+
+export const updateStudentProfile = (updatedProfile: StudentProfile, editorId: string): StudentProfile => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === updatedProfile.student.student_no);
+    const now = new Date().toISOString();
+
+    if (profileIndex !== -1) {
+        profiles[profileIndex] = {
+            ...updatedProfile,
+            student: {
+                ...updatedProfile.student,
+                updated_at: now,
+                updated_by: editorId,
+            }
+        };
+        saveToStorage(STUDENTS_KEY, profiles);
+    }
+    return updatedProfile;
+};
