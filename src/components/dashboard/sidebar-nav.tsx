@@ -57,7 +57,9 @@ const SidebarAccordionTrigger = React.forwardRef<
     )}
     {...props}
   >
-    {children}
+    <div className="flex gap-2 items-center">
+      {children}
+    </div>
   </AccordionTrigger>
 ));
 SidebarAccordionTrigger.displayName = AccordionTrigger.displayName;
@@ -86,15 +88,6 @@ type NavItem = {
 const menuItems: Record<Role, NavItem[]> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/users', label: 'User Management', icon: Users },
-    {
-      label: 'Logs',
-      icon: History,
-      items: [
-        { href: '/audit-logs', label: 'Audit Logs' },
-        { href: '/auth-logs', label: 'Authentication Logs' },
-      ],
-    },
     {
       label: 'Student Management',
       icon: GraduationCap,
@@ -114,10 +107,19 @@ const menuItems: Record<Role, NavItem[]> = {
       ],
     },
     { href: '/#', label: 'Attendance', icon: Calendar },
+    { href: '/#', label: 'Timetable', icon: Calendar },
     {
       label: 'Announcements',
       icon: Megaphone,
       items: [{ href: '/#', label: 'Generate Notice' }],
+    },
+     {
+      label: 'Logs',
+      icon: History,
+      items: [
+        { href: '/audit-logs', label: 'Audit Logs' },
+        { href: '/auth-logs', label: 'Authentication Logs' },
+      ],
     },
   ],
   Teacher: [
