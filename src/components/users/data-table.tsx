@@ -8,7 +8,9 @@ import {
   useReactTable,
   ColumnFiltersState,
   getSortedRowModel,
-  SortingState
+  SortingState,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
 } from '@tanstack/react-table';
 
 import {
@@ -31,14 +33,26 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { UserForm } from './user-form';
-import { User } from '@/lib/types';
-import { PlusCircle } from 'lucide-react';
+import { User, ALL_ROLES } from '@/lib/types';
+import { PlusCircle, X } from 'lucide-react';
+import { DataTableFacetedFilter } from './data-table-faceted-filter';
 
 interface UserDataTableProps {
   columns: ColumnDef<User>[];
   data: User[];
   onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string }) => void;
 }
+
+const statusOptions = [
+    { value: 'active', label: 'Active' },
+    { value: 'frozen', label: 'Frozen' },
+]
+
+const roleOptions = ALL_ROLES.map(role => ({
+    value: role,
+    label: role,
+}));
+
 
 export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -49,13 +63,15 @@ export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
   const table = useReactTable({
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
     onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
     state: {
       sorting,
       columnFilters,
@@ -63,25 +79,53 @@ export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
     },
   });
 
+  const isFiltered = table.getState().columnFilters.length > 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Input
-          placeholder="Filter by name, email, or role..."
-          value={globalFilter ?? ''}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm"
-        />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-1 items-center space-x-2">
+          <Input
+            placeholder="Filter by name or email..."
+            value={globalFilter ?? ''}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+          {table.getColumn("role") && (
+            <DataTableFacetedFilter
+              column={table.getColumn("role")}
+              title="Role"
+              options={roleOptions}
+            />
+          )}
+          {table.getColumn("status") && (
+            <DataTableFacetedFilter
+              column={table.getColumn("status")}
+              title="Status"
+              options={statusOptions}
+            />
+          )}
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              onClick={() => table.resetColumnFilters()}
+              className="h-8 px-2 lg:px-3"
+            >
+              Reset
+              <X className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button size="sm">
               <PlusCircle className="mr-2 h-4 w-4" />
               Create User
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Create User</DialogTitle>
+              <DialogTitle>Create New User</DialogTitle>
               <DialogDescription>
                 Fill in the details to create a new user account.
               </DialogDescription>

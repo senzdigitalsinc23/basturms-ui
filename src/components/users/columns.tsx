@@ -101,6 +101,9 @@ export const columns = ({
 
       return <Badge variant={variant as any}>{role}</Badge>;
     },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
   },
   {
     accessorKey: 'status',
@@ -112,6 +115,9 @@ export const columns = ({
           {status}
         </Badge>
       );
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
     },
   },
   {
@@ -161,9 +167,9 @@ export const columns = ({
             <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                    <DialogTitle>Edit User</DialogTitle>
+                    <DialogTitle>Edit User Profile</DialogTitle>
                     <DialogDescription>
-                        Make changes to the user's profile.
+                        Make changes to {user.name}'s profile here.
                     </DialogDescription>
                     </DialogHeader>
                     <UserForm
