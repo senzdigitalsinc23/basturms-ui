@@ -13,8 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowRight, GraduationCap, Info, Loader2 } from 'lucide-react';
+import { ArrowRight, GraduationCap, Info, Loader2, ChevronsRight } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 type StudentForPromotion = {
     id: string;
@@ -29,6 +31,8 @@ export default function PromotionsPage() {
     const [studentsInClass, setStudentsInClass] = useState<StudentForPromotion[]>([]);
     const [selectedStudents, setSelectedStudents] = useState<Record<string, boolean>>({});
     const [isLoading, setIsLoading] = useState(false);
+    const [isSpecialPromotion, setIsSpecialPromotion] = useState(false);
+    const [specialPromotionReason, setSpecialPromotionReason] = useState('');
     
     const { user } = useAuth();
     const { toast } = useToast();
@@ -83,13 +87,25 @@ export default function PromotionsPage() {
     }
     
     const studentIdsToPromote = Object.keys(selectedStudents);
+    
+    const fromClassIndex = classes.findIndex(c => c.id === fromClass);
+    const expectedToClass = classes[fromClassIndex + 1];
+
+    const isInvalidStandardPromotion = !isSpecialPromotion && toClass && expectedToClass && toClass !== expectedToClass.id;
 
     const handlePromotion = async () => {
         if (!user || !fromClass || !toClass || studentIdsToPromote.length === 0) return;
+        if (isSpecialPromotion && !specialPromotionReason) {
+             toast({
+                variant: 'destructive',
+                title: 'Reason Required',
+                description: `A reason must be provided for a special promotion.`,
+            });
+            return;
+        }
 
         setIsLoading(true);
         
-        // Simulate async operation
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         const updatedCount = promoteStudents(studentIdsToPromote, toClass, user.id);
@@ -98,6 +114,8 @@ export default function PromotionsPage() {
         setFromClass(undefined);
         setToClass(undefined);
         setSelectedStudents({});
+        setIsSpecialPromotion(false);
+        setSpecialPromotionReason('');
 
         toast({
             title: 'Promotion Successful',
@@ -107,8 +125,8 @@ export default function PromotionsPage() {
         addAuditLog({
             user: user.email,
             name: user.name,
-            action: 'Promote Students',
-            details: `Promoted ${updatedCount} students from class ID ${fromClass} to ${toClass}.`,
+            action: isSpecialPromotion ? 'Special Promotion' : 'Promote Students',
+            details: `Promoted ${updatedCount} students from class ID ${fromClass} to ${toClass}. ${isSpecialPromotion ? `Reason: ${specialPromotionReason}` : ''}`,
         });
     }
 
@@ -136,7 +154,11 @@ export default function PromotionsPage() {
         });
     }
     
-    const isPromotionDisabled = isLoading || !fromClass || !toClass || studentIdsToPromote.length === 0 || fromClass === toClass;
+    let isPromotionDisabled = isLoading || !fromClass || !toClass || studentIdsToPromote.length === 0 || fromClass === toClass || isInvalidStandardPromotion;
+    if (isSpecialPromotion) {
+        isPromotionDisabled = isLoading || !fromClass || !toClass || studentIdsToPromote.length === 0 || fromClass === toClass || !specialPromotionReason;
+    }
+    
     const isGraduationDisabled = isLoading || !fromClass || fromClass !== FINAL_CLASS_ID || studentIdsToPromote.length === 0;
 
     return (
@@ -151,8 +173,8 @@ export default function PromotionsPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>1. Select Classes</CardTitle>
-                        <CardDescription>Choose the class to promote from and the class to promote to.</CardDescription>
+                        <CardTitle>1. Select Classes &amp; Options</CardTitle>
+                        <CardDescription>Choose the class to promote from, the class to promote to, and any special options.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid md:grid-cols-3 items-center gap-4">
@@ -165,18 +187,21 @@ export default function PromotionsPage() {
                                 </SelectContent>
                             </Select>
                             <div className="flex justify-center">
-                                <ArrowRight className="h-6 w-6 text-muted-foreground" />
+                                {isSpecialPromotion ? <ChevronsRight className="h-6 w-6 text-primary" /> : <ArrowRight className="h-6 w-6 text-muted-foreground" />}
                             </div>
-                            <Select value={toClass} onValueChange={setToClass}>
+                             <Select value={toClass} onValueChange={setToClass} disabled={!fromClass}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="To Class" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    {classes.filter(c => {
+                                        if (isSpecialPromotion) return c.id !== fromClass;
+                                        return expectedToClass ? c.id === expectedToClass.id : c.id !== fromClass;
+                                    }).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
-                         {fromClass && fromClass === toClass && (
+                         {(fromClass && fromClass === toClass) && (
                             <Alert variant="destructive" className="mt-4">
                                 <Info className="h-4 w-4" />
                                 <AlertTitle>Invalid Selection</AlertTitle>
@@ -184,6 +209,27 @@ export default function PromotionsPage() {
                                     "From" and "To" classes cannot be the same for promotion.
                                 </AlertDescription>
                             </Alert>
+                        )}
+                        {isInvalidStandardPromotion && (
+                            <Alert variant="destructive" className="mt-4">
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>Invalid Promotion Sequence</AlertTitle>
+                                <AlertDescription>
+                                    Standard promotion must be to the next sequential class. For class jumps, please use the "Special Promotion" option.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        <div className="flex items-center space-x-2 mt-4">
+                            <Checkbox id="special-promotion" checked={isSpecialPromotion} onCheckedChange={(checked) => setIsSpecialPromotion(!!checked)} disabled={!fromClass} />
+                            <Label htmlFor="special-promotion" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Special Promotion (Allow Class Jump)
+                            </Label>
+                        </div>
+                        {isSpecialPromotion && fromClass && (
+                            <div className="mt-4 space-y-2">
+                                <Label htmlFor="special-promotion-reason">Reason for Special Promotion</Label>
+                                <Textarea id="special-promotion-reason" value={specialPromotionReason} onChange={(e) => setSpecialPromotionReason(e.target.value)} placeholder="e.g., Student has shown exceptional academic performance and is ready for an advanced class." />
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -240,7 +286,7 @@ export default function PromotionsPage() {
                              {fromClass === FINAL_CLASS_ID ? (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button disabled={isGraduationDisabled}>
+                                        <Button disabled={isGraduationDisabled} size="sm">
                                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             <GraduationCap className="mr-2 h-4 w-4" />
                                             Graduate Selected ({studentIdsToPromote.length})
@@ -262,8 +308,9 @@ export default function PromotionsPage() {
                              ) : (
                                  <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button disabled={isPromotionDisabled}>
+                                        <Button disabled={isPromotionDisabled} size="sm">
                                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            {isSpecialPromotion && <ChevronsRight className="mr-2 h-4 w-4" />}
                                             Promote Selected ({studentIdsToPromote.length})
                                         </Button>
                                     </AlertDialogTrigger>
@@ -288,4 +335,3 @@ export default function PromotionsPage() {
         </ProtectedRoute>
     );
 }
-
