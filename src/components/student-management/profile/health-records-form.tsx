@@ -65,7 +65,7 @@ export function HealthRecordsForm({ onSubmit, defaultValues }: HealthRecordsForm
           render={({ field }) => (
             <FormItem>
               <FormLabel>Blood Group</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                 <SelectContent>
                   {ALL_BLOOD_GROUPS.map(group => <SelectItem key={group} value={group}>{group}</SelectItem>)}
@@ -118,7 +118,7 @@ export function HealthRecordsForm({ onSubmit, defaultValues }: HealthRecordsForm
                                 control={form.control}
                                 name={`vaccinations.${index}.date`}
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="flex flex-col">
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -129,7 +129,15 @@ export function HealthRecordsForm({ onSubmit, defaultValues }: HealthRecordsForm
                                                 </FormControl>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                                <Calendar 
+                                                    mode="single" 
+                                                    selected={field.value} 
+                                                    onSelect={field.onChange} 
+                                                    captionLayout="dropdown-buttons"
+                                                    fromYear={1990}
+                                                    toYear={new Date().getFullYear()}
+                                                    initialFocus 
+                                                />
                                             </PopoverContent>
                                         </Popover>
                                         <FormMessage />
