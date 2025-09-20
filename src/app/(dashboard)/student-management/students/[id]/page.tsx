@@ -4,15 +4,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument, Class } from '@/lib/types';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords } from '@/lib/store';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -25,6 +25,7 @@ import { DisciplinaryRecordForm } from '@/components/student-management/profile/
 import { AttendanceRecordForm } from '@/components/student-management/profile/attendance-record-form';
 import { CommunicationLogForm } from '@/components/student-management/profile/communication-log-form';
 import { DocumentUploadForm } from '@/components/student-management/profile/document-upload-form';
+import { HealthRecordsForm } from '@/components/student-management/profile/health-records-form';
 
 const statusColors: Record<string, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -106,12 +107,13 @@ export default function StudentProfilePage() {
     const [age, setAge] = useState<number | null>(null);
     const [isEditFormOpen, setIsEditFormOpen] = useState(false);
     
-    // Dialog states for adding records
+    // Dialog states
     const [isAcademicFormOpen, setIsAcademicFormOpen] = useState(false);
     const [isDisciplinaryFormOpen, setIsDisciplinaryFormOpen] = useState(false);
     const [isAttendanceFormOpen, setIsAttendanceFormOpen] = useState(false);
     const [isCommunicationFormOpen, setIsCommunicationFormOpen] = useState(false);
     const [isDocumentFormOpen, setIsDocumentFormOpen] = useState(false);
+    const [isHealthFormOpen, setIsHealthFormOpen] = useState(false);
     
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
@@ -154,6 +156,25 @@ export default function StudentProfilePage() {
             setIsEditFormOpen(false);
         }
     };
+    
+    const handleUpdateHealthRecords = (values: HealthRecords) => {
+        if (!currentUser || !profile) return;
+        const updatedProfile = updateHealthRecords(profile.student.student_no, values, currentUser.id);
+        if (updatedProfile) {
+            setProfile(updatedProfile);
+            addAuditLog({
+                user: currentUser.email,
+                name: currentUser.name,
+                action: 'Update Health Records',
+                details: `Updated health records for student ${updatedProfile.student.first_name} ${updatedProfile.student.last_name}`,
+            });
+            toast({
+                title: 'Health Records Updated',
+                description: "The student's health records have been successfully updated.",
+            });
+            setIsHealthFormOpen(false);
+        }
+    }
 
     const handleAddRecord = <T,>(
         addFunction: (studentId: string, record: T, editorId: string) => StudentProfile | null,
@@ -325,7 +346,7 @@ export default function StudentProfilePage() {
                 </TabsContent>
                  <TabsContent value="health" asChild>
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row justify-between items-start">
                            <div className="flex items-center gap-4">
                                 <HeartPulse className="h-6 w-6 text-primary" />
                                 <div>
@@ -333,15 +354,33 @@ export default function StudentProfilePage() {
                                     <CardDescription>Allergies, vaccinations, and other medical information.</CardDescription>
                                 </div>
                             </div>
+                             <Dialog open={isHealthFormOpen} onOpenChange={setIsHealthFormOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Health Records</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader><DialogTitle>Edit Health Records</DialogTitle></DialogHeader>
+                                    <HealthRecordsForm 
+                                        defaultValues={healthRecords}
+                                        onSubmit={handleUpdateHealthRecords}
+                                    />
+                                </DialogContent>
+                            </Dialog>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <h4 className="font-semibold mb-2">Allergies</h4>
-                                {healthRecords?.allergies?.length ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {healthRecords.allergies.map(allergy => <Badge key={allergy} variant="destructive">{allergy}</Badge>)}
-                                    </div>
-                                ) : <p className="text-sm text-muted-foreground">No known allergies.</p>}
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="font-semibold mb-2 flex items-center"><Droplet className="mr-2 h-4 w-4 text-destructive" /> Blood Group</h4>
+                                    <p className="text-lg font-bold">{healthRecords?.blood_group || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold mb-2">Allergies</h4>
+                                    {healthRecords?.allergies?.length ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            {healthRecords.allergies.map(allergy => <Badge key={allergy} variant="destructive">{allergy}</Badge>)}
+                                        </div>
+                                    ) : <p className="text-sm text-muted-foreground">No known allergies.</p>}
+                                </div>
                             </div>
                             <Separator />
                             <div>
@@ -445,7 +484,7 @@ export default function StudentProfilePage() {
                                 <TableCell>{rec.name}</TableCell>
                                 <TableCell>{rec.type}</TableCell>
                                 <TableCell>{format(new Date(rec.uploaded_at), 'do MMM, yyyy')}</TableCell>
-                                <TableCell><Button variant="link" asChild><Link href={rec.url}>View</Link></Button></TableCell>
+                                <TableCell><Button variant="link" asChild><Link href={rec.url} target="_blank" rel="noopener noreferrer">View</Link></Button></TableCell>
                             </TableRow>
                         )}
                         emptyMessage="No documents have been uploaded."

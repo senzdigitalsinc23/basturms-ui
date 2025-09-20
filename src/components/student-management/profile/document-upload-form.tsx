@@ -8,28 +8,62 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UploadedDocument } from '@/lib/types';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Document name is required.'),
   type: z.enum(['Birth Certificate', 'Transcript', 'Report Card', 'Admission Form', 'Admission Letter']),
-  url: z.string().url('A valid URL is required.').min(1, 'URL is required.'),
+  file: z.any().refine(files => files?.length === 1, 'File is required.'),
 });
 
-type FormValues = Omit<UploadedDocument, 'uploaded_at'> & {type: 'Birth Certificate' | 'Transcript' | 'Report Card' | 'Admission Form' | 'Admission Letter'};
+type FormValues = Omit<UploadedDocument, 'uploaded_at' | 'url'> & {type: 'Birth Certificate' | 'Transcript' | 'Report Card' | 'Admission Form' | 'Admission Letter', file: FileList};
 
 type DocumentUploadFormProps = {
   onSubmit: (values: UploadedDocument) => void;
 };
 
 export function DocumentUploadForm({ onSubmit }: DocumentUploadFormProps) {
+  const { toast } = useToast();
+  const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '', type: 'Admission Form', url: '' },
+    defaultValues: { name: '', type: 'Admission Form' },
   });
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFileDataUrl(reader.result as string);
+        };
+        reader.onerror = () => {
+            toast({
+                variant: "destructive",
+                title: "File Read Error",
+                description: "Could not read the selected file.",
+            });
+        }
+        reader.readAsDataURL(file);
+    }
+  };
+
+
   const handleSubmit = (values: FormValues) => {
+    if (!fileDataUrl) {
+        toast({
+            variant: "destructive",
+            title: "No File",
+            description: "Please select a file to upload.",
+        });
+        return;
+    }
     onSubmit({
-        ...values,
+        name: values.name,
+        type: values.type,
+        url: fileDataUrl,
         uploaded_at: new Date().toISOString(),
     });
   };
@@ -60,13 +94,25 @@ export function DocumentUploadForm({ onSubmit }: DocumentUploadFormProps) {
             <FormMessage />
           </FormItem>
         )} />
-         <FormField name="url" control={form.control} render={({ field }) => (
-          <FormItem>
-            <FormLabel>Document URL</FormLabel>
-            <FormControl><Input placeholder="https://example.com/document.pdf" {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
+         <FormField
+            control={form.control}
+            name="file"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Upload from PC</FormLabel>
+                <FormControl>
+                    <Input 
+                        type="file" 
+                        onChange={(e) => {
+                            field.onChange(e.target.files);
+                            handleFileChange(e);
+                        }}
+                    />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
         <div className="flex justify-end">
           <Button type="submit">Add Document</Button>
         </div>

@@ -135,6 +135,7 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
             emergencyContact: { student_no: student1StudentNo, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
             admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' },
             healthRecords: {
+                blood_group: 'O+',
                 allergies: ['Peanuts'],
                 vaccinations: [{ name: 'MMR', date: '2012-06-01' }, { name: 'Polio', date: '2013-08-15' }],
                 medical_notes: 'Requires an inhaler for exercise-induced asthma.'

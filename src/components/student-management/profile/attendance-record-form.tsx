@@ -53,7 +53,15 @@ export function AttendanceRecordForm({ onSubmit }: AttendanceRecordFormProps) {
                 </FormControl>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                <Calendar 
+                  mode="single" 
+                  selected={field.value} 
+                  onSelect={field.onChange}
+                  captionLayout="dropdown-buttons"
+                  fromYear={2015}
+                  toYear={new Date().getFullYear()}
+                  initialFocus 
+                />
               </PopoverContent>
             </Popover>
             <FormMessage />

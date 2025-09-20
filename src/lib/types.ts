@@ -2,6 +2,7 @@
 
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -139,7 +140,11 @@ export interface AdmissionDetails {
     admission_status: AdmissionStatus;
 }
 
+export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+export const ALL_BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
 export interface HealthRecords {
+    blood_group: BloodGroup;
     allergies?: string[];
     vaccinations?: { name: string; date: string }[];
     medical_notes?: string;
