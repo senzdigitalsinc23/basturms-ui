@@ -42,11 +42,11 @@ export function UserProfile({ user }: { user: User }) {
           </div>
            <div>
             <p className="font-medium text-muted-foreground">Account Status</p>
-            <p>
+            <div>
                 <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>
                     {user.status}
                 </Badge>
-            </p>
+            </div>
           </div>
           <div>
             <p className="font-medium text-muted-foreground">Super Admin</p>
