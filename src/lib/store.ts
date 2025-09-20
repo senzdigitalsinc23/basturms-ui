@@ -155,8 +155,8 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
                 { date: '2023-10-21', type: 'Phone Call', notes: 'Discussed absence with mother. Reason: family emergency.', with_whom: 'Jane Doe (Mother)' }
             ],
             uploadedDocuments: [
-                { name: 'Birth Certificate', url: '#', uploaded_at: '2024-03-15', type: 'Birth Certificate' },
-                { name: 'Admission Form', url: '#', uploaded_at: '2024-03-15', type: 'Admission Form' }
+                { name: 'Birth Certificate', url: '#', uploaded_at: '2024-03-15T10:00:00.000Z', type: 'Birth Certificate' },
+                { name: 'Admission Form', url: '#', uploaded_at: '2024-03-15T10:05:00.000Z', type: 'Admission Form' }
             ]
         },
         {
@@ -510,6 +510,29 @@ export const addCommunicationLog = (studentId: string, record: CommunicationLog,
 
 export const addUploadedDocument = (studentId: string, record: UploadedDocument, editorId: string) =>
     updateProfileSubArray(studentId, editorId, 'uploadedDocuments', record);
+    
+export const deleteUploadedDocument = (studentId: string, documentId: string, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+
+    if (profileIndex !== -1) {
+        const now = new Date().toISOString();
+        const profile = profiles[profileIndex];
+        
+        if (profile.uploadedDocuments) {
+            profile.uploadedDocuments = profile.uploadedDocuments.filter(doc => doc.uploaded_at !== documentId);
+        }
+
+        profile.student.updated_at = now;
+        profile.student.updated_by = editorId;
+
+        profiles[profileIndex] = profile;
+        saveToStorage(STUDENTS_KEY, profiles);
+        return profile;
+    }
+
+    return null;
+}
 
 export const updateHealthRecords = (studentId: string, healthRecords: HealthRecords, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfiles();

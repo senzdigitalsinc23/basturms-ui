@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords } from '@/lib/store';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument } from '@/lib/store';
 import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,11 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { EditStudentForm } from '@/components/student-management/profile/edit-student-form';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -194,6 +195,26 @@ export default function StudentProfilePage() {
             addAuditLog({ user: currentUser.email, name: currentUser.name, action: logAction, details: logDetails });
             toast({ title: successTitle, description: successDescription });
             closeDialog();
+        }
+    };
+    
+    const handleDeleteDocument = (documentId: string) => {
+        if (!currentUser || !profile) return;
+
+        const updatedProfile = deleteUploadedDocument(profile.student.student_no, documentId, currentUser.id);
+
+        if (updatedProfile) {
+            setProfile(updatedProfile);
+            addAuditLog({
+                user: currentUser.email,
+                name: currentUser.name,
+                action: 'Delete Document',
+                details: `Deleted document (ID: ${documentId}) for student ${fullName}`,
+            });
+            toast({
+                title: 'Document Deleted',
+                description: 'The document has been successfully deleted.',
+            });
         }
     };
 
@@ -478,13 +499,38 @@ export default function StudentProfilePage() {
                         description="Official student documents."
                         icon={FileText}
                         records={uploadedDocuments}
-                        columns={['Document Name', 'Type', 'Upload Date', 'Action']}
+                        columns={['Document Name', 'Type', 'Upload Date', 'Actions']}
                         renderRow={(rec, i) => (
                             <TableRow key={i}>
                                 <TableCell>{rec.name}</TableCell>
                                 <TableCell>{rec.type}</TableCell>
                                 <TableCell>{format(new Date(rec.uploaded_at), 'do MMM, yyyy')}</TableCell>
-                                <TableCell><Button variant="link" asChild><Link href={rec.url} target="_blank" rel="noopener noreferrer">View</Link></Button></TableCell>
+                                <TableCell className="flex gap-2">
+                                    <Button variant="link" size="sm" asChild>
+                                        <Link href={rec.url} target="_blank" rel="noopener noreferrer">View</Link>
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the document.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteDocument(rec.uploaded_at)}>
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </TableCell>
                             </TableRow>
                         )}
                         emptyMessage="No documents have been uploaded."
