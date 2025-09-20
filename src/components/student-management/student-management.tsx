@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getStudentProfiles, addStudentProfile, updateStudentProfile, addAuditLog } from '@/lib/store';
+import { getStudentProfiles, addStudentProfile, updateStudentProfile, addAuditLog, getClasses } from '@/lib/store';
 import { StudentProfile } from '@/lib/types';
 import { StudentDataTable } from './data-table';
 import { columns } from './columns';
@@ -52,10 +52,13 @@ export function StudentManagement() {
 
   const refreshStudents = () => {
     const profiles = getStudentProfiles();
+    const classes = getClasses();
+    const classMap = new Map(classes.map(c => [c.id, c.name]));
+
     const displayData = profiles.map(p => ({
         student_id: p.student.student_no,
         name: `${p.student.first_name} ${p.student.last_name}`,
-        class: p.admissionDetails.class_assigned,
+        class: classMap.get(p.admissionDetails.class_assigned) || p.admissionDetails.class_assigned,
         status: p.admissionDetails.admission_status,
         admission_date: p.admissionDetails.enrollment_date,
     })).sort((a, b) => new Date(b.admission_date).getTime() - new Date(a.admission_date).getTime());

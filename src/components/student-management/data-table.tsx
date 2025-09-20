@@ -24,16 +24,8 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useRef, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { StudentDisplay } from './student-management';
-import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -42,6 +34,10 @@ import { format } from 'date-fns';
 import Papa from 'papaparse';
 import { ImportPreviewDialog } from './import-preview-dialog';
 import { ALL_ADMISSION_STATUSES } from '@/lib/types';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+
 
 interface StudentDataTableProps {
   columns: ColumnDef<StudentDisplay>[];
@@ -118,6 +114,62 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
     setPreviewData([]);
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = [
+        'enrollment_date','class_assigned','admission_status','first_name','last_name','other_name','dob','gender',
+        'email','phone','country_id','city','hometown','residence',
+        'guardian_name','guardian_phone','guardian_email','guardian_relationship',
+        'emergency_name','emergency_phone','emergency_email','emergency_relationship'
+    ];
+    const csv = Papa.unparse([headers]);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'student_upload_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportCSV = () => {
+    const dataToExport = table.getFilteredRowModel().rows.map(row => row.original);
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'students.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const tableData = table.getFilteredRowModel().rows.map(row => 
+        table.getVisibleFlatColumns().map(col => {
+            const cell = row.getVisibleCells().find(c => c.column.id === col.id);
+            if (cell) {
+                const value = cell.getValue();
+                if (typeof value === 'string' || typeof value === 'number') {
+                    return value.toString();
+                }
+            }
+            return '';
+        })
+    );
+    const headers = table.getVisibleFlatColumns().map(col => col.id);
+
+    (doc as any).autoTable({
+        head: [headers],
+        body: tableData,
+    });
+    doc.save('students.pdf');
+  };
+
 
   return (
     <div className="space-y-4">
@@ -127,7 +179,7 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                 <p className="text-muted-foreground">Manage and view the list of all students.</p>
             </div>
             <div className="flex items-center gap-2">
-                 <Button variant="outline"><FilePlus className="mr-2 h-4 w-4" /> Template</Button>
+                 <Button variant="outline" onClick={handleDownloadTemplate}><FilePlus className="mr-2 h-4 w-4" /> Template</Button>
                  <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Student</Button>
                  <input
                     type="file"
@@ -137,7 +189,17 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                     onChange={handleFileUpload}
                  />
                  <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4" /> Import</Button>
-                 <Button variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200"><Download className="mr-2 h-4 w-4" /> Export</Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200">
+                      <Download className="mr-2 h-4 w-4" /> Export <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleExportCSV}>Export as CSV</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPDF}>Export as PDF</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
 
@@ -257,7 +319,7 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
                     >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="mr-1 h-4 w-4" />
                     Previous
                     </Button>
                     <Button
@@ -267,7 +329,7 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                     disabled={!table.getCanNextPage()}
                     >
                     Next
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="ml-1 h-4 w-4" />
                     </Button>
                 </div>
             </div>
