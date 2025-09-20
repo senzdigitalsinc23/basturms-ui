@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -125,7 +126,30 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
             contactDetails: { student_no: student1StudentNo, email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
             guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother', guardian_email: 'jane.doe@example.com' },
             emergencyContact: { student_no: student1StudentNo, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
-            admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' }
+            admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' },
+            healthRecords: {
+                allergies: ['Peanuts'],
+                vaccinations: [{ name: 'MMR', date: '2012-06-01' }, { name: 'Polio', date: '2013-08-15' }],
+                medical_notes: 'Requires an inhaler for exercise-induced asthma.'
+            },
+            academicRecords: [
+                { term: '1st Term 2023', subject: 'Mathematics', grade: 'A', teacher_remarks: 'Excellent work' },
+                { term: '1st Term 2023', subject: 'English', grade: 'B+', teacher_remarks: 'Good, but needs to participate more in class discussions.' }
+            ],
+            disciplinaryRecords: [
+                { date: '2023-10-20', incident: 'Skipped class', action_taken: 'Detention', reported_by: '2' }
+            ],
+            attendanceRecords: [
+                { date: '2024-05-10', status: 'Present' },
+                { date: '2024-05-11', status: 'Absent' },
+            ],
+            communicationLogs: [
+                { date: '2023-10-21', type: 'Phone Call', notes: 'Discussed absence with mother. Reason: family emergency.', with_whom: 'Jane Doe (Mother)' }
+            ],
+            uploadedDocuments: [
+                { name: 'Birth Certificate', url: '#', uploaded_at: '2024-03-15', type: 'Birth Certificate' },
+                { name: 'Admission Form', url: '#', uploaded_at: '2024-03-15', type: 'Admission Form' }
+            ]
         },
         {
             student: { student_no: student2StudentNo, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser, avatarUrl: 'https://picsum.photos/seed/student2/200/200' },

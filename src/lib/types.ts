@@ -1,5 +1,6 @@
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -137,10 +138,56 @@ export interface AdmissionDetails {
     admission_status: AdmissionStatus;
 }
 
+export interface HealthRecords {
+    allergies?: string[];
+    vaccinations?: { name: string; date: string }[];
+    medical_notes?: string;
+}
+
+export interface DisciplinaryRecord {
+    date: string;
+    incident: string;
+    action_taken: string;
+    reported_by: string; // user id
+}
+
+export interface AcademicRecord {
+    term: string;
+    subject: string;
+    grade: string;
+    teacher_remarks: string;
+}
+
+export interface AttendanceRecord {
+    date: string;
+    status: 'Present' | 'Absent' | 'Late' | 'Excused';
+}
+
+export interface CommunicationLog {
+    date: string;
+    type: 'Email' | 'Phone Call' | 'Meeting';
+    notes: string;
+    with_whom: string; // e.g. "Jane Doe (Mother)"
+}
+
+export interface UploadedDocument {
+    name: string;
+    url: string;
+    uploaded_at: string;
+    type: 'Birth Certificate' | 'Transcript' | 'Report Card' | 'Admission Form' | 'Admission Letter';
+}
+
+
 export interface StudentProfile {
     student: Student;
     contactDetails: ContactDetails;
     guardianInfo: GuardianInfo;
     emergencyContact: EmergencyContact;
     admissionDetails: AdmissionDetails;
+    healthRecords?: HealthRecords;
+    disciplinaryRecords?: DisciplinaryRecord[];
+    academicRecords?: AcademicRecord[];
+    attendanceRecords?: AttendanceRecord[];
+    communicationLogs?: CommunicationLog[];
+    uploadedDocuments?: UploadedDocument[];
 }

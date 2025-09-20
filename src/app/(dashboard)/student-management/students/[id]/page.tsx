@@ -1,18 +1,20 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses } from '@/lib/store';
-import { StudentProfile } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getStudentProfileById, getClasses, getUsers } from '@/lib/store';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { format } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield } from 'lucide-react';
+import { format, differenceInYears } from 'date-fns';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const statusColors: Record<string, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -42,11 +44,56 @@ function DetailItem({ icon, label, value }: { icon: React.ElementType, label: st
     )
 }
 
+function RecordCard<T>({ title, description, icon, records, columns, renderRow, emptyMessage = "No records found." }: { 
+    title: string, 
+    description: string, 
+    icon: React.ElementType,
+    records?: T[], 
+    columns: string[],
+    renderRow: (record: T, index: number) => React.ReactNode,
+    emptyMessage?: string
+}) {
+    const Icon = icon;
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-center gap-4">
+                    <Icon className="h-6 w-6 text-primary" />
+                    <div>
+                        <CardTitle>{title}</CardTitle>
+                        <CardDescription>{description}</CardDescription>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                {records && records.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {columns.map(col => <TableHead key={col}>{col}</TableHead>)}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {records.map(renderRow)}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-muted-foreground">{emptyMessage}</p>
+                )}
+            </CardContent>
+            <CardFooter>
+                 <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
 export default function StudentProfilePage() {
     const params = useParams();
     const studentId = params.id as string;
     const [profile, setProfile] = useState<StudentProfile | null>(null);
     const [className, setClassName] = useState('');
+    const [age, setAge] = useState<number | null>(null);
 
     useEffect(() => {
         if (studentId) {
@@ -57,6 +104,7 @@ export default function StudentProfilePage() {
                 const classes = getClasses();
                 const studentClass = classes.find(c => c.id === studentProfile.admissionDetails.class_assigned);
                 setClassName(studentClass?.name || 'N/A');
+                setAge(differenceInYears(new Date(), new Date(studentProfile.student.dob)));
             }
         }
     }, [studentId]);
@@ -69,9 +117,11 @@ export default function StudentProfilePage() {
         );
     }
 
-    const { student, contactDetails, guardianInfo, admissionDetails } = profile;
+    const { student, contactDetails, guardianInfo, admissionDetails, academicRecords, healthRecords, disciplinaryRecords, attendanceRecords, communicationLogs, uploadedDocuments } = profile;
     const fullName = `${student.first_name} ${student.last_name} ${student.other_name || ''}`.trim();
     const initials = `${student.first_name[0]}${student.last_name[0]}`;
+    const users = getUsers();
+    const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown User';
 
     return (
         <div className="space-y-6">
@@ -111,6 +161,7 @@ export default function StudentProfilePage() {
                     </CardHeader>
                     <CardContent>
                         <p className="font-semibold text-lg">{format(new Date(student.dob), 'do MMMM, yyyy')}</p>
+                         {age !== null && <p className="text-sm text-muted-foreground">{age} years old</p>}
                     </CardContent>
                 </Card>
                  <Card>
@@ -124,11 +175,15 @@ export default function StudentProfilePage() {
             </div>
 
             <Tabs defaultValue="contact">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-6">
                     <TabsTrigger value="contact">Contact & Guardian</TabsTrigger>
                     <TabsTrigger value="academic">Academic</TabsTrigger>
-                    <TabsTrigger value="financials">Financials</TabsTrigger>
+                    <TabsTrigger value="health">Health</TabsTrigger>
+                    <TabsTrigger value="conduct">Conduct</TabsTrigger>
+                    <TabsTrigger value="attendance">Attendance</TabsTrigger>
+                    <TabsTrigger value="documents">Documents</TabsTrigger>
                 </TabsList>
+
                 <TabsContent value="contact" asChild>
                     <Card>
                         <CardContent className="pt-6">
@@ -153,26 +208,125 @@ export default function StudentProfilePage() {
                     </Card>
                 </TabsContent>
                 <TabsContent value="academic" asChild>
-                     <Card>
+                    <RecordCard<AcademicRecord>
+                        title="Academic Performance"
+                        description="Review grades and remarks for each term."
+                        icon={GraduationCap}
+                        records={academicRecords}
+                        columns={['Term', 'Subject', 'Grade', 'Teacher Remarks']}
+                        renderRow={(rec, i) => (
+                            <TableRow key={i}>
+                                <TableCell>{rec.term}</TableCell>
+                                <TableCell>{rec.subject}</TableCell>
+                                <TableCell><Badge variant="secondary">{rec.grade}</Badge></TableCell>
+                                <TableCell className="max-w-xs truncate">{rec.teacher_remarks}</TableCell>
+                            </TableRow>
+                        )}
+                    />
+                </TabsContent>
+                 <TabsContent value="health" asChild>
+                    <Card>
                         <CardHeader>
-                            <CardTitle>Academic Records</CardTitle>
-                            <CardDescription>Grades, attendance, and performance reports.</CardDescription>
+                           <div className="flex items-center gap-4">
+                                <HeartPulse className="h-6 w-6 text-primary" />
+                                <div>
+                                    <CardTitle>Health Records</CardTitle>
+                                    <CardDescription>Allergies, vaccinations, and other medical information.</CardDescription>
+                                </div>
+                            </div>
                         </CardHeader>
-                        <CardContent>
-                           <p className="text-muted-foreground">No academic records found. This section is under development.</p>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <h4 className="font-semibold mb-2">Allergies</h4>
+                                {healthRecords?.allergies?.length ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {healthRecords.allergies.map(allergy => <Badge key={allergy} variant="destructive">{allergy}</Badge>)}
+                                    </div>
+                                ) : <p className="text-sm text-muted-foreground">No known allergies.</p>}
+                            </div>
+                            <Separator />
+                            <div>
+                                <h4 className="font-semibold mb-2">Vaccinations</h4>
+                                {healthRecords?.vaccinations?.length ? (
+                                    <ul className="list-disc pl-5 text-sm space-y-1">
+                                        {healthRecords.vaccinations.map(vax => <li key={vax.name}>{vax.name} on {format(new Date(vax.date), 'do MMM, yyyy')}</li>)}
+                                    </ul>
+                                ) : <p className="text-sm text-muted-foreground">No vaccination records.</p>}
+                            </div>
+                             <Separator />
+                            <div>
+                                <h4 className="font-semibold mb-2">Medical Notes</h4>
+                                <p className="text-sm text-muted-foreground">{healthRecords?.medical_notes || 'No additional medical notes.'}</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="financials" asChild>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Financial Records</CardTitle>
-                            <CardDescription>Fee payments and financial statements.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <p className="text-muted-foreground">No financial records found. This section is under development.</p>
-                        </CardContent>
-                    </Card>
+                <TabsContent value="conduct" asChild>
+                     <RecordCard<DisciplinaryRecord>
+                        title="Student Conduct & Disciplinary Records"
+                        description="Log of all disciplinary incidents."
+                        icon={Scale}
+                        records={disciplinaryRecords}
+                        columns={['Date', 'Incident Reported', 'Action Taken', 'Reported By']}
+                        renderRow={(rec, i) => (
+                            <TableRow key={i}>
+                                <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
+                                <TableCell>{rec.incident}</TableCell>
+                                <TableCell>{rec.action_taken}</TableCell>
+                                <TableCell>{getUserName(rec.reported_by)}</TableCell>
+                            </TableRow>
+                        )}
+                    />
+                </TabsContent>
+                <TabsContent value="attendance" asChild>
+                     <div className="grid gap-6">
+                        <RecordCard<AttendanceRecord>
+                            title="Attendance Summary"
+                            description="Overview of student's attendance."
+                            icon={Activity}
+                            records={attendanceRecords}
+                            columns={['Date', 'Status']}
+                            renderRow={(rec, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
+                                    <TableCell><Badge variant={rec.status === 'Present' ? 'secondary' : 'destructive'}>{rec.status}</Badge></TableCell>
+                                </TableRow>
+                            )}
+                        />
+                         <RecordCard<CommunicationLog>
+                            title="Communication Log"
+                            description="Record of communications with parents/guardians."
+                            icon={MessageSquare}
+                            records={communicationLogs}
+                            columns={['Date', 'Type', 'With Whom', 'Notes']}
+                            renderRow={(rec, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
+                                    <TableCell>{rec.type}</TableCell>
+                                    <TableCell>{rec.with_whom}</TableCell>
+                                    <TableCell>{rec.notes}</TableCell>
+                                </TableRow>
+                            )}
+                        />
+                    </div>
+                </TabsContent>
+                <TabsContent value="documents" asChild>
+                    <RecordCard<UploadedDocument>
+                        title="Uploaded Documents"
+                        description="Official student documents."
+                        icon={FileText}
+                        records={uploadedDocuments}
+                        columns={['Document Name', 'Type', 'Upload Date', 'Action']}
+                        renderRow={(rec, i) => (
+                            <TableRow key={i}>
+                                <TableCell>{rec.name}</TableCell>
+                                <TableCell>{rec.type}</TableCell>
+                                <TableCell>{format(new Date(rec.uploaded_at), 'do MMM, yyyy')}</TableCell>
+                                <TableCell><Button variant="link" asChild><Link href={rec.url}>View</Link></Button></TableCell>
+                            </TableRow>
+                        )}
+                        emptyMessage="No documents have been uploaded."
+                    />
                 </TabsContent>
             </Tabs>
         </div>
