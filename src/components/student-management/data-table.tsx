@@ -40,6 +40,7 @@ import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Papa from 'papaparse';
+import { ImportPreviewDialog } from './import-preview-dialog';
 
 interface StudentDataTableProps {
   columns: ColumnDef<StudentDisplay>[];
@@ -58,10 +59,12 @@ const statusOptions = [
 export function StudentDataTable({ columns, data, onImport }: StudentDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
   const [date, setDate] = useState<Date>()
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
 
   const table = useReactTable({
     data,
@@ -95,7 +98,11 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          onImport(results.data);
+          setPreviewData(results.data);
+          setIsPreviewOpen(true);
+           if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
         },
         error: (error: any) => {
           console.error("Error parsing CSV:", error);
@@ -103,6 +110,12 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
         }
       });
     }
+  };
+
+  const handleConfirmImport = () => {
+    onImport(previewData);
+    setIsPreviewOpen(false);
+    setPreviewData([]);
   };
 
 
@@ -178,28 +191,6 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                     </Button>
                 )}
             </div>
-            {/* <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-                <Button size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create User
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                <DialogTitle>Create New User</DialogTitle>
-                <DialogDescription>
-                    Fill in the details to create a new user account.
-                </DialogDescription>
-                </DialogHeader>
-                <UserForm
-                onSubmit={(values) => {
-                    onAdd(values);
-                    setIsFormOpen(false);
-                }}
-                />
-            </DialogContent>
-            </Dialog> */}
         </div>
         <div className="rounded-md border">
             <Table>
@@ -269,6 +260,12 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
             Next
             </Button>
         </div>
+        <ImportPreviewDialog 
+            isOpen={isPreviewOpen}
+            onClose={() => setIsPreviewOpen(false)}
+            onConfirm={handleConfirmImport}
+            data={previewData}
+        />
     </div>
   );
 }
