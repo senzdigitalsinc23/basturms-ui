@@ -27,6 +27,7 @@ import { AttendanceRecordForm } from '@/components/student-management/profile/at
 import { CommunicationLogForm } from '@/components/student-management/profile/communication-log-form';
 import { DocumentUploadForm } from '@/components/student-management/profile/document-upload-form';
 import { HealthRecordsForm } from '@/components/student-management/profile/health-records-form';
+import { CommunicationInterface } from '@/components/student-management/profile/communication-interface';
 
 const statusColors: Record<string, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -115,6 +116,7 @@ export default function StudentProfilePage() {
     const [isCommunicationFormOpen, setIsCommunicationFormOpen] = useState(false);
     const [isDocumentFormOpen, setIsDocumentFormOpen] = useState(false);
     const [isHealthFormOpen, setIsHealthFormOpen] = useState(false);
+    const [isCommunicateOpen, setIsCommunicateOpen] = useState(false);
     
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
@@ -235,13 +237,51 @@ export default function StudentProfilePage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/student-management/students">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to List
-                    </Link>
-                </Button>
+            <div className="flex items-center justify-between">
+                <div>{/* This empty div helps with flex layout */}</div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href="/student-management/students">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back to List
+                        </Link>
+                    </Button>
+                     <Dialog open={isCommunicateOpen} onOpenChange={setIsCommunicateOpen}>
+                        <DialogTrigger asChild>
+                             <Button variant="outline" size="sm">
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Communicate
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl">
+                             <DialogHeader>
+                                <DialogTitle>Communicate</DialogTitle>
+                                <DialogDescription>Contact student or parent.</DialogDescription>
+                            </DialogHeader>
+                            <CommunicationInterface student={profile} />
+                        </DialogContent>
+                    </Dialog>
+                    <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                        <DialogTrigger asChild>
+                             <Button size="sm">
+                                <Edit className="mr-2 h-4 w-4" /> Edit Student
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Edit Student Profile</DialogTitle>
+                                <DialogDescription>
+                                    Update the details for {fullName}.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <EditStudentForm
+                                defaultValues={profile}
+                                classes={classes}
+                                onSubmit={handleUpdateProfile}
+                            />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
             <Card>
                 <CardHeader className="flex flex-row items-center gap-6 space-y-0">
@@ -253,28 +293,6 @@ export default function StudentProfilePage() {
                         <h1 className="text-3xl font-bold font-headline">{fullName}</h1>
                         <p className="text-muted-foreground">Student ID: {student.student_no}</p>
                         <p className="text-muted-foreground">Class: {className}</p>
-                    </div>
-                    <div>
-                         <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-                            <DialogTrigger asChild>
-                                <Button>
-                                    <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-2xl">
-                                <DialogHeader>
-                                    <DialogTitle>Edit Student Profile</DialogTitle>
-                                    <DialogDescription>
-                                        Update the details for {fullName}.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <EditStudentForm
-                                    defaultValues={profile}
-                                    classes={classes}
-                                    onSubmit={handleUpdateProfile}
-                                />
-                            </DialogContent>
-                        </Dialog>
                     </div>
                 </CardHeader>
             </Card>
