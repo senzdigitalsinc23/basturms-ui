@@ -57,9 +57,7 @@ const SidebarAccordionTrigger = React.forwardRef<
     )}
     {...props}
   >
-    <div className="flex gap-2 items-center">
-      {children}
-    </div>
+    {children}
   </AccordionTrigger>
 ));
 SidebarAccordionTrigger.displayName = AccordionTrigger.displayName;
@@ -92,7 +90,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Student Management',
       icon: GraduationCap,
       items: [
-        { href: '/#', label: 'Students' },
+        { href: '/student-management/students', label: 'Students' },
         { href: '/#', label: 'Add Student' },
         { href: '/#', label: 'Classes' },
       ],
@@ -221,13 +219,14 @@ export function SidebarNav() {
             </Link>
         </SidebarHeader>
       <SidebarContent className="p-2">
-        <Accordion type="multiple" className="w-full">
+        <Accordion type="multiple" className="w-full" defaultValue={['item-0', 'item-1']}>
           {navItems.map((item, index) =>
             item.items ? (
               <AccordionItem value={`item-${index}`} key={index} className="border-b-0">
                 <SidebarAccordionTrigger>
                   <item.icon className="h-5 w-5" />
                   <span className="text-base hidden group-data-[state=expanded]:inline">{item.label}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ml-auto hidden group-data-[state=expanded]:inline" />
                 </SidebarAccordionTrigger>
                 <SidebarAccordionContent>
                   {item.items.map((subItem) => (
