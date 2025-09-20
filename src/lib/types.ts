@@ -56,6 +56,7 @@ export interface AuditLog {
   name: string; // user's full name
   action: string;
   details: string;
+  clientInfo?: string;
 }
 
 export interface AuthLog {
@@ -65,4 +66,5 @@ export interface AuthLog {
   event: 'Login Success' | 'Login Failure' | 'Logout';
   status: 'Success' | 'Failure';
   details: string;
+  clientInfo?: string;
 }

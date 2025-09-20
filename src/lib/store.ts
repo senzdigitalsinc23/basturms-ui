@@ -234,26 +234,28 @@ export const resetPassword = (userId: string, newPassword: string): boolean => {
 
 // Audit Log Functions
 export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KEY, []);
-export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>): void => {
+export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
   const logs = getAuditLogs();
   const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
   const newLog: AuditLog = {
     ...log,
     id: nextId,
     timestamp: new Date().toISOString(),
+    clientInfo: typeof window !== 'undefined' ? navigator.userAgent : 'N/A',
   };
   saveToStorage(LOGS_KEY, [newLog, ...logs]);
 };
 
 // Auth Log Functions
 export const getAuthLogs = (): AuthLog[] => getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
-export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp'>): void => {
+export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
     const logs = getAuthLogs();
     const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
     const newLog: AuthLog = {
         ...log,
         id: nextId,
         timestamp: new Date().toISOString(),
+        clientInfo: typeof window !== 'undefined' ? navigator.userAgent : 'N/A',
     };
     saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
 }

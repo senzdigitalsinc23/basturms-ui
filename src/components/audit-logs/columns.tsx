@@ -46,10 +46,20 @@ export const columns: ColumnDef<AuditLog>[] = [
     header: 'Action',
   },
   {
+    accessorKey: 'clientInfo',
+    header: 'Client Info',
+    cell: ({ row }) => {
+        const info = row.getValue('clientInfo') as string || 'N/A';
+        const shortInfo = info.split(') ').pop()?.split(' ')[0] || info;
+        return <div className="max-w-[150px] truncate" title={info}>{shortInfo}</div>;
+    }
+  },
+  {
     accessorKey: 'details',
     header: 'Details',
     cell: ({ row }) => {
       const details = row.getValue('details') as string;
+      const clientInfo = row.original.clientInfo;
       return (
         <Dialog>
           <DialogTrigger asChild>
@@ -64,10 +74,19 @@ export const columns: ColumnDef<AuditLog>[] = [
                 Full details for the selected log entry.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-                <pre className="p-4 bg-muted rounded-md text-sm whitespace-pre-wrap break-words">
-                    {details}
-                </pre>
+            <div className="space-y-4 text-sm">
+                <div>
+                    <h4 className="font-semibold mb-1">Details</h4>
+                    <pre className="p-4 bg-muted rounded-md whitespace-pre-wrap break-words">
+                        {details}
+                    </pre>
+                </div>
+                 {clientInfo && <div>
+                    <h4 className="font-semibold mb-1">Client Info</h4>
+                    <pre className="p-4 bg-muted rounded-md whitespace-pre-wrap break-words">
+                        {clientInfo}
+                    </pre>
+                </div>}
             </div>
           </DialogContent>
         </Dialog>
