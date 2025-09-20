@@ -63,7 +63,7 @@ export default function PromotionsPage() {
         }
     }, [fromClass, classes]);
 
-    const isAllSelected = studentsInClass.length > 0 && Object.keys(selectedStudents).length === studentsInClass.length;
+    const isAllSelected = studentsInClass.length > 0 && Object.keys(selectedStudents).length === studentsInClass.length && Object.keys(selectedStudents).length === studentsInClass.length;
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -87,7 +87,7 @@ export default function PromotionsPage() {
         setSelectedStudents(newSelection);
     }
     
-    const studentIdsToPromote = Object.keys(selectedStudents);
+    const studentIdsToPromote = Object.keys(selectedStudents).filter(id => selectedStudents[id]);
     
     const fromClassIndex = classes.findIndex(c => c.id === fromClass);
     const expectedToClass = classes[fromClassIndex + 1];
@@ -95,9 +95,11 @@ export default function PromotionsPage() {
     const isInvalidStandardPromotion = !isSpecialPromotion && toClass && expectedToClass && toClass !== expectedToClass.id;
     
     const fetchStudentData = () => {
-        // This function is just to trigger a re-render by updating state
-        // The actual data is fetched inside the useEffect listening to fromClass
-        setStudentsInClass(prev => [...prev]);
+        // This function re-triggers the useEffect that depends on fromClass
+        // by resetting the value, which will then be set again, causing a refresh.
+        const currentFrom = fromClass;
+        setFromClass(undefined);
+        setTimeout(() => setFromClass(currentFrom), 0);
     }
 
     const handlePromotion = async () => {
