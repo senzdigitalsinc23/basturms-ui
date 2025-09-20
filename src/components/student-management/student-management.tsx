@@ -5,6 +5,7 @@ import { StudentProfile } from '@/lib/types';
 import { StudentDataTable } from './data-table';
 import { columns } from './columns';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 // Flatten the StudentProfile for easier display in the data table
 export type StudentDisplay = {
@@ -18,8 +19,9 @@ export type StudentDisplay = {
 export function StudentManagement() {
   const [students, setStudents] = useState<StudentDisplay[]>([]);
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
 
-  useEffect(() => {
+  const refreshStudents = () => {
     const profiles = getStudentProfiles();
     const displayData = profiles.map(p => ({
         student_id: p.student.student_no,
@@ -27,31 +29,97 @@ export function StudentManagement() {
         class: p.admissionDetails.class_assigned,
         status: p.admissionDetails.admission_status,
         admission_date: p.admissionDetails.enrollment_date,
-    }))
+    })).sort((a, b) => new Date(b.admission_date).getTime() - new Date(a.admission_date).getTime());
     setStudents(displayData);
+  }
+
+  useEffect(() => {
+    refreshStudents();
   }, []);
 
   const handleAddStudent = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>) => {
     if (!currentUser) return;
 
     const newProfile = addStudentProfile(profileData, currentUser.id);
-    const newDisplayData: StudentDisplay = {
-        student_id: newProfile.student.student_no,
-        name: `${newProfile.student.first_name} ${newProfile.student.last_name}`,
-        class: newProfile.admissionDetails.class_assigned,
-        status: newProfile.admissionDetails.admission_status,
-        admission_date: newProfile.admissionDetails.enrollment_date,
-    };
     
-    setStudents((prev) => [...prev, newDisplayData]);
-
     addAuditLog({
         user: currentUser.email,
         name: currentUser.name,
         action: 'Create Student',
-        details: `Created student ${newDisplayData.name} with ID ${newDisplayData.student_id}`,
+        details: `Created student ${newProfile.student.first_name} ${newProfile.student.last_name} with ID ${newProfile.student.student_no}`,
     });
+    return newProfile;
   };
+
+  const handleImportStudents = (importedData: any[]) => {
+    if (!currentUser) return;
+    try {
+        let createdCount = 0;
+        importedData.forEach(row => {
+            // Very basic validation
+            if (row.first_name && row.last_name && row.enrollment_date && row.class_assigned) {
+                const profileData: Parameters<typeof handleAddStudent>[0] = {
+                    student: {
+                        first_name: row.first_name,
+                        last_name: row.last_name,
+                        other_name: row.other_name,
+                        dob: new Date(row.dob).toISOString(),
+                        gender: row.gender,
+                    },
+                    contactDetails: {
+                        email: row.email,
+                        phone: row.phone,
+                        country_id: '1', // Assuming default
+                        city: row.city,
+                        hometown: row.hometown,
+                        residence: row.residence,
+                    },
+                    guardianInfo: {
+                        guardian_name: row.guardian_name,
+                        guardian_phone: row.guardian_phone,
+                        guardian_relationship: row.guardian_relationship,
+                        guardian_email: row.guardian_email,
+                    },
+                    emergencyContact: {
+                        emergency_name: row.emergency_name,
+                        emergency_phone: row.emergency_phone,
+                        emergency_relationship: row.emergency_relationship,
+                        emergency_email: row.emergency_email,
+                    },
+                    admissionDetails: {
+                        enrollment_date: new Date(row.enrollment_date).toISOString(),
+                        class_assigned: row.class_assigned,
+                        admission_status: row.admission_status || 'Admitted',
+                    }
+                };
+                handleAddStudent(profileData);
+                createdCount++;
+            }
+        });
+        
+        refreshStudents();
+
+        toast({
+            title: "Import Successful",
+            description: `${createdCount} student(s) imported successfully.`
+        });
+        addAuditLog({
+            user: currentUser.email,
+            name: currentUser.name,
+            action: 'Import Students',
+            details: `Imported ${createdCount} students from CSV.`,
+        });
+
+    } catch (error) {
+        console.error("Import failed:", error);
+        toast({
+            variant: "destructive",
+            title: "Import Failed",
+            description: "There was an error processing the CSV file. Please check the file format and try again."
+        });
+    }
+  }
+
 
 //   const handleUpdateStudent = (profile: StudentProfile) => {
 //     if (!currentUser) return;
@@ -65,6 +133,7 @@ export function StudentManagement() {
         // onUpdate: handleUpdateStudent,
       })}
       data={students}
+      onImport={handleImportStudents}
     //   onAdd={handleAddStudent}
     />
   );

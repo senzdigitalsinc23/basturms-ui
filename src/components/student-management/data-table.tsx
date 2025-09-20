@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -39,10 +39,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import Papa from 'papaparse';
 
 interface StudentDataTableProps {
   columns: ColumnDef<StudentDisplay>[];
   data: StudentDisplay[];
+  onImport: (data: any[]) => void;
   // onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password'> & { role: User['role'], password?: string }) => void;
 }
 
@@ -53,12 +55,13 @@ const statusOptions = [
 ]
 
 
-export function StudentDataTable({ columns, data }: StudentDataTableProps) {
+export function StudentDataTable({ columns, data, onImport }: StudentDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
   const [date, setDate] = useState<Date>()
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const table = useReactTable({
     data,
@@ -81,6 +84,28 @@ export function StudentDataTable({ columns, data }: StudentDataTableProps) {
 
   const isFiltered = table.getState().columnFilters.length > 0;
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          onImport(results.data);
+        },
+        error: (error: any) => {
+          console.error("Error parsing CSV:", error);
+          // You can add a toast notification here for the error
+        }
+      });
+    }
+  };
+
+
   return (
     <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -91,7 +116,14 @@ export function StudentDataTable({ columns, data }: StudentDataTableProps) {
             <div className="flex items-center gap-2">
                  <Button variant="outline"><FilePlus className="mr-2 h-4 w-4" /> Template</Button>
                  <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Student</Button>
-                 <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200"><Upload className="mr-2 h-4 w-4" /> Import</Button>
+                 <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                 />
+                 <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4" /> Import</Button>
                  <Button variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200"><Download className="mr-2 h-4 w-4" /> Export</Button>
             </div>
         </div>
