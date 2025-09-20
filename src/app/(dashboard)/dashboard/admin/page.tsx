@@ -2,227 +2,189 @@
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { getAuditLogs, getUsers } from '@/lib/store';
-import { AuditLog, Role, User as UserType } from '@/lib/types';
-import { Activity, PieChart as PieChartIcon, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { subDays, format, parseISO, isValid, formatDistanceToNow } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Badge } from '@/components/ui/badge';
+import { Users, DollarSign, BarChart3, CalendarCheck } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
-const COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-];
+function RecentNotices() {
+  const notices = [
+    { title: 'Mid-term Exam Schedule', date: '2024-09-15', audience: 'Students' },
+    { title: 'Parent-Teacher Meeting', date: '2024-09-12', audience: 'Parents' },
+    { title: 'Annual Sports Day', date: '2024-09-10', audience: 'All School' },
+    { title: 'Staff Meeting', date: '2024-09-08', audience: 'Teachers' },
+  ];
 
-function RecentUsers() {
-  const [recentUsers, setRecentUsers] = useState<UserType[]>([]);
-
-  useEffect(() => {
-    const allUsers = getUsers();
-    const sortedUsers = [...allUsers].sort((a, b) => {
-        const dateA = a.created_at ? parseISO(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? parseISO(b.created_at).getTime() : 0;
-        return dateB - dateA;
-    });
-    setRecentUsers(sortedUsers.slice(0, 5));
-  }, []);
-
-  const formatRelativeTime = (dateString: string | undefined) => {
-    if (!dateString) return 'date unknown';
-    const date = parseISO(dateString);
-    if (isValid(date)) {
-        return formatDistanceToNow(date, { addSuffix: true });
+  const getAudienceBadgeVariant = (audience: string) => {
+    switch (audience) {
+      case 'Students':
+        return 'default';
+      case 'Parents':
+        return 'secondary';
+      case 'Teachers':
+        return 'outline';
+      default:
+        return 'destructive';
     }
-    return 'invalid date';
-  }
+  };
+
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Sign-ups</CardTitle>
-        <CardDescription>The 5 most recently created user accounts.</CardDescription>
+        <CardTitle>Recent Notices</CardTitle>
+        <CardDescription>Important announcements for the school community.</CardDescription>
       </CardHeader>
       <CardContent>
-        {recentUsers.length > 0 ? (
-          <ul className="space-y-4">
-            {recentUsers.map((user) => (
-              <li key={user.id} className="flex items-center justify-between">
-                <div className='flex items-center gap-3'>
-                  <Avatar>
-                    <AvatarImage src={user.avatarUrl} />
-                    <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <Badge variant='outline'>{user.role}</Badge>
-                  <p className='text-sm text-muted-foreground mt-1'>{formatRelativeTime(user.created_at)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-center text-muted-foreground py-8">
-            No recent users found.
-          </div>
-        )}
+        <ul className="space-y-4">
+          {notices.map((notice, index) => (
+            <li key={index} className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{notice.title}</p>
+                <p className="text-sm text-muted-foreground">{notice.date}</p>
+              </div>
+              <Badge variant={getAudienceBadgeVariant(notice.audience) as any}>{notice.audience}</Badge>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );
 }
 
+const salesData = [
+  { name: 'Jan', sales: 4000, views: 2400 },
+  { name: 'Feb', sales: 3000, views: 1398 },
+  { name: 'Mar', sales: 5000, views: 9800 },
+  { name: 'Apr', sales: 2780, views: 3908 },
+  { name: 'May', sales: 1890, views: 4800 },
+  { name: 'Jun', sales: 2390, views: 3800 },
+  { name: 'Jul', sales: 3490, views: 4300 },
+];
+
+const performanceData = [
+    { name: 'Jan', performance: 78 },
+    { name: 'Feb', performance: 82 },
+    { name: 'Mar', performance: 80 },
+    { name: 'Apr', performance: 85 },
+    { name: 'May', performance: 88 },
+    { name: 'Jun', performance: 90 },
+    { name: 'Jul', performance: 92 },
+];
+
 
 export default function AdminDashboardPage() {
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [activeUsers, setActiveUsers] = useState(0);
-  const [recentLogsCount, setRecentLogsCount] = useState(0);
-  const [roleDistribution, setRoleDistribution] = useState<{ name: string; value: number }[]>([]);
-  const [activityData, setActivityData] = useState<{ date: string; actions: number }[]>([]);
-
-  useEffect(() => {
-    const users = getUsers();
-    const logs = getAuditLogs();
-    
-    setTotalUsers(users.length);
-    setActiveUsers(users.filter(u => u.status === 'active').length);
-
-    const oneDayAgo = subDays(new Date(), 1);
-    setRecentLogsCount(logs.filter(log => parseISO(log.timestamp) > oneDayAgo).length);
-
-    const roles: { [key in Role]?: number } = {};
-    users.forEach(user => {
-      if (roles[user.role]) {
-        roles[user.role]!++;
-      } else {
-        roles[user.role] = 1;
-      }
-    });
-    setRoleDistribution(Object.entries(roles).map(([name, value]) => ({ name, value })));
-    
-    const sevenDaysAgo = subDays(new Date(), 7);
-    const recentLogs = logs.filter(log => parseISO(log.timestamp) > sevenDaysAgo);
-    const activityByDay: { [key: string]: number } = {};
-
-    for (let i = 6; i >= 0; i--) {
-      const date = subDays(new Date(), i);
-      const formattedDate = format(date, 'MMM d');
-      activityByDay[formattedDate] = 0;
-    }
-
-    recentLogs.forEach(log => {
-      const formattedDate = format(parseISO(log.timestamp), 'MMM d');
-      if (activityByDay[formattedDate] !== undefined) {
-        activityByDay[formattedDate]++;
-      }
-    });
-    setActivityData(Object.entries(activityByDay).map(([date, actions]) => ({ date, actions })));
-
-  }, []);
-
   return (
     <ProtectedRoute allowedRoles={['Admin']}>
         <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            A complete overview of the system, user activity, and more.
-          </p>
-        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
               <Users className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalUsers}</div>
-              <p className="text-xs text-muted-foreground">All registered user accounts</p>
+              <div className="text-2xl font-bold">1,254</div>
+              <p className="text-xs text-muted-foreground">+20.1% from last month</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <Users className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+              <DollarSign className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activeUsers}</div>
-               <p className="text-xs text-muted-foreground">{totalUsers > 0 ? `${((activeUsers/totalUsers) * 100).toFixed(0)}% of total users` : 'No users yet'}</p>
+              <div className="text-2xl font-bold">$45,231.89</div>
+               <p className="text-xs text-muted-foreground">+12.2% from last month</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Actions (24h)</CardTitle>
-              <Activity className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Avg. Attendance</CardTitle>
+              <CalendarCheck className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{recentLogsCount}</div>
-                <p className="text-xs text-muted-foreground">User actions recorded in logs</p>
+                <div className='flex items-center gap-4'>
+                    <div className="text-2xl font-bold">92%</div>
+                    <div className="w-12 h-12 relative">
+                        <svg className="w-full h-full" viewBox="0 0 36 36">
+                            <path
+                                className="stroke-current text-muted/20"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                strokeWidth="3"
+                            />
+                            <path
+                                className="stroke-current text-primary"
+                                strokeDasharray="92, 100"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                transform="rotate(-90 18 18)"
+                            />
+                        </svg>
+                    </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">+2.5% from yesterday</p>
             </CardContent>
           </Card>
            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">User Roles</CardTitle>
-              <PieChartIcon className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Avg. Performance</CardTitle>
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{roleDistribution.length}</div>
-              <p className="text-xs text-muted-foreground">Distinct roles assigned</p>
+              <div className="text-2xl font-bold">85%</div>
+              <p className="text-xs text-muted-foreground">+5.1% from last term</p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-5">
-          <Card className="lg:col-span-3">
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>User actions over the last 7 days.</CardDescription>
+              <CardTitle>Sales &amp; Views</CardTitle>
             </CardHeader>
             <CardContent>
               <ChartContainer config={{}} className="min-h-64 w-full">
                 <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={activityData}>
+                   <BarChart data={salesData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} />
-                        <YAxis tickLine={false} axisLine={false} width={20}/>
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                        <YAxis tickLine={false} axisLine={false} width={20} />
                         <Tooltip content={<ChartTooltipContent />} cursor={{fill: 'hsl(var(--accent))'}} />
-                        <Line type="monotone" dataKey="actions" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                    </LineChart>
+                        <Legend iconType="square" />
+                        <Bar dataKey="views" stackId="a" fill="hsl(var(--chart-2))" name="Page Views" />
+                        <Bar dataKey="sales" stackId="a" fill="hsl(var(--chart-1))" name="Sales" />
+                    </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
           </Card>
-
-          <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle>User Role Distribution</CardTitle>
-                <CardDescription>A breakdown of all user roles.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ChartContainer config={{}} className="min-h-64 w-full">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Tooltip content={<ChartTooltipContent />} />
-                            <Pie data={roleDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="hsl(var(--primary))" label={(props) => `${props.name} (${props.value})`}>
-                                {roleDistribution.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                        </PieChart>
-                    </ResponsiveContainer>
-                </ChartContainer>
-            </CardContent>
-          </Card>
+          <RecentNotices />
         </div>
+
          <div className="grid gap-6 lg:grid-cols-1">
-          <RecentUsers />
+            <Card>
+                <CardHeader>
+                    <CardTitle>Student Performance</CardTitle>
+                    <CardDescription>Average scores across different classes.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ChartContainer config={{}} className="min-h-64 w-full">
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={performanceData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                                <YAxis tickLine={false} axisLine={false} width={20} />
+                                <Tooltip content={<ChartTooltipContent />} cursor={{fill: 'hsl(var(--accent))'}} />
+                                <Line type="monotone" dataKey="performance" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
         </div>
       </div>
     </ProtectedRoute>
