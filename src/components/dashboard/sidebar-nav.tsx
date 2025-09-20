@@ -87,8 +87,14 @@ const menuItems: Record<Role, NavItem[]> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/users', label: 'User Management', icon: Users },
-    { href: '/audit-logs', label: 'Audit Logs', icon: History },
-    { href: '/auth-logs', label: 'Authentication Logs', icon: Fingerprint },
+    {
+      label: 'Logs',
+      icon: History,
+      items: [
+        { href: '/audit-logs', label: 'Audit Logs' },
+        { href: '/auth-logs', label: 'Authentication Logs' },
+      ],
+    },
     {
       label: 'Student Management',
       icon: GraduationCap,
