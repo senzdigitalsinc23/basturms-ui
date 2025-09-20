@@ -16,6 +16,35 @@ export type StudentDisplay = {
   admission_date: string;
 };
 
+// A more robust date parsing function
+function parseDateString(dateStr: string): Date | null {
+    if (!dateStr) return null;
+
+    // Try standard ISO and MM/DD/YYYY directly
+    let date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+        return date;
+    }
+
+    // Try DD/MM/YYYY
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+        // new Date(year, monthIndex, day)
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const year = parseInt(parts[2], 10);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+            date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+        }
+    }
+
+    return null; // Return null if all parsing fails
+}
+
+
 export function StudentManagement() {
   const [students, setStudents] = useState<StudentDisplay[]>([]);
   const { user: currentUser } = useAuth();
@@ -58,14 +87,14 @@ export function StudentManagement() {
         importedData.forEach((row, index) => {
             // Very basic validation
             if (row.first_name && row.last_name && row.enrollment_date && row.class_assigned) {
-                const enrollmentDate = new Date(row.enrollment_date);
-                const dobDate = new Date(row.dob);
+                const enrollmentDate = parseDateString(row.enrollment_date);
+                const dobDate = parseDateString(row.dob);
 
-                if (isNaN(enrollmentDate.getTime())) {
+                if (!enrollmentDate) {
                     console.error(`Skipping row ${index + 2} due to invalid enrollment_date:`, row.enrollment_date);
                     return;
                 }
-                 if (isNaN(dobDate.getTime())) {
+                 if (!dobDate) {
                     console.error(`Skipping row ${index + 2} due to invalid dob:`, row.dob);
                     return;
                 }
