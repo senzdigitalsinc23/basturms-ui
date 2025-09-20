@@ -95,15 +95,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/#', label: 'Classes' },
       ],
     },
-    {
-      label: 'Staff Management',
-      icon: Briefcase,
-      items: [
-        { href: '/users', label: 'Staff List' },
-        { href: '/#', label: 'Add Staff' },
-        { href: '/#', label: 'Staff Attendance' },
-      ],
-    },
+    { href: '/users', label: 'User Management', icon: Users },
     { href: '/#', label: 'Attendance', icon: Calendar },
     { href: '/#', label: 'Timetable', icon: Calendar },
     {
