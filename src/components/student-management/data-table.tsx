@@ -129,10 +129,10 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
 
   const handleDownloadTemplate = () => {
     const headers = [
-      'enrollment_date', 'class_assigned', 'admission_status', 'first_name', 'last_name', 'other_name', 'dob', 'gender',
-      'email', 'phone', 'country_id', 'city', 'hometown', 'residence',
-      'guardian_name', 'guardian_phone', 'guardian_email', 'guardian_relationship',
-      'emergency_name', 'emergency_phone', 'emergency_email', 'emergency_relationship'
+      'enrollment_date','class_assigned','admission_status','first_name','last_name','other_name','dob','gender',
+      'email','phone','country_id','city','hometown','residence',
+      'guardian_name','guardian_phone','guardian_email','guardian_relationship',
+      'emergency_name','emergency_phone','emergency_email','emergency_relationship'
     ];
     const csv = Papa.unparse([headers]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -162,14 +162,11 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
-    const dataColumns = columns.filter(col => col.id !== 'select' && col.id !== 'actions' && col.accessorKey);
+    const dataColumns = columns.filter(col => col.id !== 'select' && col.id !== 'actions');
     
     const headers = dataColumns.map(col => {
-        // A simple way to get header text, might need adjustment for complex headers
-        const header = col.header;
-        if(typeof header === 'string') return header;
-        // Fallback for function headers - might need a better mapping
-        return col.id || '';
+        const header = typeof col.header === 'function' ? col.id : col.header;
+        return header || '';
     });
 
     const body = table.getFilteredRowModel().rows.map(row => {
@@ -286,6 +283,9 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
                         selected={date}
                         onSelect={setDate}
                         numberOfMonths={2}
+                        captionLayout="dropdown-buttons"
+                        fromYear={1990}
+                        toYear={new Date().getFullYear()}
                     />
                     </PopoverContent>
                 </Popover>
