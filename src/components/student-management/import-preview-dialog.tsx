@@ -45,31 +45,31 @@ export function ImportPreviewDialog({
         <DialogHeader>
           <DialogTitle>Import Preview</DialogTitle>
           <DialogDescription>
-            Review the data below before importing. A total of {rowCount} records and {colCount} columns found. Scroll to see all records.
+            Review the data below before importing. A total of {rowCount} records and {colCount} columns found. Scroll to see all records and columns.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="h-[400px] rounded-md border">
-          <Table>
-            <TableHeader className="sticky top-0 bg-background">
-              <TableRow>
-                {headers.map((header) => (
-                  <TableHead key={header}>{header}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((row, rowIndex) => (
-                <TableRow key={rowIndex}>
-                  {headers.map((header) => (
-                    <TableCell key={`${rowIndex}-${header}`} className="max-w-[150px] truncate">
-                      {row[header]}
-                    </TableCell>
-                  ))}
+        <div className="overflow-auto max-h-[60vh] border rounded-md">
+            <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                    {headers.map((header) => (
+                    <TableHead key={header} className="whitespace-nowrap">{header}</TableHead>
+                    ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollArea>
+                </TableHeader>
+                <TableBody>
+                {data.map((row, rowIndex) => (
+                    <TableRow key={rowIndex}>
+                    {headers.map((header) => (
+                        <TableCell key={`${rowIndex}-${header}`} className="whitespace-nowrap max-w-[200px] truncate">
+                        {row[header]}
+                        </TableCell>
+                    ))}
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
