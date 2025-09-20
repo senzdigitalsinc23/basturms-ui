@@ -17,6 +17,8 @@ import {
   DisciplinaryRecord,
   CommunicationLog,
   UploadedDocument,
+  AttendanceRecord,
+  HealthRecords,
 } from './types';
 
 const USERS_KEY = 'campusconnect_users';
@@ -459,6 +461,64 @@ export const updateStudentStatus = (studentId: string, status: AdmissionStatus, 
         const profile = profiles[profileIndex];
         
         profile.admissionDetails.admission_status = status;
+        profile.student.updated_at = now;
+        profile.student.updated_by = editorId;
+
+        profiles[profileIndex] = profile;
+        saveToStorage(STUDENTS_KEY, profiles);
+        return profile;
+    }
+    return null;
+}
+
+const updateProfileSubArray = <T>(studentId: string, editorId: string, arrayName: keyof StudentProfile, newItem: T): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+
+    if (profileIndex !== -1) {
+        const now = new Date().toISOString();
+        const profile = profiles[profileIndex];
+
+        if (Array.isArray(profile[arrayName])) {
+            (profile[arrayName] as T[]).push(newItem);
+        } else {
+            (profile[arrayName] as T[]) = [newItem];
+        }
+
+        profile.student.updated_at = now;
+        profile.student.updated_by = editorId;
+
+        profiles[profileIndex] = profile;
+        saveToStorage(STUDENTS_KEY, profiles);
+        return profile;
+    }
+    return null;
+}
+
+export const addAcademicRecord = (studentId: string, record: AcademicRecord, editorId: string) => 
+    updateProfileSubArray(studentId, editorId, 'academicRecords', record);
+
+export const addDisciplinaryRecord = (studentId: string, record: DisciplinaryRecord, editorId: string) =>
+    updateProfileSubArray(studentId, editorId, 'disciplinaryRecords', record);
+
+export const addAttendanceRecord = (studentId: string, record: AttendanceRecord, editorId: string) =>
+    updateProfileSubArray(studentId, editorId, 'attendanceRecords', record);
+
+export const addCommunicationLog = (studentId: string, record: CommunicationLog, editorId: string) =>
+    updateProfileSubArray(studentId, editorId, 'communicationLogs', record);
+
+export const addUploadedDocument = (studentId: string, record: UploadedDocument, editorId: string) =>
+    updateProfileSubArray(studentId, editorId, 'uploadedDocuments', record);
+
+export const updateHealthRecords = (studentId: string, healthRecords: HealthRecords, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    
+    if (profileIndex !== -1) {
+        const now = new Date().toISOString();
+        const profile = profiles[profileIndex];
+        
+        profile.healthRecords = healthRecords;
         profile.student.updated_at = now;
         profile.student.updated_by = editorId;
 

@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog } from '@/lib/store';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument } from '@/lib/store';
 import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument, Class } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,6 +20,11 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { EditStudentForm } from '@/components/student-management/profile/edit-student-form';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { AcademicRecordForm } from '@/components/student-management/profile/academic-record-form';
+import { DisciplinaryRecordForm } from '@/components/student-management/profile/disciplinary-record-form';
+import { AttendanceRecordForm } from '@/components/student-management/profile/attendance-record-form';
+import { CommunicationLogForm } from '@/components/student-management/profile/communication-log-form';
+import { DocumentUploadForm } from '@/components/student-management/profile/document-upload-form';
 
 const statusColors: Record<string, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -49,14 +54,15 @@ function DetailItem({ icon, label, value }: { icon: React.ElementType, label: st
     )
 }
 
-function RecordCard<T>({ title, description, icon, records, columns, renderRow, emptyMessage = "No records found." }: { 
+function RecordCard<T>({ title, description, icon, records, columns, renderRow, emptyMessage = "No records found.", addRecordButton }: { 
     title: string, 
     description: string, 
     icon: React.ElementType,
     records?: T[], 
     columns: string[],
     renderRow: (record: T, index: number) => React.ReactNode,
-    emptyMessage?: string
+    emptyMessage?: string,
+    addRecordButton?: React.ReactNode,
 }) {
     const Icon = icon;
     return (
@@ -86,9 +92,7 @@ function RecordCard<T>({ title, description, icon, records, columns, renderRow, 
                     <p className="text-muted-foreground">{emptyMessage}</p>
                 )}
             </CardContent>
-            <CardFooter>
-                 <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button>
-            </CardFooter>
+            {addRecordButton && <CardFooter>{addRecordButton}</CardFooter>}
         </Card>
     );
 }
@@ -101,6 +105,14 @@ export default function StudentProfilePage() {
     const [className, setClassName] = useState('');
     const [age, setAge] = useState<number | null>(null);
     const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+    
+    // Dialog states for adding records
+    const [isAcademicFormOpen, setIsAcademicFormOpen] = useState(false);
+    const [isDisciplinaryFormOpen, setIsDisciplinaryFormOpen] = useState(false);
+    const [isAttendanceFormOpen, setIsAttendanceFormOpen] = useState(false);
+    const [isCommunicationFormOpen, setIsCommunicationFormOpen] = useState(false);
+    const [isDocumentFormOpen, setIsDocumentFormOpen] = useState(false);
+    
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
 
@@ -140,6 +152,27 @@ export default function StudentProfilePage() {
                 description: "The student's profile has been successfully updated.",
             });
             setIsEditFormOpen(false);
+        }
+    };
+
+    const handleAddRecord = <T,>(
+        addFunction: (studentId: string, record: T, editorId: string) => StudentProfile | null,
+        record: T,
+        logAction: string,
+        logDetails: string,
+        successTitle: string,
+        successDescription: string,
+        closeDialog: () => void
+    ) => {
+        if (!currentUser || !profile) return;
+        
+        const updatedProfile = addFunction(profile.student.student_no, record, currentUser.id);
+        
+        if (updatedProfile) {
+            setProfile(updatedProfile);
+            addAuditLog({ user: currentUser.email, name: currentUser.name, action: logAction, details: logDetails });
+            toast({ title: successTitle, description: successDescription });
+            closeDialog();
         }
     };
 
@@ -280,6 +313,14 @@ export default function StudentProfilePage() {
                                 <TableCell className="max-w-xs truncate">{rec.teacher_remarks}</TableCell>
                             </TableRow>
                         )}
+                        addRecordButton={
+                            <Dialog open={isAcademicFormOpen} onOpenChange={setIsAcademicFormOpen}>
+                                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                <DialogContent><DialogHeader><DialogTitle>Add Academic Record</DialogTitle></DialogHeader>
+                                    <AcademicRecordForm onSubmit={values => handleAddRecord(addAcademicRecord, values, "Add Academic Record", `Added grade for ${values.subject}`, "Record Added", "Academic record added successfully.", () => setIsAcademicFormOpen(false))} />
+                                </DialogContent>
+                            </Dialog>
+                        }
                     />
                 </TabsContent>
                  <TabsContent value="health" asChild>
@@ -334,6 +375,14 @@ export default function StudentProfilePage() {
                                 <TableCell>{getUserName(rec.reported_by)}</TableCell>
                             </TableRow>
                         )}
+                        addRecordButton={
+                             <Dialog open={isDisciplinaryFormOpen} onOpenChange={setIsDisciplinaryFormOpen}>
+                                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                <DialogContent><DialogHeader><DialogTitle>Add Disciplinary Record</DialogTitle></DialogHeader>
+                                    <DisciplinaryRecordForm users={users} onSubmit={values => handleAddRecord(addDisciplinaryRecord, values, "Add Disciplinary Record", `Logged incident: ${values.incident}`, "Record Added", "Disciplinary record added successfully.", () => setIsDisciplinaryFormOpen(false))} />
+                                </DialogContent>
+                            </Dialog>
+                        }
                     />
                 </TabsContent>
                 <TabsContent value="attendance" asChild>
@@ -350,6 +399,14 @@ export default function StudentProfilePage() {
                                     <TableCell><Badge variant={rec.status === 'Present' ? 'secondary' : 'destructive'}>{rec.status}</Badge></TableCell>
                                 </TableRow>
                             )}
+                             addRecordButton={
+                                <Dialog open={isAttendanceFormOpen} onOpenChange={setIsAttendanceFormOpen}>
+                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                    <DialogContent><DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
+                                        <AttendanceRecordForm onSubmit={values => handleAddRecord(addAttendanceRecord, values, "Add Attendance Record", `Logged attendance for ${format(new Date(values.date), 'yyyy-MM-dd')}`, "Record Added", "Attendance record added successfully.", () => setIsAttendanceFormOpen(false))} />
+                                    </DialogContent>
+                                </Dialog>
+                            }
                         />
                          <RecordCard<CommunicationLog>
                             title="Communication Log"
@@ -365,6 +422,14 @@ export default function StudentProfilePage() {
                                     <TableCell>{rec.notes}</TableCell>
                                 </TableRow>
                             )}
+                             addRecordButton={
+                                <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
+                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                    <DialogContent><DialogHeader><DialogTitle>Add Communication Log</DialogTitle></DialogHeader>
+                                        <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
+                                    </DialogContent>
+                                </Dialog>
+                            }
                         />
                     </div>
                 </TabsContent>
@@ -384,6 +449,14 @@ export default function StudentProfilePage() {
                             </TableRow>
                         )}
                         emptyMessage="No documents have been uploaded."
+                        addRecordButton={
+                             <Dialog open={isDocumentFormOpen} onOpenChange={setIsDocumentFormOpen}>
+                                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                <DialogContent><DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+                                    <DocumentUploadForm onSubmit={values => handleAddRecord(addUploadedDocument, values, "Upload Document", `Uploaded document: ${values.name}`, "Document Uploaded", "Document uploaded successfully.", () => setIsDocumentFormOpen(false))} />
+                                </DialogContent>
+                            </Dialog>
+                        }
                     />
                 </TabsContent>
             </Tabs>
