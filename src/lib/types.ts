@@ -110,8 +110,6 @@ export interface ContactDetails {
     city: string;
     hometown: string;
     residence: string;
-    gps_no?: string;
-    house_no?: string;
 }
 
 export interface GuardianInfo {

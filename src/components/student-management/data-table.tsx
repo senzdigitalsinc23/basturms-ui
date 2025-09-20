@@ -35,7 +35,7 @@ import Papa from 'papaparse';
 import { ImportPreviewDialog } from './import-preview-dialog';
 import { ALL_ADMISSION_STATUSES } from '@/lib/types';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 
@@ -81,7 +81,7 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
     },
   });
 
-  const isFiltered = table.getState().columnFilters.length > 0;
+  const isFiltered = table.getState().columnFilters.length > 0 || globalFilter;
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -149,23 +149,18 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
-    const tableData = table.getFilteredRowModel().rows.map(row => 
-        table.getVisibleFlatColumns().map(col => {
-            const cell = row.getVisibleCells().find(c => c.column.id === col.id);
-            if (cell) {
-                const value = cell.getValue();
-                if (typeof value === 'string' || typeof value === 'number') {
-                    return value.toString();
-                }
-            }
-            return '';
-        })
-    );
-    const headers = table.getVisibleFlatColumns().map(col => col.id);
+    const dataColumns = columns.filter(col => col.id !== 'select' && col.id !== 'actions' && col.accessorKey);
+    const headers = dataColumns.map(col => col.header as string);
+    const body = table.getFilteredRowModel().rows.map(row => {
+        return dataColumns.map(col => {
+             const accessor = col.accessorKey as keyof StudentDisplay;
+             return row.original[accessor];
+        });
+    });
 
-    (doc as any).autoTable({
+    autoTable(doc, {
         head: [headers],
-        body: tableData,
+        body: body,
     });
     doc.save('students.pdf');
   };
@@ -245,7 +240,10 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                 {isFiltered && (
                     <Button
                     variant="ghost"
-                    onClick={() => table.resetColumnFilters()}
+                    onClick={() => {
+                        table.resetColumnFilters();
+                        setGlobalFilter('');
+                    }}
                     className="h-8 px-2 lg:px-3"
                     >
                     Reset
