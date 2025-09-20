@@ -19,6 +19,7 @@ import { Checkbox } from '../ui/checkbox';
 import { StudentDisplay } from './student-management';
 import { format } from 'date-fns';
 import { AdmissionStatus, ALL_ADMISSION_STATUSES } from '@/lib/types';
+import Link from 'next/link';
 
 
 type ColumnsProps = {
@@ -126,9 +127,11 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisp
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Profile
+                    <DropdownMenuItem asChild>
+                        <Link href={`/student-management/students/${student.student_id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Profile
+                        </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                         <Pencil className="mr-2 h-4 w-4" />

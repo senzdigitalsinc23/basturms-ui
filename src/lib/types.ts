@@ -96,6 +96,7 @@ export interface Student {
     other_name?: string;
     dob: string;
     gender: 'Male' | 'Female' | 'Other';
+    avatarUrl?: string;
     created_at: string;
     created_by: string; // user id
     updated_at: string;
@@ -104,12 +105,12 @@ export interface Student {
 
 export interface ContactDetails {
     student_no: string;
-    email: string;
-    phone: string;
+    email?: string;
+    phone?: string;
     country_id: string; // Assuming country will be a separate entity later
-    city: string;
-    hometown: string;
-    residence: string;
+    city?: string;
+    hometown?: string;
+    residence?: string;
 }
 
 export interface GuardianInfo {

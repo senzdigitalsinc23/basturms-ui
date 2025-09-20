@@ -121,14 +121,14 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
 
     return [
         {
-            student: { student_no: student1StudentNo, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
+            student: { student_no: student1StudentNo, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser, avatarUrl: 'https://picsum.photos/seed/student1/200/200' },
             contactDetails: { student_no: student1StudentNo, email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
             guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother', guardian_email: 'jane.doe@example.com' },
             emergencyContact: { student_no: student1StudentNo, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
             admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' }
         },
         {
-            student: { student_no: student2StudentNo, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
+            student: { student_no: student2StudentNo, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser, avatarUrl: 'https://picsum.photos/seed/student2/200/200' },
             contactDetails: { student_no: student2StudentNo, email: 'mary.smith@example.com', phone: '123-456-7891', country_id: '1', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa' },
             guardianInfo: { student_no: student2StudentNo, guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father', guardian_email: 'peter.smith@example.com' },
             emergencyContact: { student_no: student2StudentNo, emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
@@ -236,7 +236,7 @@ export const getUserByEmail = (email: string): User | undefined => {
   return user ? mapUser(user) : undefined;
 }
 
-export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'status'> & { role: Role }): User => {
+export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string }): User => {
   const users = getUsersInternal();
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
@@ -333,7 +333,12 @@ export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>
 // Student Management Functions
 export const getStudentProfiles = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
 
-export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>, creatorId: string): StudentProfile => {
+export const getStudentProfileById = (studentId: string): StudentProfile | undefined => {
+    const profiles = getStudentProfiles();
+    return profiles.find(p => p.student.student_no === studentId);
+}
+
+export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, creatorId: string): StudentProfile => {
     const profiles = getStudentProfiles();
     const now = new Date();
     
@@ -357,6 +362,7 @@ export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student
         student: {
             ...profile.student,
             student_no: newStudentNo,
+            avatarUrl: `https://picsum.photos/seed/${newStudentNo}/200/200`,
             created_at: now.toISOString(),
             updated_at: now.toISOString(),
             created_by: creatorId,
