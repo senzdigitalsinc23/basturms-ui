@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { getStudentProfiles, addStudentProfile, updateStudentProfile, addAuditLog, getClasses } from '@/lib/store';
-import { StudentProfile } from '@/lib/types';
+import { Class, StudentProfile } from '@/lib/types';
 import { StudentDataTable } from './data-table';
 import { columns } from './columns';
 import { useAuth } from '@/hooks/use-auth';
@@ -47,6 +47,7 @@ function parseDateString(dateStr: string): Date | null {
 
 export function StudentManagement() {
   const [students, setStudents] = useState<StudentDisplay[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -67,12 +68,14 @@ export function StudentManagement() {
 
   useEffect(() => {
     refreshStudents();
+    setClasses(getClasses());
   }, []);
 
   const handleAddStudent = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>) => {
     if (!currentUser) return;
 
     const newProfile = addStudentProfile(profileData, currentUser.id);
+    refreshStudents();
     
     addAuditLog({
         user: currentUser.email,
@@ -177,8 +180,9 @@ export function StudentManagement() {
         // onUpdate: handleUpdateStudent,
       })}
       data={students}
+      classes={classes}
       onImport={handleImportStudents}
-    //   onAdd={handleAddStudent}
+      onAdd={handleAddStudent}
     />
   );
 }

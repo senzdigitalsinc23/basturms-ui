@@ -30,20 +30,24 @@ import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import Papa from 'papaparse';
 import { ImportPreviewDialog } from './import-preview-dialog';
-import { ALL_ADMISSION_STATUSES } from '@/lib/types';
+import { ALL_ADMISSION_STATUSES, Class } from '@/lib/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { DateRange } from 'react-day-picker';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { StudentForm } from './student-form';
 
 
 interface StudentDataTableProps {
   columns: ColumnDef<StudentDisplay>[];
   data: StudentDisplay[];
+  classes: Class[];
   onImport: (data: any[]) => void;
+  onAdd: (profile: any) => void;
 }
 
 const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
@@ -52,7 +56,7 @@ const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
 }));
 
 
-export function StudentDataTable({ columns, data, onImport }: StudentDataTableProps) {
+export function StudentDataTable({ columns, data, classes, onImport, onAdd }: StudentDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -60,6 +64,7 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
 
 
   const table = useReactTable({
@@ -89,8 +94,8 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
     }
   }, [date, table]);
 
-  const isFiltered = table.getState().columnFilters.length > 0 || globalFilter;
-  const isDateFiltered = date?.from && date?.to;
+  const isFiltered = table.getState().columnFilters.length > 0 || !!globalFilter;
+  const isDateFiltered = !!date;
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -124,10 +129,10 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
 
   const handleDownloadTemplate = () => {
     const headers = [
-        'enrollment_date','class_assigned','admission_status','first_name','last_name','other_name','dob','gender',
-        'email','phone','country_id','city','hometown','residence',
-        'guardian_name','guardian_phone','guardian_email','guardian_relationship',
-        'emergency_name','emergency_phone','emergency_email','emergency_relationship'
+      'enrollment_date', 'class_assigned', 'admission_status', 'first_name', 'last_name', 'other_name', 'dob', 'gender',
+      'email', 'phone', 'country_id', 'city', 'hometown', 'residence',
+      'guardian_name', 'guardian_phone', 'guardian_email', 'guardian_relationship',
+      'emergency_name', 'emergency_phone', 'emergency_email', 'emergency_relationship'
     ];
     const csv = Papa.unparse([headers]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -160,17 +165,17 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
     const dataColumns = columns.filter(col => col.id !== 'select' && col.id !== 'actions' && col.accessorKey);
     
     const headers = dataColumns.map(col => {
-        if (typeof col.header === 'function') {
-            // This is a simple way, might need more robust handling for complex headers
-            return col.id || '';
-        }
-        return col.header as string;
+        // A simple way to get header text, might need adjustment for complex headers
+        const header = col.header;
+        if(typeof header === 'string') return header;
+        // Fallback for function headers - might need a better mapping
+        return col.id || '';
     });
 
     const body = table.getFilteredRowModel().rows.map(row => {
         return dataColumns.map(col => {
              const accessor = col.accessorKey as keyof StudentDisplay;
-             let cellValue = row.original[accessor];
+             let cellValue = row.original[accessor] as any;
              if (col.id === 'admission_date' && typeof cellValue === 'string') {
                  return format(new Date(cellValue), 'yyyy-MM-dd');
              }
@@ -194,15 +199,8 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                 <p className="text-muted-foreground">Manage and view the list of all students.</p>
             </div>
             <div className="flex items-center gap-2">
+                 <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileUpload} />
                  <Button variant="outline" onClick={handleDownloadTemplate}><FilePlus className="mr-2 h-4 w-4" /> Template</Button>
-                 <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Student</Button>
-                 <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".csv"
-                    onChange={handleFileUpload}
-                 />
                  <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4" /> Import</Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -215,6 +213,26 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                     <DropdownMenuItem onClick={handleExportPDF}>Export as PDF</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                 <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
+                    <DialogTrigger asChild>
+                        <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Student</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Add New Student</DialogTitle>
+                            <DialogDescription>
+                                Fill in the details to create a new student profile.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <StudentForm
+                            classes={classes}
+                            onSubmit={(values) => {
+                                onAdd(values);
+                                setIsAddFormOpen(false);
+                            }}
+                        />
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
 
