@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -58,7 +59,7 @@ export function ProtectedRoute({
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground mb-6">You do not have permission to view this page. Your role is '{user.role}', but this page requires one of the following roles: {allowedRoles.join(', ')}.</p>
-                    <Button asChild>
+                    <Button asChild size="sm">
                         <Link href="/dashboard">Return to Dashboard</Link>
                     </Button>
                 </CardContent>

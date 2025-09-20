@@ -137,7 +137,7 @@ export function EditStudentForm({
              <FormField control={form.control} name="dob" render={({ field }) => (
                 <FormItem className="flex flex-col"><FormLabel>Date of Birth</FormLabel>
                 <Popover><PopoverTrigger asChild>
-                    <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                    <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")} size="sm">
                         {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button></FormControl>
@@ -198,7 +198,7 @@ export function EditStudentForm({
 
 
         <div className="flex justify-end pt-4 sticky bottom-0 bg-background/95 pb-4">
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} size="sm">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>

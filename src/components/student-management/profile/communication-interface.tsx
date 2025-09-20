@@ -77,7 +77,7 @@ export function CommunicationInterface({ student }: CommunicationInterfaceProps)
                     }
                 }}
                 />
-                <Button onClick={handleSendMessage}>
+                <Button onClick={handleSendMessage} size="sm">
                 <Send className="h-4 w-4" />
                 <span className="sr-only">Send</span>
                 </Button>
@@ -91,7 +91,7 @@ export function CommunicationInterface({ student }: CommunicationInterfaceProps)
                 <p>To: {student.guardianInfo.guardian_name} (Parent) at {student.guardianInfo.guardian_phone}</p>
             </div>
             <Textarea placeholder="Compose SMS to parent..." rows={10} />
-            <Button>Send SMS</Button>
+            <Button size="sm">Send SMS</Button>
         </div>
       </TabsContent>
       <TabsContent value="email">
@@ -101,7 +101,7 @@ export function CommunicationInterface({ student }: CommunicationInterfaceProps)
                 <p>To: {student.guardianInfo.guardian_email} (Parent)</p>
             </div>
             <Textarea placeholder="Compose Email to parent..." rows={10} />
-            <Button>Send Email</Button>
+            <Button size="sm">Send Email</Button>
         </div>
       </TabsContent>
     </Tabs>

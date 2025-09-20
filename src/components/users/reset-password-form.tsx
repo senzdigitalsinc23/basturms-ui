@@ -1,3 +1,4 @@
+
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -98,7 +99,7 @@ export function ResetPasswordForm({ onSubmit }: ResetPasswordFormProps) {
           )}
         />
         <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} size="sm">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Set New Password
           </Button>

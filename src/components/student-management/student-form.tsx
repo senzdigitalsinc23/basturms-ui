@@ -1,3 +1,4 @@
+
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -149,7 +150,7 @@ export function StudentForm({
              <FormField control={form.control} name="dob" render={({ field }) => (
                 <FormItem className="flex flex-col"><FormLabel>Date of Birth</FormLabel>
                 <Popover><PopoverTrigger asChild>
-                    <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                    <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")} size="sm">
                         {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button></FormControl>
@@ -197,7 +198,7 @@ export function StudentForm({
             <FormField control={form.control} name="enrollment_date" render={({ field }) => (
                  <FormItem className="flex flex-col"><FormLabel>Enrollment Date</FormLabel>
                  <Popover><PopoverTrigger asChild>
-                     <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                     <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")} size="sm">
                          {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                      </Button></FormControl>
@@ -218,7 +219,7 @@ export function StudentForm({
 
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} size="sm">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEditMode ? 'Save Changes' : 'Add Student'}
           </Button>

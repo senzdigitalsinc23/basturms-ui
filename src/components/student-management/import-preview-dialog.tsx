@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Dialog,
@@ -71,10 +72,10 @@ export function ImportPreviewDialog({
             </Table>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} size="sm">
             Cancel
           </Button>
-          <Button onClick={onConfirm}>Confirm Import</Button>
+          <Button onClick={onConfirm} size="sm">Confirm Import</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

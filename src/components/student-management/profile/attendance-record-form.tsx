@@ -46,7 +46,7 @@ export function AttendanceRecordForm({ onSubmit }: AttendanceRecordFormProps) {
             <Popover>
               <PopoverTrigger asChild>
                 <FormControl>
-                  <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
+                  <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')} size="sm">
                     {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                   </Button>
@@ -83,7 +83,7 @@ export function AttendanceRecordForm({ onSubmit }: AttendanceRecordFormProps) {
           </FormItem>
         )} />
         <div className="flex justify-end">
-          <Button type="submit">Add Record</Button>
+          <Button type="submit" size="sm">Add Record</Button>
         </div>
       </form>
     </Form>

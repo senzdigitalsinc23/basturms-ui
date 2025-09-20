@@ -1,3 +1,4 @@
+
 'use client';
 import {
   ColumnDef,
@@ -221,11 +222,11 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd, onBu
             </div>
             <div className="flex items-center gap-2">
                  <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileUpload} />
-                 <Button variant="outline" onClick={handleDownloadTemplate}><FilePlus className="mr-2 h-4 w-4" /> Template</Button>
-                 <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4" /> Import</Button>
+                 <Button variant="outline" onClick={handleDownloadTemplate} size="sm"><FilePlus className="mr-2 h-4 w-4" /> Template</Button>
+                 <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200" onClick={handleImportClick} size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200">
+                    <Button variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200" size="sm">
                       <Download className="mr-2 h-4 w-4" /> Export <ChevronsUpDown className="ml-2 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -236,7 +237,7 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd, onBu
                 </DropdownMenu>
                  <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
                     <DialogTrigger asChild>
-                        <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Student</Button>
+                        <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Student</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-2xl">
                         <DialogHeader>
@@ -334,7 +335,7 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd, onBu
                      <span className="text-sm text-muted-foreground">{selectedRows.length} selected</span>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
+                            <Button variant="outline" size="sm">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                             <DropdownMenuItem onClick={handleExportCSV}>Export Selected (CSV)</DropdownMenuItem>

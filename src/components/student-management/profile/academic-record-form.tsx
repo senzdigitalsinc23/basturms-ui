@@ -58,7 +58,7 @@ export function AcademicRecordForm({ onSubmit }: AcademicRecordFormProps) {
           </FormItem>
         )} />
         <div className="flex justify-end">
-          <Button type="submit">Add Record</Button>
+          <Button type="submit" size="sm">Add Record</Button>
         </div>
       </form>
     </Form>

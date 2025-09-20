@@ -114,7 +114,7 @@ export function DocumentUploadForm({ onSubmit }: DocumentUploadFormProps) {
             )}
             />
         <div className="flex justify-end">
-          <Button type="submit">Add Document</Button>
+          <Button type="submit" size="sm">Add Document</Button>
         </div>
       </form>
     </Form>
