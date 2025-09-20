@@ -52,7 +52,7 @@ const SidebarAccordionTrigger = React.forwardRef<
   <AccordionTrigger
     ref={ref}
     className={cn(
-      'flex w-full items-center gap-2 rounded-md p-2 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus:outline-none',
+      'flex w-full items-center gap-2 rounded-md p-2 text-left text-base font-normal text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus:outline-none h-auto justify-start',
       className
     )}
     {...props}
