@@ -1,4 +1,5 @@
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -31,6 +32,11 @@ export const ALL_ROLES: Role[] = [
 export interface RoleStorage {
   id: string;
   name: Role;
+}
+
+export interface Class {
+  id: string;
+  name: string;
 }
 
 export interface User {
@@ -116,7 +122,7 @@ export interface AdmissionDetails {
     student_no: string;
     admission_no: string;
     enrollment_date: string;
-    class_assigned: string; // Assuming class will be a separate entity later
+    class_assigned: string; // This will be the ID from the Class type
     admission_status: 'Admitted' | 'Pending' | 'Withdrawn';
 }
 

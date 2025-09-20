@@ -97,7 +97,15 @@ export function StudentDataTable({ columns, data }: StudentDataTableProps) {
         </div>
 
         <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-1 items-center space-x-2">
+                <Input
+                    placeholder="Search by name or ID..."
+                    value={globalFilter ?? ''}
+                    onChange={(event) =>
+                        setGlobalFilter(event.target.value)
+                    }
+                    className="h-8 w-[150px] lg:w-[250px]"
+                />
                 {table.getColumn("status") && (
                     <DataTableFacetedFilter
                     column={table.getColumn("status")}
@@ -110,7 +118,7 @@ export function StudentDataTable({ columns, data }: StudentDataTableProps) {
                     <Button
                         variant={"outline"}
                         className={cn(
-                        "w-[240px] justify-start text-left font-normal",
+                        "w-[240px] justify-start text-left font-normal h-8",
                         !date && "text-muted-foreground"
                         )}
                     >

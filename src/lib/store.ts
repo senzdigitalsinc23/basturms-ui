@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -11,6 +12,7 @@ import {
   UserStorage,
   AuthLog,
   StudentProfile,
+  Class,
 } from './types';
 
 const USERS_KEY = 'campusconnect_users';
@@ -18,6 +20,7 @@ const ROLES_KEY = 'campusconnect_roles';
 const LOGS_KEY = 'campusconnect_logs';
 const AUTH_LOGS_KEY = 'campusconnect_auth_logs';
 const STUDENTS_KEY = 'campusconnect_students';
+const CLASSES_KEY = 'campusconnect_classes';
 
 
 const getInitialRoles = (): RoleStorage[] => {
@@ -102,25 +105,58 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
 
 const getInitialStudentProfiles = (): StudentProfile[] => {
     const now = new Date();
-    const year = now.getFullYear().toString().slice(-2);
-    const adminUser = '1'; 
+    const currentYear = now.getFullYear();
+    const yearYY = currentYear.toString().slice(-2);
+    const adminUser = '1';
+    
+    // Student 1 admitted this year
+    const student1EnrollDate = new Date(currentYear, 2, 15).toISOString(); // Mar 15
+    const student1StudentNo = `WR-TK001-LBA${yearYY}001`;
+    const student1AdmissionNo = `ADM${yearYY}001`;
+
+    // Student 2 admitted last year
+    const lastYear = currentYear - 1;
+    const lastYearYY = lastYear.toString().slice(-2);
+    const student2EnrollDate = new Date(lastYear, 8, 1).toISOString(); // Sep 1
+    const student2StudentNo = `WR-TK001-LBA${lastYearYY}001`;
+    const student2AdmissionNo = `ADM${lastYearYY}001`;
+
     return [
         {
-            student: { student_no: `WR-TK001-LBA${year}001`, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
-            contactDetails: { student_no: `WR-TK001-LBA${year}001`, email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
-            guardianInfo: { student_no: `WR-TK001-LBA${year}001`, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother' },
-            emergencyContact: { student_no: `WR-TK001-LBA${year}001`, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
-            admissionDetails: { student_no: `WR-TK001-LBA${year}001`, admission_no: `ADM${year}001`, enrollment_date: now.toISOString(), class_assigned: 'Grade 5', admission_status: 'Admitted' }
+            student: { student_no: student1StudentNo, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
+            contactDetails: { student_no: student1StudentNo, email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
+            guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother' },
+            emergencyContact: { student_no: student1StudentNo, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
+            admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' }
         },
         {
-            student: { student_no: `WR-TK001-LBA${year}002`, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
-            contactDetails: { student_no: `WR-TK001-LBA${year}002`, email: 'mary.smith@example.com', phone: '123-456-7891', country_id: '1', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa' },
-            guardianInfo: { student_no: `WR-TK001-LBA${year}002`, guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father' },
-            emergencyContact: { student_no: `WR-TK001-LBA${year}002`, emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
-            admissionDetails: { student_no: `WR-TK001-LBA${year}002`, admission_no: `ADM${year}002`, enrollment_date: now.toISOString(), class_assigned: 'Grade 4', admission_status: 'Admitted' }
+            student: { student_no: student2StudentNo, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
+            contactDetails: { student_no: student2StudentNo, email: 'mary.smith@example.com', phone: '123-456-7891', country_id: '1', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa' },
+            guardianInfo: { student_no: student2StudentNo, guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father' },
+            emergencyContact: { student_no: student2StudentNo, emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
+            admissionDetails: { student_no: student2StudentNo, admission_no: student2AdmissionNo, enrollment_date: student2EnrollDate, class_assigned: 'b4', admission_status: 'Admitted' }
         }
-    ]
+    ];
 }
+
+
+const getInitialClasses = (): Class[] => {
+    return [
+        { id: 'nur1', name: 'Nursery 1' },
+        { id: 'nur2', name: 'Nursery 2' },
+        { id: 'kg1', name: 'Kingdergarten 1' },
+        { id: 'kg2', name: 'Kingdergarten 2' },
+        { id: 'b1', name: 'Basic 1' },
+        { id: 'b2', name: 'Basic 2' },
+        { id: 'b3', name: 'Basic 3' },
+        { id: 'b4', name: 'Basic 4' },
+        { id: 'b5', name: 'Basic 5' },
+        { id: 'b6', name: 'Basic 6' },
+        { id: 'jhs1', name: 'Junior High School 1' },
+        { id: 'jhs2', name: 'Junior High School 2' },
+        { id: 'jhs3', name: 'Junior High School 3' },
+    ];
+};
 
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') {
@@ -164,11 +200,17 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(STUDENTS_KEY)) {
         saveToStorage(STUDENTS_KEY, getInitialStudentProfiles());
     }
+    if (!window.localStorage.getItem(CLASSES_KEY)) {
+        saveToStorage(CLASSES_KEY, getInitialClasses());
+    }
   }
 };
 
 // Role Functions
 export const getRoles = (): RoleStorage[] => getFromStorage<RoleStorage[]>(ROLES_KEY, []);
+
+// Class Functions
+export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
 
 // User Functions
 const getUsersInternal = (): UserStorage[] => getFromStorage<UserStorage[]>(USERS_KEY, []);
