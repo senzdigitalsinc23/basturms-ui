@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getStudentProfiles, addStudentProfile, updateStudentProfile, addAuditLog, getClasses } from '@/lib/store';
-import { Class, StudentProfile } from '@/lib/types';
+import { getStudentProfiles, addStudentProfile, updateStudentStatus, addAuditLog, getClasses } from '@/lib/store';
+import { AdmissionStatus, Class, StudentProfile } from '@/lib/types';
 import { StudentDataTable } from './data-table';
 import { columns } from './columns';
 import { useAuth } from '@/hooks/use-auth';
@@ -11,13 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 export type StudentDisplay = {
   student_id: string;
   name: string;
-  class: string;
+  class_name: string;
+  class_id: string;
   status: string;
   admission_date: string;
+  email: string;
 };
 
 // A more robust date parsing function
-function parseDateString(dateStr: string): Date | null {
+function parseDateString(dateStr: string | undefined): Date | null {
     if (!dateStr) return null;
 
     // Try standard ISO and MM/DD/YYYY directly
@@ -59,9 +61,11 @@ export function StudentManagement() {
     const displayData = profiles.map(p => ({
         student_id: p.student.student_no,
         name: `${p.student.first_name} ${p.student.last_name}`,
-        class: classMap.get(p.admissionDetails.class_assigned) || p.admissionDetails.class_assigned,
+        class_name: classMap.get(p.admissionDetails.class_assigned) || 'N/A',
+        class_id: p.admissionDetails.class_assigned,
         status: p.admissionDetails.admission_status,
         admission_date: p.admissionDetails.enrollment_date,
+        email: p.contactDetails.email,
     })).sort((a, b) => new Date(b.admission_date).getTime() - new Date(a.admission_date).getTime());
     setStudents(displayData);
   }
@@ -168,16 +172,34 @@ export function StudentManagement() {
   }
 
 
-//   const handleUpdateStudent = (profile: StudentProfile) => {
-//     if (!currentUser) return;
-//     const updatedProfile = updateStudentProfile(profile, currentUser.id);
-//     //... update state and log
-//   };
+  const handleUpdateStatus = (studentId: string, status: AdmissionStatus) => {
+    if (!currentUser) return;
+    const updatedProfile = updateStudentStatus(studentId, status, currentUser.id);
+    if (updatedProfile) {
+        refreshStudents();
+        toast({
+            title: "Status Updated",
+            description: `Student ${updatedProfile.student.first_name}'s status has been changed to ${status}.`
+        });
+        addAuditLog({
+            user: currentUser.email,
+            name: currentUser.name,
+            action: 'Update Student Status',
+            details: `Changed status of student ID ${studentId} to ${status}`,
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: "Update Failed",
+            description: "Could not find the student to update."
+        })
+    }
+  };
 
   return (
     <StudentDataTable
       columns={columns({
-        // onUpdate: handleUpdateStudent,
+        onUpdateStatus: handleUpdateStatus,
       })}
       data={students}
       classes={classes}

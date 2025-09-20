@@ -10,6 +10,7 @@ import {
   AuthLog,
   StudentProfile,
   Class,
+  AdmissionStatus,
 } from './types';
 
 const USERS_KEY = 'campusconnect_users';
@@ -393,3 +394,22 @@ export const updateStudentProfile = (updatedProfile: StudentProfile, editorId: s
     }
     return updatedProfile;
 };
+
+export const updateStudentStatus = (studentId: string, status: AdmissionStatus, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    
+    if (profileIndex !== -1) {
+        const now = new Date().toISOString();
+        const profile = profiles[profileIndex];
+        
+        profile.admissionDetails.admission_status = status;
+        profile.student.updated_at = now;
+        profile.student.updated_by = editorId;
+
+        profiles[profileIndex] = profile;
+        saveToStorage(STUDENTS_KEY, profiles);
+        return profile;
+    }
+    return null;
+}

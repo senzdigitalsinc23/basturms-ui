@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Pencil, KeyRound, UserX, UserCheck } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Pencil, UserX, Eye, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,15 +10,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { StudentDisplay } from './student-management';
 import { format } from 'date-fns';
-import { AdmissionStatus } from '@/lib/types';
+import { AdmissionStatus, ALL_ADMISSION_STATUSES } from '@/lib/types';
 
 
-type ColumnsProps = {};
+type ColumnsProps = {
+    onUpdateStatus: (studentId: string, status: AdmissionStatus) => void;
+};
 
 const statusColors: Record<AdmissionStatus, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -31,7 +36,7 @@ const statusColors: Record<AdmissionStatus, string> = {
 };
 
 
-export const columns = ({}: ColumnsProps): ColumnDef<StudentDisplay>[] => [
+export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisplay>[] => [
     {
         id: 'select',
         header: ({ table }) => (
@@ -73,10 +78,10 @@ export const columns = ({}: ColumnsProps): ColumnDef<StudentDisplay>[] => [
         },
     },
     {
-        accessorKey: 'class',
+        accessorKey: 'class_name',
         header: 'Class',
         cell: ({ row }) => {
-            const className = row.getValue('class') as string;
+            const className = row.getValue('class_name') as string;
             return <Badge variant="outline" className="font-normal">{className}</Badge>;
         }
     },
@@ -101,7 +106,7 @@ export const columns = ({}: ColumnsProps): ColumnDef<StudentDisplay>[] => [
         },
         filterFn: (row, id, value) => {
             const date = new Date(row.getValue(id));
-            const [from, to] = value as string[];
+            const [from, to] = value as [string, string];
             return date >= new Date(from) && date <= new Date(to);
         }
     },
@@ -122,13 +127,30 @@ export const columns = ({}: ColumnsProps): ColumnDef<StudentDisplay>[] => [
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuItem>
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Eye className="mr-2 h-4 w-4" />
                         View Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                     </DropdownMenuItem>
+                     <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                            <ChevronsUpDown className="mr-2 h-4 w-4" />
+                            Change Status
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                            {ALL_ADMISSION_STATUSES.map(status => (
+                                <DropdownMenuItem 
+                                    key={status}
+                                    onClick={() => onUpdateStatus(student.student_id, status)}
+                                    disabled={student.status === status}
+                                >
+                                    {status}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive focus:text-destructive">
                         <UserX className="mr-2 h-4 w-4" />
