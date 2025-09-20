@@ -15,7 +15,7 @@ export type StudentDisplay = {
   class_id: string;
   status: string;
   admission_date: string;
-  email: string;
+  email?: string;
 };
 
 // A more robust date parsing function
