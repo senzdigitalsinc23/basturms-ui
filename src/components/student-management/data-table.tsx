@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Papa from 'papaparse';
 import { ImportPreviewDialog } from './import-preview-dialog';
+import { ALL_ADMISSION_STATUSES } from '@/lib/types';
 
 interface StudentDataTableProps {
   columns: ColumnDef<StudentDisplay>[];
@@ -49,11 +50,10 @@ interface StudentDataTableProps {
   // onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password'> & { role: User['role'], password?: string }) => void;
 }
 
-const statusOptions = [
-    { value: 'Admitted', label: 'Admitted' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Withdrawn', label: 'Withdrawn' },
-]
+const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
+    value: status,
+    label: status
+}));
 
 
 export function StudentDataTable({ columns, data, onImport }: StudentDataTableProps) {

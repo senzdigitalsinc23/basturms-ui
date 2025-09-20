@@ -76,7 +76,19 @@ export interface AuthLog {
   clientInfo?: string;
 }
 
+
 // Student Management Types
+export type AdmissionStatus = 'Admitted' | 'Pending' | 'Graduated' | 'Stopped' | 'Transferred' | 'Suspended' | 'Withdrawn';
+
+export const ALL_ADMISSION_STATUSES: AdmissionStatus[] = [
+    'Admitted',
+    'Pending',
+    'Graduated',
+    'Stopped',
+    'Transferred',
+    'Suspended',
+    'Withdrawn',
+];
 export interface Student {
     student_no: string;
     first_name: string;
@@ -123,7 +135,7 @@ export interface AdmissionDetails {
     admission_no: string;
     enrollment_date: string;
     class_assigned: string; // This will be the ID from the Class type
-    admission_status: 'Admitted' | 'Pending' | 'Withdrawn';
+    admission_status: AdmissionStatus;
 }
 
 export interface StudentProfile {

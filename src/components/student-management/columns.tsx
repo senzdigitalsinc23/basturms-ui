@@ -14,22 +14,21 @@ import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { StudentDisplay } from './student-management';
 import { format } from 'date-fns';
+import { AdmissionStatus } from '@/lib/types';
 
 
 type ColumnsProps = {
 //   onUpdate: (user: User) => void;
 };
 
-const statusColors: { [key: string]: string } = {
-    'Admitted': 'bg-green-100 text-green-800',
-    'Pending': 'bg-yellow-100 text-yellow-800',
-    'Withdrawn': 'bg-red-100 text-red-800',
-    // Add other statuses from your design
-    'Inactive': 'bg-red-100 text-red-800',
-    'Graduated': 'bg-blue-100 text-blue-800',
-    'Suspended': 'bg-orange-100 text-orange-800',
-    'Transferred': 'bg-purple-100 text-purple-800',
-    'Stopped': 'bg-gray-100 text-gray-800',
+const statusColors: Record<AdmissionStatus, string> = {
+    Admitted: 'bg-green-100 text-green-800',
+    Pending: 'bg-yellow-100 text-yellow-800',
+    Withdrawn: 'bg-red-100 text-red-800',
+    Graduated: 'bg-blue-100 text-blue-800',
+    Suspended: 'bg-orange-100 text-orange-800',
+    Transferred: 'bg-purple-100 text-purple-800',
+    Stopped: 'bg-gray-100 text-gray-800',
 };
 
 
@@ -88,7 +87,7 @@ export const columns = ({
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => {
-            const status = row.getValue('status') as string;
+            const status = row.getValue('status') as AdmissionStatus;
             const colorClass = statusColors[status] || 'bg-gray-100 text-gray-800';
             return <Badge variant="outline" className={`${colorClass} border-none`}>{status}</Badge>;
         },

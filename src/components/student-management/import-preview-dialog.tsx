@@ -45,7 +45,7 @@ export function ImportPreviewDialog({
         <DialogHeader>
           <DialogTitle>Import Preview</DialogTitle>
           <DialogDescription>
-            Review the data below before importing. A total of {rowCount} records and {colCount} columns found. Only the first 10 records are shown here.
+            Review the data below before importing. A total of {rowCount} records and {colCount} columns found. Scroll to see all records.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[400px] rounded-md border">
@@ -58,7 +58,7 @@ export function ImportPreviewDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.slice(0, 10).map((row, rowIndex) => (
+              {data.map((row, rowIndex) => (
                 <TableRow key={rowIndex}>
                   {headers.map((header) => (
                     <TableCell key={`${rowIndex}-${header}`} className="max-w-[150px] truncate">
