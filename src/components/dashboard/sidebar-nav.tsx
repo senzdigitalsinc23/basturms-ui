@@ -218,7 +218,6 @@ export function SidebarNav() {
                 <SidebarAccordionTrigger>
                   <item.icon className="h-5 w-5" />
                   <span className="text-base hidden group-data-[state=expanded]:inline">{item.label}</span>
-                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 ml-auto hidden group-data-[state=expanded]:inline" />
                 </SidebarAccordionTrigger>
                 <SidebarAccordionContent>
                   {item.items.map((subItem) => (

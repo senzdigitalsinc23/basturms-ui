@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Pencil, KeyRound, UserX, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
@@ -121,10 +122,17 @@ export const columns = ({}: ColumnsProps): ColumnDef<StudentDisplay>[] => [
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuItem>
+                        <Pencil className="mr-2 h-4 w-4" />
                         View Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem>
+                        <Pencil className="mr-2 h-4 w-4" />
                         Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive">
+                        <UserX className="mr-2 h-4 w-4" />
+                        Suspend
                     </DropdownMenuItem>
                 </DropdownMenuContent>
                 </DropdownMenu>
