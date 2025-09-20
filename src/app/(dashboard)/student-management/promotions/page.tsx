@@ -27,7 +27,6 @@ type StudentForPromotion = {
 
 export default function PromotionsPage() {
     const [classes, setClasses] = useState<Class[]>([]);
-    const [allStudentProfiles, setAllStudentProfiles] = useState<StudentProfile[]>([]);
     const [fromClass, setFromClass] = useState<string | undefined>();
     const [toClass, setToClass] = useState<string | undefined>();
     const [studentsInClass, setStudentsInClass] = useState<StudentForPromotion[]>([]);
@@ -41,26 +40,14 @@ export default function PromotionsPage() {
 
     const FINAL_CLASS_ID = 'jhs3'; // Assuming this is the final class before graduation
 
-    const fetchStudentData = () => {
-        const profiles = getStudentProfiles();
-        setAllStudentProfiles(profiles);
-    }
-    
     useEffect(() => {
         const allClasses = getClasses();
         setClasses(allClasses);
-        fetchStudentData();
-
-        // Re-fetch data when the window gets focus to catch updates from other tabs
-        const handleFocus = () => fetchStudentData();
-        window.addEventListener('focus', handleFocus);
-        return () => {
-            window.removeEventListener('focus', handleFocus);
-        };
     }, []);
 
     useEffect(() => {
         if (fromClass) {
+            const allStudentProfiles = getStudentProfiles();
             const classMap = new Map(classes.map(c => [c.id, c.name]));
             const filteredStudents = allStudentProfiles
                 .filter(p => p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
@@ -74,7 +61,7 @@ export default function PromotionsPage() {
         } else {
             setStudentsInClass([]);
         }
-    }, [fromClass, classes, allStudentProfiles]);
+    }, [fromClass, classes]);
 
     const isAllSelected = studentsInClass.length > 0 && Object.keys(selectedStudents).length === studentsInClass.length;
 
@@ -106,6 +93,12 @@ export default function PromotionsPage() {
     const expectedToClass = classes[fromClassIndex + 1];
 
     const isInvalidStandardPromotion = !isSpecialPromotion && toClass && expectedToClass && toClass !== expectedToClass.id;
+    
+    const fetchStudentData = () => {
+        // This function is just to trigger a re-render by updating state
+        // The actual data is fetched inside the useEffect listening to fromClass
+        setStudentsInClass(prev => [...prev]);
+    }
 
     const handlePromotion = async () => {
         if (!user || !fromClass || !toClass || studentIdsToPromote.length === 0) return;
