@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getStudentProfiles, addStudentProfile, updateStudentStatus, addAuditLog, getClasses } from '@/lib/store';
+import { getStudentProfiles, addStudentProfile, updateStudentStatus, addAuditLog, getClasses, deleteStudentProfile } from '@/lib/store';
 import { AdmissionStatus, Class, StudentProfile } from '@/lib/types';
 import { StudentDataTable } from './data-table';
 import { columns } from './columns';
@@ -55,8 +55,9 @@ export function StudentManagement() {
 
   const refreshStudents = () => {
     const profiles = getStudentProfiles();
-    const classes = getClasses();
-    const classMap = new Map(classes.map(c => [c.id, c.name]));
+    const classesData = getClasses();
+    setClasses(classesData);
+    const classMap = new Map(classesData.map(c => [c.id, c.name]));
 
     const displayData = profiles.map(p => ({
         student_id: p.student.student_no,
@@ -72,7 +73,6 @@ export function StudentManagement() {
 
   useEffect(() => {
     refreshStudents();
-    setClasses(getClasses());
   }, []);
 
   const handleAddStudent = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>) => {
@@ -171,7 +171,6 @@ export function StudentManagement() {
     }
   }
 
-
   const handleUpdateStatus = (studentId: string, status: AdmissionStatus) => {
     if (!currentUser) return;
     const updatedProfile = updateStudentStatus(studentId, status, currentUser.id);
@@ -195,6 +194,46 @@ export function StudentManagement() {
         })
     }
   };
+  
+  const handleBulkUpdateStatus = (studentIds: string[], status: AdmissionStatus) => {
+    if (!currentUser) return;
+    let successCount = 0;
+    studentIds.forEach(id => {
+        const updated = updateStudentStatus(id, status, currentUser.id);
+        if (updated) successCount++;
+    });
+    refreshStudents();
+    toast({
+        title: "Bulk Status Update",
+        description: `Updated status for ${successCount} of ${studentIds.length} students to ${status}.`
+    });
+    addAuditLog({
+        user: currentUser.email,
+        name: currentUser.name,
+        action: 'Bulk Update Student Status',
+        details: `Changed status of ${studentIds.length} students to ${status}`,
+    });
+  }
+  
+  const handleBulkDelete = (studentIds: string[]) => {
+    if (!currentUser) return;
+    let successCount = 0;
+    studentIds.forEach(id => {
+        const success = deleteStudentProfile(id);
+        if (success) successCount++;
+    });
+    refreshStudents();
+    toast({
+        title: "Bulk Delete Successful",
+        description: `Deleted ${successCount} of ${studentIds.length} students.`
+    });
+    addAuditLog({
+        user: currentUser.email,
+        name: currentUser.name,
+        action: 'Bulk Delete Students',
+        details: `Deleted ${studentIds.length} students.`,
+    });
+  }
 
   return (
     <StudentDataTable
@@ -205,6 +244,8 @@ export function StudentManagement() {
       classes={classes}
       onImport={handleImportStudents}
       onAdd={handleAddStudent}
+      onBulkUpdateStatus={handleBulkUpdateStatus}
+      onBulkDelete={handleBulkDelete}
     />
   );
 }

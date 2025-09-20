@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import {
@@ -471,6 +469,17 @@ export const updateStudentStatus = (studentId: string, status: AdmissionStatus, 
     }
     return null;
 }
+
+export const deleteStudentProfile = (studentId: string): boolean => {
+    const profiles = getStudentProfiles();
+    const newProfiles = profiles.filter(p => p.student.student_no !== studentId);
+    if (newProfiles.length < profiles.length) {
+        saveToStorage(STUDENTS_KEY, newProfiles);
+        return true;
+    }
+    return false;
+}
+
 
 const updateProfileSubArray = <T>(studentId: string, editorId: string, arrayName: keyof StudentProfile, newItem: T): StudentProfile | null => {
     const profiles = getStudentProfiles();

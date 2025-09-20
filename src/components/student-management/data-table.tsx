@@ -11,6 +11,7 @@ import {
   SortingState,
   getFacetedRowModel,
   getFacetedUniqueValues,
+  RowSelectionState,
 } from '@tanstack/react-table';
 
 import {
@@ -25,7 +26,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useEffect, useRef, useState } from 'react';
 import { StudentDisplay } from './student-management';
-import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
+import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -33,13 +34,14 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Papa from 'papaparse';
 import { ImportPreviewDialog } from './import-preview-dialog';
-import { ALL_ADMISSION_STATUSES, Class } from '@/lib/types';
+import { ALL_ADMISSION_STATUSES, AdmissionStatus, Class } from '@/lib/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuSeparator } from '../ui/dropdown-menu';
 import { DateRange } from 'react-day-picker';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { StudentForm } from './student-form';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 
 interface StudentDataTableProps {
@@ -48,6 +50,8 @@ interface StudentDataTableProps {
   classes: Class[];
   onImport: (data: any[]) => void;
   onAdd: (profile: any) => void;
+  onBulkUpdateStatus: (studentIds: string[], status: AdmissionStatus) => void;
+  onBulkDelete: (studentIds: string[]) => void;
 }
 
 const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
@@ -56,7 +60,7 @@ const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
 }));
 
 
-export function StudentDataTable({ columns, data, classes, onImport, onAdd }: StudentDataTableProps) {
+export function StudentDataTable({ columns, data, classes, onImport, onAdd, onBulkUpdateStatus, onBulkDelete }: StudentDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -65,6 +69,8 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
 
   const table = useReactTable({
@@ -79,10 +85,12 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
-      globalFilter
+      globalFilter,
+      rowSelection
     },
   });
 
@@ -93,6 +101,9 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
         table.getColumn('admission_date')?.setFilterValue(undefined);
     }
   }, [date, table]);
+  
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedStudentIds = selectedRows.map(row => row.original.student_id);
 
   const isFiltered = table.getState().columnFilters.length > 0 || !!globalFilter;
   const isDateFiltered = !!date;
@@ -147,7 +158,8 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
   };
 
   const handleExportCSV = () => {
-    const dataToExport = table.getFilteredRowModel().rows.map(row => row.original);
+    const rows = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
+    const dataToExport = rows.map(row => row.original);
     const csv = Papa.unparse(dataToExport);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -169,7 +181,8 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
         return header || '';
     });
 
-    const body = table.getFilteredRowModel().rows.map(row => {
+    const rows = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
+    const body = rows.map(row => {
         return dataColumns.map(col => {
              const accessor = col.accessorKey as keyof StudentDisplay;
              let cellValue = row.original[accessor] as any;
@@ -187,6 +200,17 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
     doc.save('students.pdf');
   };
 
+  const handleConfirmBulkDelete = () => {
+    onBulkDelete(selectedStudentIds);
+    table.resetRowSelection();
+    setIsDeleteAlertOpen(false);
+  }
+
+  const handleBulkStatusUpdate = (status: AdmissionStatus) => {
+    onBulkUpdateStatus(selectedStudentIds, status);
+    table.resetRowSelection();
+  }
+
 
   return (
     <div className="space-y-4">
@@ -202,7 +226,7 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200">
-                      <Download className="mr-2 h-4 w-4" /> Export <ChevronsUpDown className="ml-2 h-4 w-4" />
+                      <Download className="mr-2 h-4 w-4" /> Export <ChevronsUpDown className="ml-2 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
@@ -236,7 +260,7 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
         <div className="flex items-center justify-between gap-2">
             <div className="flex flex-1 items-center space-x-2">
                 <Input
-                    placeholder="Search by name or ID..."
+                    placeholder="Search by name, ID, class or email..."
                     value={globalFilter ?? ''}
                     onChange={(event) =>
                         setGlobalFilter(event.target.value)
@@ -304,6 +328,49 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd }: St
                     </Button>
                 )}
             </div>
+            
+             {selectedRows.length > 0 && (
+                <div className="flex items-center gap-2">
+                     <span className="text-sm text-muted-foreground">{selectedRows.length} selected</span>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onClick={handleExportCSV}>Export Selected (CSV)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportPDF}>Export Selected (PDF)</DropdownMenuItem>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                    {ALL_ADMISSION_STATUSES.map(status => (
+                                        <DropdownMenuItem key={status} onClick={() => handleBulkStatusUpdate(status)}>{status}</DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                             <DropdownMenuSeparator />
+                             <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the selected student profiles.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleConfirmBulkDelete}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                             </AlertDialog>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            )}
         </div>
         <div className="rounded-md border">
             <Table>
