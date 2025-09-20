@@ -199,21 +199,32 @@ export default function PromotionsPage() {
                                     {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <div className="flex justify-center">
-                                {isSpecialPromotion ? <ChevronsRight className="h-6 w-6 text-primary" /> : <ArrowRight className="h-6 w-6 text-muted-foreground" />}
-                            </div>
-                             <Select value={toClass} onValueChange={setToClass} disabled={!fromClass}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="To Class" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {classes.filter(c => {
-                                        if (!fromClass) return true;
-                                        if (isSpecialPromotion) return c.id !== fromClass;
-                                        return expectedToClass ? c.id === expectedToClass.id : c.id !== fromClass;
-                                    }).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            
+                            {fromClass !== FINAL_CLASS_ID && (
+                                <>
+                                    <div className="flex justify-center">
+                                        {isSpecialPromotion ? <ChevronsRight className="h-6 w-6 text-primary" /> : <ArrowRight className="h-6 w-6 text-muted-foreground" />}
+                                    </div>
+                                    <Select value={toClass} onValueChange={setToClass} disabled={!fromClass}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="To Class" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {classes.filter(c => {
+                                                if (!fromClass) return true;
+                                                if (isSpecialPromotion) return c.id !== fromClass;
+                                                return expectedToClass ? c.id === expectedToClass.id : c.id !== fromClass;
+                                            }).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </>
+                            )}
+                             {fromClass === FINAL_CLASS_ID && (
+                                <div className="md:col-span-2 flex items-center justify-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                                    <GraduationCap className="h-8 w-8 text-blue-600" />
+                                    <p className="font-medium text-blue-800">This is the final class. Selected students will be moved to the graduation workflow.</p>
+                                </div>
+                            )}
                         </div>
                          {(fromClass && fromClass === toClass) && (
                             <Alert variant="destructive" className="mt-4">
@@ -234,7 +245,7 @@ export default function PromotionsPage() {
                             </Alert>
                         )}
                         <div className="flex items-center space-x-2 mt-4">
-                            <Checkbox id="special-promotion" checked={isSpecialPromotion} onCheckedChange={(checked) => setIsSpecialPromotion(!!checked)} disabled={!fromClass} />
+                            <Checkbox id="special-promotion" checked={isSpecialPromotion} onCheckedChange={(checked) => setIsSpecialPromotion(!!checked)} disabled={!fromClass || fromClass === FINAL_CLASS_ID} />
                             <Label htmlFor="special-promotion" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                 Special Promotion (Allow Class Jump)
                             </Label>
