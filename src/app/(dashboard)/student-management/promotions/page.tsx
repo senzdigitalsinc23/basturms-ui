@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -26,6 +27,7 @@ type StudentForPromotion = {
 
 export default function PromotionsPage() {
     const [classes, setClasses] = useState<Class[]>([]);
+    const [allStudentProfiles, setAllStudentProfiles] = useState<StudentProfile[]>([]);
     const [fromClass, setFromClass] = useState<string | undefined>();
     const [toClass, setToClass] = useState<string | undefined>();
     const [studentsInClass, setStudentsInClass] = useState<StudentForPromotion[]>([]);
@@ -39,16 +41,28 @@ export default function PromotionsPage() {
 
     const FINAL_CLASS_ID = 'jhs3'; // Assuming this is the final class before graduation
 
+    const fetchStudentData = () => {
+        const profiles = getStudentProfiles();
+        setAllStudentProfiles(profiles);
+    }
+    
     useEffect(() => {
         const allClasses = getClasses();
         setClasses(allClasses);
+        fetchStudentData();
+
+        // Re-fetch data when the window gets focus to catch updates from other tabs
+        const handleFocus = () => fetchStudentData();
+        window.addEventListener('focus', handleFocus);
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
     }, []);
 
     useEffect(() => {
         if (fromClass) {
-            const allProfiles = getStudentProfiles();
             const classMap = new Map(classes.map(c => [c.id, c.name]));
-            const filteredStudents = allProfiles
+            const filteredStudents = allStudentProfiles
                 .filter(p => p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
                 .map(p => ({
                     id: p.student.student_no,
@@ -60,7 +74,7 @@ export default function PromotionsPage() {
         } else {
             setStudentsInClass([]);
         }
-    }, [fromClass, classes]);
+    }, [fromClass, classes, allStudentProfiles]);
 
     const isAllSelected = studentsInClass.length > 0 && Object.keys(selectedStudents).length === studentsInClass.length;
 
@@ -109,6 +123,8 @@ export default function PromotionsPage() {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         const updatedCount = promoteStudents(studentIdsToPromote, toClass, user.id);
+        
+        fetchStudentData(); // Re-fetch students after promotion
 
         setIsLoading(false);
         setFromClass(undefined);
@@ -136,6 +152,8 @@ export default function PromotionsPage() {
         setIsLoading(true);
         await new Promise(resolve => setTimeout(resolve, 1000));
         const updatedCount = graduateStudents(studentIdsToPromote, user.id);
+        
+        fetchStudentData(); // Re-fetch students after graduation
 
         setIsLoading(false);
         setFromClass(undefined);
@@ -195,6 +213,7 @@ export default function PromotionsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {classes.filter(c => {
+                                        if (!fromClass) return true;
                                         if (isSpecialPromotion) return c.id !== fromClass;
                                         return expectedToClass ? c.id === expectedToClass.id : c.id !== fromClass;
                                     }).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
