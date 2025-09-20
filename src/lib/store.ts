@@ -1,6 +1,3 @@
-
-
-
 'use client';
 
 import {
@@ -125,14 +122,14 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
         {
             student: { student_no: student1StudentNo, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
             contactDetails: { student_no: student1StudentNo, email: 'john.doe@example.com', phone: '123-456-7890', country_id: '1', city: 'Accra', hometown: 'Accra', residence: 'East Legon' },
-            guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother' },
+            guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother', guardian_email: 'jane.doe@example.com' },
             emergencyContact: { student_no: student1StudentNo, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
             admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' }
         },
         {
             student: { student_no: student2StudentNo, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser },
             contactDetails: { student_no: student2StudentNo, email: 'mary.smith@example.com', phone: '123-456-7891', country_id: '1', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa' },
-            guardianInfo: { student_no: student2StudentNo, guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father' },
+            guardianInfo: { student_no: student2StudentNo, guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father', guardian_email: 'peter.smith@example.com' },
             emergencyContact: { student_no: student2StudentNo, emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
             admissionDetails: { student_no: student2StudentNo, admission_no: student2AdmissionNo, enrollment_date: student2EnrollDate, class_assigned: 'b4', admission_status: 'Admitted' }
         }
@@ -396,6 +393,3 @@ export const updateStudentProfile = (updatedProfile: StudentProfile, editorId: s
     }
     return updatedProfile;
 };
-
-
-    

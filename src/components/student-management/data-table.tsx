@@ -23,27 +23,27 @@ import {
 } from '@/components/ui/table';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StudentDisplay } from './student-management';
 import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import Papa from 'papaparse';
 import { ImportPreviewDialog } from './import-preview-dialog';
 import { ALL_ADMISSION_STATUSES } from '@/lib/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { DateRange } from 'react-day-picker';
 
 
 interface StudentDataTableProps {
   columns: ColumnDef<StudentDisplay>[];
   data: StudentDisplay[];
   onImport: (data: any[]) => void;
-  // onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password'> & { role: User['role'], password?: string }) => void;
 }
 
 const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
@@ -56,7 +56,7 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [date, setDate] = useState<Date>()
+  const [date, setDate] = useState<DateRange | undefined>()
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -81,7 +81,16 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
     },
   });
 
+  useEffect(() => {
+    if (date?.from && date?.to) {
+        table.getColumn('admission_date')?.setFilterValue([date.from.toISOString(), date.to.toISOString()]);
+    } else {
+        table.getColumn('admission_date')?.setFilterValue(undefined);
+    }
+  }, [date, table]);
+
   const isFiltered = table.getState().columnFilters.length > 0 || globalFilter;
+  const isDateFiltered = date?.from && date?.to;
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -102,7 +111,6 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
         },
         error: (error: any) => {
           console.error("Error parsing CSV:", error);
-          // You can add a toast notification here for the error
         }
       });
     }
@@ -150,11 +158,23 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
   const handleExportPDF = () => {
     const doc = new jsPDF();
     const dataColumns = columns.filter(col => col.id !== 'select' && col.id !== 'actions' && col.accessorKey);
-    const headers = dataColumns.map(col => col.header as string);
+    
+    const headers = dataColumns.map(col => {
+        if (typeof col.header === 'function') {
+            // This is a simple way, might need more robust handling for complex headers
+            return col.id || '';
+        }
+        return col.header as string;
+    });
+
     const body = table.getFilteredRowModel().rows.map(row => {
         return dataColumns.map(col => {
              const accessor = col.accessorKey as keyof StudentDisplay;
-             return row.original[accessor];
+             let cellValue = row.original[accessor];
+             if (col.id === 'admission_date' && typeof cellValue === 'string') {
+                 return format(new Date(cellValue), 'yyyy-MM-dd');
+             }
+             return cellValue;
         });
     });
 
@@ -218,31 +238,46 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
                  <Popover>
                     <PopoverTrigger asChild>
                     <Button
+                        id="date"
                         variant={"outline"}
                         className={cn(
-                        "w-[240px] justify-start text-left font-normal h-8",
+                        "w-[300px] justify-start text-left font-normal h-8",
                         !date && "text-muted-foreground"
                         )}
                     >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date range</span>}
+                        {date?.from ? (
+                        date.to ? (
+                            <>
+                            {format(date.from, "LLL dd, y")} -{" "}
+                            {format(date.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(date.from, "LLL dd, y")
+                        )
+                        ) : (
+                        <span>Pick a date range</span>
+                        )}
                     </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
-                        mode="single"
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date?.from}
                         selected={date}
                         onSelect={setDate}
-                        initialFocus
+                        numberOfMonths={2}
                     />
                     </PopoverContent>
                 </Popover>
-                {isFiltered && (
+                {(isFiltered || isDateFiltered) && (
                     <Button
                     variant="ghost"
                     onClick={() => {
                         table.resetColumnFilters();
                         setGlobalFilter('');
+                        setDate(undefined);
                     }}
                     className="h-8 px-2 lg:px-3"
                     >
@@ -308,7 +343,7 @@ export function StudentDataTable({ columns, data, onImport }: StudentDataTablePr
             </div>
             <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium">
-                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
                 </span>
                 <div className="flex items-center space-x-2">
                     <Button

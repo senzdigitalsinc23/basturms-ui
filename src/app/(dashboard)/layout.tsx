@@ -21,7 +21,7 @@ function DashboardMain({ children }: { children: React.ReactNode }) {
       )}
     >
       <DashboardHeader />
-      <main className="flex-1 p-4 md:p-6 bg-background/95">{children}</main>
+      <main className="flex-1 p-4 md:p-6 bg-card">{children}</main>
     </div>
   );
 }

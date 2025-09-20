@@ -17,9 +17,7 @@ import { format } from 'date-fns';
 import { AdmissionStatus } from '@/lib/types';
 
 
-type ColumnsProps = {
-//   onUpdate: (user: User) => void;
-};
+type ColumnsProps = {};
 
 const statusColors: Record<AdmissionStatus, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -32,9 +30,7 @@ const statusColors: Record<AdmissionStatus, string> = {
 };
 
 
-export const columns = ({
-//   onUpdate,
-}: ColumnsProps): ColumnDef<StudentDisplay>[] => [
+export const columns = ({}: ColumnsProps): ColumnDef<StudentDisplay>[] => [
     {
         id: 'select',
         header: ({ table }) => (
@@ -102,6 +98,11 @@ export const columns = ({
             const date = new Date(row.getValue('admission_date'));
             return <div>{format(date, "MMMM do, yyyy")}</div>;
         },
+        filterFn: (row, id, value) => {
+            const date = new Date(row.getValue(id));
+            const [from, to] = value as string[];
+            return date >= new Date(from) && date <= new Date(to);
+        }
     },
     {
         id: 'actions',
