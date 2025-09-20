@@ -57,3 +57,12 @@ export interface AuditLog {
   action: string;
   details: string;
 }
+
+export interface AuthLog {
+  id: string;
+  timestamp: string;
+  email: string;
+  event: 'Login Success' | 'Login Failure' | 'Logout';
+  status: 'Success' | 'Failure';
+  details: string;
+}

@@ -30,6 +30,7 @@ import {
   Building2,
   Calendar,
   Megaphone,
+  Fingerprint,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -87,6 +88,7 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/users', label: 'User Management', icon: Users },
     { href: '/audit-logs', label: 'Audit Logs', icon: History },
+    { href: '/auth-logs', label: 'Authentication Logs', icon: Fingerprint },
     {
       label: 'Student Management',
       icon: GraduationCap,
@@ -207,7 +209,7 @@ export function SidebarNav() {
         <SidebarHeader>
             <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
                 <Building2 className="h-6 w-6 text-primary"/>
-                <span className="">Metoxi</span>
+                <span className="hidden group-data-[state=expanded]:inline">Metoxi</span>
             </Link>
         </SidebarHeader>
       <SidebarContent className="p-2">
@@ -217,7 +219,8 @@ export function SidebarNav() {
               <AccordionItem value={`item-${index}`} key={index} className="border-b-0">
                 <SidebarAccordionTrigger>
                   <item.icon className="h-5 w-5" />
-                  <span className="text-base">{item.label}</span>
+                  <span className="text-base hidden group-data-[state=expanded]:inline">{item.label}</span>
+                  <ChevronDown className="h-4 w-4 ml-auto shrink-0 transition-transform duration-200 hidden group-data-[state=expanded]:inline"/>
                 </SidebarAccordionTrigger>
                 <SidebarAccordionContent>
                   {item.items.map((subItem) => (
@@ -229,7 +232,7 @@ export function SidebarNav() {
                       isActive={pathname === subItem.href}
                       variant="ghost"
                     >
-                      {subItem.label}
+                      <span className="hidden group-data-[state=expanded]:inline">{subItem.label}</span>
                     </SidebarMenuButton>
                   ))}
                 </SidebarAccordionContent>
@@ -244,7 +247,7 @@ export function SidebarNav() {
                 variant={pathname === item.href ? 'default' : 'ghost'}
               >
                 <item.icon className="h-5 w-5" />
-                <span className="text-base">{item.label}</span>
+                <span className="text-base hidden group-data-[state=expanded]:inline">{item.label}</span>
               </SidebarMenuButton>
             )
           )}
@@ -260,13 +263,13 @@ export function SidebarNav() {
               variant="ghost"
             >
               <Settings />
-              <span>Settings</span>
+              <span className="hidden group-data-[state=expanded]:inline">Settings</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={logout} tooltip={{ children: 'Logout', side: 'right' }} variant="ghost">
               <LogOut />
-              <span>Logout</span>
+              <span className="hidden group-data-[state=expanded]:inline">Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -7,11 +7,13 @@ import {
   ALL_ROLES,
   RoleStorage,
   UserStorage,
+  AuthLog,
 } from './types';
 
 const USERS_KEY = 'campusconnect_users';
 const ROLES_KEY = 'campusconnect_roles';
 const LOGS_KEY = 'campusconnect_logs';
+const AUTH_LOGS_KEY = 'campusconnect_auth_logs';
 
 const getInitialRoles = (): RoleStorage[] => {
   return ALL_ROLES.map((role, index) => ({
@@ -129,6 +131,9 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(LOGS_KEY)) {
       saveToStorage(LOGS_KEY, []);
     }
+     if (!window.localStorage.getItem(AUTH_LOGS_KEY)) {
+      saveToStorage(AUTH_LOGS_KEY, []);
+    }
   }
 };
 
@@ -239,3 +244,16 @@ export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>): void => {
   };
   saveToStorage(LOGS_KEY, [newLog, ...logs]);
 };
+
+// Auth Log Functions
+export const getAuthLogs = (): AuthLog[] => getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
+export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp'>): void => {
+    const logs = getAuthLogs();
+    const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
+    const newLog: AuthLog = {
+        ...log,
+        id: nextId,
+        timestamp: new Date().toISOString(),
+    };
+    saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
+}
