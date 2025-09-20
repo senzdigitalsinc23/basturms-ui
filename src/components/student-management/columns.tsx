@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Pencil, UserX, Eye, ChevronsUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Pencil, UserX, Eye, ChevronsUpDown, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -77,6 +77,14 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisp
             </Button>
         );
         },
+        cell: ({ row }) => {
+            const student = row.original;
+            return (
+                <Link href={`/student-management/students/${student.student_id}`} className="font-medium text-primary hover:underline">
+                    {student.name}
+                </Link>
+            )
+        }
     },
     {
         accessorKey: 'class_name',

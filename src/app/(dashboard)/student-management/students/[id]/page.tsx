@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -160,6 +160,14 @@ export default function StudentProfilePage() {
 
     return (
         <div className="space-y-6">
+            <div className="flex items-center gap-4">
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/student-management/students">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to List
+                    </Link>
+                </Button>
+            </div>
             <Card>
                 <CardHeader className="flex flex-row items-center gap-6 space-y-0">
                     <Avatar className="h-24 w-24 border-4 border-background shadow-md">
