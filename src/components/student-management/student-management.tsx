@@ -80,7 +80,6 @@ export function StudentManagement() {
     if (!currentUser) return;
 
     const newProfile = addStudentProfile(profileData, currentUser.id);
-    refreshStudents();
     
     addAuditLog({
         user: currentUser.email,
@@ -121,22 +120,29 @@ export function StudentManagement() {
                     contactDetails: {
                         email: row.email,
                         phone: row.phone,
-                        country_id: '1', // Assuming default
+                        country: row.country,
                         city: row.city,
                         hometown: row.hometown,
                         residence: row.residence,
+                        house_no: row.house_no,
+                        gps_no: row.gps_no,
                     },
                     guardianInfo: {
                         guardian_name: row.guardian_name,
                         guardian_phone: row.guardian_phone,
                         guardian_relationship: row.guardian_relationship,
                         guardian_email: row.guardian_email,
+                        father_name: row.father_name,
+                        father_phone: row.father_phone,
+                        father_email: row.father_email,
+                        mother_name: row.mother_name,
+                        mother_phone: row.mother_phone,
+                        mother_email: row.mother_email,
                     },
                     emergencyContact: {
                         emergency_name: row.emergency_name,
                         emergency_phone: row.emergency_phone,
                         emergency_relationship: row.emergency_relationship,
-                        emergency_email: row.emergency_email,
                     },
                     admissionDetails: {
                         enrollment_date: enrollmentDate.toISOString(),

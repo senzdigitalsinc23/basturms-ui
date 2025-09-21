@@ -139,10 +139,12 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
 
   const handleDownloadTemplate = () => {
     const headers = [
-      'enrollment_date','class_assigned','admission_status','first_name','last_name','other_name','dob','gender',
-      'email','phone','country_id','city','hometown','residence',
+      'enrollment_date','class_assigned','admission_status','first_name','last_name','other_name','dob','gender', 'nhis_number',
+      'email','phone','country','city','hometown','residence','house_no', 'gps_no',
       'guardian_name','guardian_phone','guardian_email','guardian_relationship',
-      'emergency_name','emergency_phone','emergency_email','emergency_relationship'
+      'father_name','father_phone','father_email',
+      'mother_name','mother_phone','mother_email',
+      'emergency_name','emergency_phone','emergency_relationship'
     ];
     const csv = Papa.unparse([headers]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
