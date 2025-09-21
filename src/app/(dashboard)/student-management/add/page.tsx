@@ -43,13 +43,13 @@ export default function AddStudentPage() {
     });
 
     autoTable(doc, {
-        body: tableData("Father's Details", ["Father's Name", "Father's Phone", "Father's Email"]),
+        body: tableData("Father's Details (Leave blank if same as guardian)", ["Father's Name", "Father's Phone", "Father's Email"]),
         theme: 'grid',
         styles: { fontSize: 10 },
     });
     
     autoTable(doc, {
-        body: tableData("Mother's Details", ["Mother's Name", "Mother's Phone", "Mother's Email"]),
+        body: tableData("Mother's Details (Leave blank if same as guardian)", ["Mother's Name", "Mother's Phone", "Mother's Email"]),
         theme: 'grid',
         styles: { fontSize: 10 },
     });
