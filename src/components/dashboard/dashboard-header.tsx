@@ -2,13 +2,19 @@
 'use client';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserNav } from './user-nav';
-import { Bell, Check } from 'lucide-react';
+import { Bell, Check, CheckCheck } from 'lucide-react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { notifications } from '@/lib/notifications';
+import { notifications, markAllAsRead, useNotifications } from '@/lib/notifications';
 import Link from 'next/link';
 
 export function DashboardHeader() {
+  const currentNotifications = useNotifications();
+  const handleMarkAllRead = (e: React.MouseEvent) => {
+    e.preventDefault();
+    markAllAsRead();
+  }
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
       <div className="flex items-center gap-2 md:hidden">
@@ -19,7 +25,7 @@ export function DashboardHeader() {
           <DropdownMenuTrigger asChild>
              <Button variant="ghost" size="icon" className="rounded-full relative">
               <Bell className="h-5 w-5" />
-               {notifications.some(n => !n.read) && (
+               {currentNotifications.some(n => !n.read) && (
                   <span className="absolute top-1 right-1 flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
@@ -30,7 +36,7 @@ export function DashboardHeader() {
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel>Notifications</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {notifications.map((notification) => (
+            {currentNotifications.map((notification) => (
               <DropdownMenuItem key={notification.id} asChild>
                 <Link href={notification.href} className="flex items-start gap-3">
                    <div className={`mt-1 h-2 w-2 rounded-full ${notification.read ? 'bg-transparent' : 'bg-primary'}`} />
@@ -42,8 +48,8 @@ export function DashboardHeader() {
               </DropdownMenuItem>
             ))}
              <DropdownMenuSeparator />
-             <DropdownMenuItem className="justify-center">
-                <Check className="mr-2 h-4 w-4" />
+             <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={handleMarkAllRead} disabled={currentNotifications.every(n => n.read)}>
+                <CheckCheck className="mr-2 h-4 w-4" />
                 Mark all as read
              </DropdownMenuItem>
           </DropdownMenuContent>

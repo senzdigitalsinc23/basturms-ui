@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { notifications as initialNotifications, Notification } from '@/lib/notifications';
+import { Notification, useNotifications, toggleNotificationRead, markAllAsRead as globalMarkAllAsRead } from '@/lib/notifications';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,20 +9,14 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 export default function NotificationsPage() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-
-    useEffect(() => {
-        setNotifications(initialNotifications);
-    }, []);
+    const notifications = useNotifications();
 
     const toggleReadStatus = (id: string) => {
-        setNotifications(prev => 
-            prev.map(n => n.id === id ? { ...n, read: !n.read } : n)
-        );
+        toggleNotificationRead(id);
     };
 
     const markAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        globalMarkAllAsRead();
     };
 
     return (
