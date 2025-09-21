@@ -59,11 +59,21 @@ const formSchema = z.object({
   // Emergency
   emergency_name: z.string().min(2, "Emergency contact name is required."),
   emergency_phone: z.string().min(1, "Emergency contact phone is required."),
-  emergency_relationship: z.string().min(2, "Emergency contact relationship is required."),
+  emergency_relationship: z.enum(['Brother', 'Sister', 'Uncle', 'Nephew', 'Niece', 'Aunt', 'Other'], { required_error: 'Please select a relationship.' }),
 
   // Admission
   enrollment_date: z.date({ required_error: 'Enrollment date is required.' }),
   class_assigned: z.string({ required_error: 'Please select a class.' }),
+}).refine(data => {
+    return !(data.father_name && !data.father_phone);
+}, {
+    message: "Father's phone is required if name is provided.",
+    path: ['father_phone'],
+}).refine(data => {
+    return !(data.mother_name && !data.mother_phone);
+}, {
+    message: "Mother's phone is required if name is provided.",
+    path: ['mother_phone'],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -113,7 +123,7 @@ export function AddStudentForm() {
   const tabs = [
     { id: 1, name: 'Personal', fields: ['first_name', 'last_name', 'dob', 'gender'] },
     { id: 2, name: 'Contact/Address', fields: ['residence', 'country', 'hometown', 'house_no', 'gps_no'] },
-    { id: 3, name: 'Parents Details', fields: [] },
+    { id: 3, name: 'Parents Details', fields: ['guardian_name', 'guardian_phone', 'guardian_relationship', 'father_phone', 'mother_phone'] },
     { id: 4, name: 'Emergency Contact', fields: ['emergency_name', 'emergency_phone', 'emergency_relationship'] },
     { id: 5, name: 'Admission Info', fields: ['enrollment_date', 'class_assigned'] },
     { id: 6, name: 'Preview', fields: [] },
@@ -285,6 +295,25 @@ export function AddStudentForm() {
               
                <TabsContent value="3">
                 <div className="space-y-6">
+                    <h3 className="text-md font-semibold text-primary pt-4">Main Guardian's Details *</h3>
+                    <Separator />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField name="guardian_name" render={({ field }) => (
+                            <FormItem><FormLabel>Guardian's Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField name="guardian_phone" render={({ field }) => (
+                            <FormItem><FormLabel>Guardian's Phone *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField name="guardian_relationship" render={({ field }) => (
+                            <FormItem><FormLabel>Relationship to Student *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField name="guardian_email" render={({ field }) => (
+                            <FormItem><FormLabel>Guardian's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                    </div>
+                    
                     <h3 className="text-md font-semibold text-primary pt-4">Father's Details</h3>
                     <Separator />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -328,7 +357,21 @@ export function AddStudentForm() {
                             <FormItem><FormLabel>Emergency Contact Phone *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )}/>
                         <FormField name="emergency_relationship" render={({ field }) => (
-                            <FormItem><FormLabel>Relationship to Student *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Relationship to Student *</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Brother">Brother</SelectItem>
+                                        <SelectItem value="Sister">Sister</SelectItem>
+                                        <SelectItem value="Uncle">Uncle</SelectItem>
+                                        <SelectItem value="Nephew">Nephew</SelectItem>
+                                        <SelectItem value="Niece">Niece</SelectItem>
+                                        <SelectItem value="Aunt">Aunt</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
                         )}/>
                     </div>
                  </div>
@@ -393,6 +436,9 @@ export function AddStudentForm() {
                     <h4 className="text-md font-semibold text-primary pt-4">Parent's Details</h4>
                      <Separator />
                      <div className="grid md:grid-cols-3 gap-4">
+                        <PreviewItem label="Guardian's Name" value={watch('guardian_name')} />
+                        <PreviewItem label="Guardian's Phone" value={watch('guardian_phone')} />
+                        <PreviewItem label="Guardian's Relationship" value={watch('guardian_relationship')} />
                         <PreviewItem label="Father's Name" value={watch('father_name')} />
                         <PreviewItem label="Father's Phone" value={watch('father_phone')} />
                         <PreviewItem label="Father's Email" value={watch('father_email')} />
