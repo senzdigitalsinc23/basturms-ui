@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getClasses, addStudentProfile, addAuditLog } from '@/lib/store';
+import { getClasses, addStudentProfile, addAuditLog, addUploadedDocument, getStudentProfiles } from '@/lib/store';
 import { Class, StudentProfile, AdmissionStatus, ALL_ADMISSION_STATUSES } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { differenceInYears, format } from 'date-fns';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,7 +50,7 @@ const formSchema = z.object({
 
   // Parents
   guardian_name: z.string().min(2, "Guardian's name is required."),
-  guardian_phone: z.string().min(1, "Guardian's phone is required."),
+  guardian_phone: zstring().min(1, "Guardian's phone is required."),
   guardian_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   guardian_relationship: z.string().min(2, "Guardian's relationship is required."),
   father_name: z.string().optional(),
@@ -197,6 +199,8 @@ export function AddStudentForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [classes, setClasses] = useState<Class[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [generatedStudentNo, setGeneratedStudentNo] = useState('');
+  const [generatedAdmissionNo, setGeneratedAdmissionNo] = useState('');
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -243,6 +247,7 @@ export function AddStudentForm() {
 
   const { handleSubmit, trigger, watch } = methods;
   const dob = watch('dob');
+  const enrollmentDate = watch('enrollment_date');
   const [age, setAge] = useState<number | null>(null);
 
   useEffect(() => {
@@ -250,6 +255,28 @@ export function AddStudentForm() {
       setAge(differenceInYears(new Date(), dob));
     }
   }, [dob]);
+
+  useEffect(() => {
+    if (enrollmentDate) {
+        const profiles = getStudentProfiles();
+        const admissionYear = new Date(enrollmentDate).getFullYear();
+        const yearYY = admissionYear.toString().slice(-2);
+        
+        const studentsInYear = profiles.filter(p => {
+            const pYear = new Date(p.admissionDetails.enrollment_date).getFullYear();
+            return pYear === admissionYear;
+        });
+
+        const nextInYear = studentsInYear.length + 1;
+        const nextNumberPadded = nextInYear.toString().padStart(3, '0');
+        
+        setGeneratedStudentNo(`WR-TK001-LBA${yearYY}${nextNumberPadded}`);
+        setGeneratedAdmissionNo(`ADM${yearYY}${nextNumberPadded}`);
+    } else {
+        setGeneratedStudentNo('');
+        setGeneratedAdmissionNo('');
+    }
+  }, [enrollmentDate]);
 
   const tabs = [
     { id: 1, name: 'Personal', fields: ['first_name', 'last_name', 'dob', 'gender'] },
@@ -271,6 +298,77 @@ export function AddStudentForm() {
   const handlePrevious = () => {
     setCurrentStep(prev => (prev > 1 ? prev - 1 : prev));
   };
+
+    const generateAdmissionFormPdf = (data: FormData, studentNo: string, admissionNo: string): string => {
+        const doc = new jsPDF();
+        const className = classes.find(c => c.id === data.class_assigned)?.name || 'N/A';
+        doc.setFontSize(16);
+        doc.text("Student Admission Form", 105, 20, { align: 'center' });
+        
+        const tableData = [
+            [{ content: 'Personal Details', colSpan: 2, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' }}],
+            ['Student No', studentNo],
+            ['Admission No', admissionNo],
+            ['Full Name', `${data.first_name} ${data.last_name} ${data.other_name || ''}`],
+            ['Date of Birth', format(data.dob, 'PPP')],
+            ['Gender', data.gender],
+            
+            [{ content: 'Contact & Address', colSpan: 2, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' }}],
+            ['Residence', data.residence],
+            ['Hometown', data.hometown],
+            ['GPS No', data.gps_no],
+            ['Email', data.email || 'N/A'],
+            ['Phone', data.phone || 'N/A'],
+
+            [{ content: 'Guardian\'s Information', colSpan: 2, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' }}],
+            ['Guardian Name', data.guardian_name],
+            ['Guardian Phone', data.guardian_phone],
+            ['Relationship', data.guardian_relationship],
+
+            [{ content: 'Admission Details', colSpan: 2, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' }}],
+            ['Enrollment Date', format(data.enrollment_date, 'PPP')],
+            ['Class Assigned', className],
+            ['Admission Status', data.admission_status],
+        ];
+
+        (doc as any).autoTable({
+            startY: 30,
+            body: tableData,
+            theme: 'grid',
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: '#e0e0e0', textColor: '#333' }
+        });
+
+        return doc.output('datauristring');
+    };
+    
+    const generateAdmissionLetterPdf = (data: FormData, studentNo: string, admissionNo: string): string => {
+        const doc = new jsPDF();
+        const className = classes.find(c => c.id === data.class_assigned)?.name || 'N/A';
+        const studentName = `${data.first_name} ${data.last_name}`;
+
+        doc.setFontSize(18);
+        doc.text("METOXI SCHOOL", 105, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text("Admission Letter", 105, 30, { align: 'center' });
+
+        doc.text(`Date: ${format(new Date(), 'PPP')}`, 15, 50);
+        doc.text(`Student Name: ${studentName}`, 15, 60);
+        doc.text(`Admission No: ${admissionNo}`, 15, 70);
+
+        doc.text("Dear Parent/Guardian,", 15, 90);
+        const letterBody = `We are pleased to inform you that ${studentName} has been offered admission into ${className} at METOXI SCHOOL for the academic year beginning ${format(data.enrollment_date, 'MMMM yyyy')}.
+
+We are confident that our school will provide an excellent educational experience. Please review the attached documents for further information.
+
+We look forward to welcoming you to our school community.`;
+        doc.text(letterBody, 15, 100, { maxWidth: 180 });
+        
+        doc.text("Sincerely,", 15, 150);
+        doc.text("The Headmaster", 15, 160);
+
+        return doc.output('datauristring');
+    };
   
   const processSubmit = async (data: FormData) => {
     if (!user) {
@@ -321,7 +419,7 @@ export function AddStudentForm() {
         },
     };
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const newProfile = addStudentProfile(profileData, user.id);
 
@@ -332,6 +430,24 @@ export function AddStudentForm() {
         details: `Enrolled new student: ${newProfile.student.first_name} ${newProfile.student.last_name} (ID: ${newProfile.student.student_no})`
     });
     
+    // Generate and add admission form PDF
+    const admissionFormPdf = generateAdmissionFormPdf(data, newProfile.student.student_no, newProfile.admissionDetails.admission_no);
+    addUploadedDocument(newProfile.student.student_no, {
+        name: 'Admission Form.pdf',
+        type: 'Admission Form',
+        url: admissionFormPdf,
+        uploaded_at: new Date().toISOString()
+    }, user.id);
+    
+    // Generate and add admission letter PDF
+    const admissionLetterPdf = generateAdmissionLetterPdf(data, newProfile.student.student_no, newProfile.admissionDetails.admission_no);
+    addUploadedDocument(newProfile.student.student_no, {
+        name: 'Admission Letter.pdf',
+        type: 'Admission Letter',
+        url: admissionLetterPdf,
+        uploaded_at: new Date().toISOString()
+    }, user.id);
+
     setIsLoading(false);
     toast({
         title: 'Student Enrolled Successfully',
@@ -473,11 +589,11 @@ export function AddStudentForm() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <FormItem>
                             <FormLabel>Student No</FormLabel>
-                            <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
+                            <FormControl><Input value={generatedStudentNo} readOnly disabled /></FormControl>
                         </FormItem>
                         <FormItem>
                             <FormLabel>Admission No</FormLabel>
-                            <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
+                            <FormControl><Input value={generatedAdmissionNo} readOnly disabled /></FormControl>
                         </FormItem>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
@@ -609,5 +725,3 @@ export function AddStudentForm() {
     </Card>
   );
 }
-
-    

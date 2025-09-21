@@ -27,7 +27,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useEffect, useRef, useState } from 'react';
 import { StudentDisplay } from './student-management';
-import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2, FileDown } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -156,6 +156,36 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
     document.body.removeChild(link);
   };
 
+  const handleDownloadBlankForm = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Student Admission Form", 105, 20, { align: 'center' });
+
+    const fields = [
+        { group: "Personal Details", items: ["Full Name", "Date of Birth", "Gender"] },
+        { group: "Contact & Address", items: ["Residence", "Hometown", "GPS No", "Email", "Phone"] },
+        { group: "Guardian's Information", items: ["Guardian Name", "Guardian Phone", "Relationship"] },
+        { group: "Admission Details", items: ["Enrollment Date", "Class Assigned"] },
+    ];
+    
+    let y = 40;
+    fields.forEach(fieldGroup => {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(fieldGroup.group, 15, y);
+        y += 7;
+        doc.setFont('helvetica', 'normal');
+        fieldGroup.items.forEach(item => {
+            doc.text(`${item}:`, 20, y);
+            doc.line(50, y + 1, 190, y + 1);
+            y += 10;
+        });
+        y += 5;
+    });
+
+    doc.save('blank_admission_form.pdf');
+  };
+
   const handleExportCSV = () => {
     const rows = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
     const dataToExport = rows.map(row => row.original);
@@ -220,7 +250,17 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
             </div>
             <div className="flex items-center gap-2">
                  <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileUpload} />
-                 <Button variant="outline" onClick={handleDownloadTemplate} size="sm"><FilePlus className="mr-2 h-4 w-4" /> Template</Button>
+                 
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" /> Templates</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuItem onClick={handleDownloadTemplate}>CSV Upload Template</DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleDownloadBlankForm}>Blank Admission Form (PDF)</DropdownMenuItem>
+                    </DropdownMenuContent>
+                 </DropdownMenu>
+
                  <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200" onClick={handleImportClick} size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
