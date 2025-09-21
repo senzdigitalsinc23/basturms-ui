@@ -37,9 +37,12 @@ const formSchema = z.object({
   // Contact
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   phone: z.string().optional(),
-  residence: z.string().min(1, "Residence is required."),
-  hometown: z.string().optional(),
+  country: z.string().min(1, "Country is required."),
   city: z.string().optional(),
+  hometown: z.string().min(1, "Hometown is required."),
+  residence: z.string().min(1, "Residence is required."),
+  house_no: z.string().min(1, "House number is required."),
+  gps_no: z.string().min(1, "GPS number is required."),
 
   // Parents
   guardian_name: z.string().min(2, "Guardian's name is required."),
@@ -86,6 +89,9 @@ export function AddStudentForm() {
   const methods = useForm<FormData>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
+    defaultValues: {
+        country: "Ghana",
+    }
   });
 
   const { handleSubmit, trigger, watch, formState: { errors } } = methods;
@@ -100,7 +106,7 @@ export function AddStudentForm() {
 
   const tabs = [
     { id: 1, name: 'Personal', fields: ['first_name', 'last_name', 'dob', 'gender'] },
-    { id: 2, name: 'Contact/Address', fields: ['residence'] },
+    { id: 2, name: 'Contact/Address', fields: ['residence', 'country', 'hometown', 'house_no', 'gps_no'] },
     { id: 3, name: 'Parents Details', fields: ['guardian_name', 'guardian_phone', 'guardian_relationship'] },
     { id: 4, name: 'Emergency Contact', fields: ['emergency_name', 'emergency_phone', 'emergency_relationship'] },
     { id: 5, name: 'Admission Info', fields: ['enrollment_date', 'class_assigned'] },
@@ -137,10 +143,12 @@ export function AddStudentForm() {
         contactDetails: {
             email: data.email,
             phone: data.phone,
-            country_id: '1', // Default
+            country: data.country,
             city: data.city,
             hometown: data.hometown,
             residence: data.residence,
+            house_no: data.house_no,
+            gps_no: data.gps_no,
         },
         guardianInfo: {
             guardian_name: data.guardian_name,
@@ -232,22 +240,33 @@ export function AddStudentForm() {
                  <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField name="email" render={({ field }) => (
-                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} placeholder="student@example.com" /></FormControl><FormMessage /></FormItem>
                         )}/>
                         <FormField name="phone" render={({ field }) => (
-                            <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="024-123-4567" /></FormControl><FormMessage /></FormItem>
                         )}/>
                     </div>
-                     <FormField name="residence" render={({ field }) => (
-                        <FormItem><FormLabel>Current Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                     )}/>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField name="hometown" render={({ field }) => (
-                            <FormItem><FormLabel>Hometown</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField name="city" render={({ field }) => (
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <FormField name="country" render={({ field }) => (
+                            <FormItem><FormLabel>Country *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
+                         <FormField name="city" render={({ field }) => (
                             <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
+                         )} />
+                         <FormField name="hometown" render={({ field }) => (
+                            <FormItem><FormLabel>Hometown *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <FormField name="residence" render={({ field }) => (
+                            <FormItem><FormLabel>Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
+                         <FormField name="house_no" render={({ field }) => (
+                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
+                         <FormField name="gps_no" render={({ field }) => (
+                            <FormItem><FormLabel>GPS No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
                     </div>
                  </div>
               </TabsContent>
@@ -298,7 +317,7 @@ export function AddStudentForm() {
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button></FormControl>
                             </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 10} toYear={new Date().getFullYear()} initialFocus />
                             </PopoverContent></Popover><FormMessage /></FormItem>
                         )}/>
                          <FormField name="class_assigned" render={({ field }) => (
@@ -332,12 +351,15 @@ export function AddStudentForm() {
 
                     <h4 className="text-md font-semibold text-primary pt-4">Contact & Address</h4>
                      <Separator />
-                     <div className="grid md:grid-cols-2 gap-4">
+                     <div className="grid md:grid-cols-3 gap-4">
                         <PreviewItem label="Email" value={watch('email')} />
                         <PreviewItem label="Phone" value={watch('phone')} />
-                        <PreviewItem label="Residence" value={watch('residence')} />
-                        <PreviewItem label="Hometown" value={watch('hometown')} />
+                        <PreviewItem label="Country" value={watch('country')} />
                         <PreviewItem label="City" value={watch('city')} />
+                        <PreviewItem label="Hometown" value={watch('hometown')} />
+                        <PreviewItem label="Residence" value={watch('residence')} />
+                        <PreviewItem label="House No" value={watch('house_no')} />
+                        <PreviewItem label="GPS No" value={watch('gps_no')} />
                     </div>
 
                     <h4 className="text-md font-semibold text-primary pt-4">Parent's Details</h4>

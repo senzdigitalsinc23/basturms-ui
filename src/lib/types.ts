@@ -3,6 +3,7 @@
 
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -110,10 +111,12 @@ export interface ContactDetails {
     student_no: string;
     email?: string;
     phone?: string;
-    country_id: string; // Assuming country will be a separate entity later
+    country: string;
     city?: string;
-    hometown?: string;
-    residence?: string;
+    hometown: string;
+    residence: string;
+    house_no: string;
+    gps_no: string;
 }
 
 export interface GuardianInfo {
@@ -136,7 +139,7 @@ export interface AdmissionDetails {
     student_no: string;
     admission_no: string;
     enrollment_date: string;
-    class_assigned: string; // This will be the ID from the Class type
+    class_assigned: string; // This will be a Class ID
     admission_status: AdmissionStatus;
 }
 
