@@ -694,6 +694,30 @@ export const getStaffAcademicHistory = (): StaffAcademicHistory[] => getFromStor
 export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
+export const addStaff = (staff: Staff): Staff => {
+    const staffList = getStaff();
+    saveToStorage(STAFF_KEY, [...staffList, staff]);
+    return staff;
+};
+
+export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {
+    const histories = getStaffAcademicHistory();
+    saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, [...histories, history]);
+    return history;
+};
+
+export const addStaffDocument = (document: StaffDocument): StaffDocument => {
+    const documents = getStaffDocuments();
+    saveToStorage(STAFF_DOCUMENTS_KEY, [...documents, document]);
+    return document;
+};
+
+export const addStaffAppointmentHistory = (appointment: StaffAppointmentHistory): StaffAppointmentHistory => {
+    const appointments = getStaffAppointmentHistory();
+    saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, [...appointments, appointment]);
+    return appointment;
+};
+
 export const getStaffProfileByUserId = (userId: string): StaffProfile | undefined => {
     const profiles = getStaffProfiles();
     return profiles.find(p => p.user_id === userId);

@@ -29,14 +29,12 @@ import { StaffDisplay } from './staff-management';
 import { PlusCircle, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { ALL_ROLES, User, ALL_EMPLOYMENT_STATUSES } from '@/lib/types';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { UserForm } from '../users/user-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import Link from 'next/link';
 
 interface StaffDataTableProps {
   columns: ColumnDef<StaffDisplay>[];
   data: StaffDisplay[];
-  onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string }) => void;
 }
 
 const roleOptions = ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent').map(role => ({
@@ -50,11 +48,10 @@ const statusOptions = ALL_EMPLOYMENT_STATUSES.map(status => ({
 }));
 
 
-export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
+export function StaffDataTable({ columns, data }: StaffDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const table = useReactTable({
     data,
@@ -90,27 +87,11 @@ export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
                 <p className="text-muted-foreground">Manage all staff members including teachers and administrators.</p>
             </div>
             <div className="flex items-center gap-2">
-                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Staff
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                        <DialogTitle>Create New Staff User</DialogTitle>
-                        <DialogDescription>
-                            Fill in the details to create a new staff account.
-                        </DialogDescription>
-                        </DialogHeader>
-                        <UserForm
-                        onSubmit={(values) => {
-                            onAdd(values);
-                            setIsFormOpen(false);
-                        }}
-                        />
-                    </DialogContent>
-                </Dialog>
+                <Button size="sm" asChild>
+                    <Link href="/staff-management/add">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Staff
+                    </Link>
+                </Button>
                 <Button size="sm" variant="outline">
                     <Download className="mr-2 h-4 w-4" /> Export
                 </Button>

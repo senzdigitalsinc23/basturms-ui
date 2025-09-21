@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { useForm, FormProvider, useFieldArray, useFormContext } from 'react-hook-form';
+import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,25 +15,27 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CalendarIcon, X } from 'lucide-react';
+import { Loader2, CalendarIcon, X, Check, ChevronsUpDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses } from '@/lib/store';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, addUser } from '@/lib/store';
 import type { Class } from '@/lib/types';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../ui/command';
+import { Badge } from '../ui/badge';
 
 const MAX_STEPS = 5;
 
 const academicHistorySchema = z.object({
   school: z.string().min(1, 'School name is required'),
-  program: z.string().min(1, 'Program is required'),
+  qualification: z.string().min(1, 'Qualification is required'),
   year_completed: z.number().min(1900).max(new Date().getFullYear()),
 });
 
 const documentSchema = z.object({
   name: z.string().min(1, 'Document name is required'),
-  file: z.any().refine(files => files?.length === 1, 'File is required.'),
+  file: z.any().refine(file => file instanceof File, 'File is required.'),
 });
 
 const formSchema = z.object({
@@ -48,12 +50,14 @@ const formSchema = z.object({
   snnit_no: z.string().optional(),
   
   // Address
-  country: z.string().min(1, "Country is required."),
-  city: z.string().optional(),
-  hometown: z.string().min(1, "Hometown is required."),
-  residence: z.string().min(1, "Residence is required."),
-  house_no: z.string().min(1, "House number is required."),
-  gps_no: z.string().min(1, "GPS number is required."),
+  address: z.object({
+    country: z.string().min(1, "Country is required."),
+    city: z.string().optional(),
+    hometown: z.string().min(1, "Hometown is required."),
+    residence: z.string().min(1, "Residence is required."),
+    house_no: z.string().min(1, "House number is required."),
+    gps_no: z.string().min(1, "GPS number is required."),
+  }),
 
   // Academic History
   academic_history: z.array(academicHistorySchema).optional(),
@@ -93,9 +97,9 @@ function AcademicHistoryFields() {
                         />
                         <FormField
                             control={control}
-                            name={`academic_history.${index}.program`}
+                            name={`academic_history.${index}.qualification`}
                             render={({ field }) => (
-                                <FormItem><FormLabel>Program Offered</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Qualification</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )}
                         />
                         <FormField
@@ -113,7 +117,7 @@ function AcademicHistoryFields() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ school: '', program: '', year_completed: new Date().getFullYear() })}
+                onClick={() => append({ school: '', qualification: '', year_completed: new Date().getFullYear() })}
             >
                 Add Academic History
             </Button>
@@ -144,7 +148,7 @@ function DocumentsFields() {
                             control={control}
                             name={`documents.${index}.file`}
                             render={({ field }) => (
-                                <FormItem><FormLabel>File</FormLabel><FormControl><Input type="file" accept=".pdf" onChange={(e) => field.onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>File</FormLabel><FormControl><Input type="file" accept=".pdf" onChange={(e) => field.onChange(e.target.files?.[0])} /></FormControl><FormMessage /></FormItem>
                             )}
                         />
                     </div>
@@ -186,12 +190,14 @@ export function AddStaffForm() {
       id_type: 'Ghana Card',
       id_no: '',
       snnit_no: '',
-      country: "Ghana",
-      city: '',
-      hometown: '',
-      residence: '',
-      house_no: '',
-      gps_no: '',
+      address: {
+        country: "Ghana",
+        city: '',
+        hometown: '',
+        residence: '',
+        house_no: '',
+        gps_no: '',
+      },
       academic_history: [],
       documents: [],
       appointment_date: undefined,
@@ -228,7 +234,7 @@ export function AddStaffForm() {
 
   const tabs = [
     { id: 1, name: 'Personal & Contact', fields: ['first_name', 'last_name', 'email', 'phone', 'id_no'] },
-    { id: 2, name: 'Address', fields: ['residence', 'country', 'hometown', 'house_no', 'gps_no'] },
+    { id: 2, name: 'Address', fields: ['address.residence', 'address.country', 'address.hometown', 'address.house_no', 'address.gps_no'] },
     { id: 3, name: 'Academic History', fields: ['academic_history'] },
     { id: 4, name: 'Documents', fields: ['documents'] },
     { id: 5, name: 'Appointment', fields: ['appointment_date', 'role', 'appointment_status'] },
@@ -253,13 +259,60 @@ export function AddStaffForm() {
     }
     setIsLoading(true);
 
-    // TODO: Implement staff creation logic
-    console.log(data);
+    const newUser = addUser({
+      name: `${data.first_name} ${data.last_name}`,
+      email: data.email,
+      role: data.role,
+      password: 'password', // Default password
+      status: 'active'
+    });
+
+    const newStaff = addStaff({
+        staff_id: generatedStaffId,
+        user_id: newUser.id,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        other_name: data.other_name,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        id_type: data.id_type,
+        id_no: data.id_no,
+        snnit_no: data.snnit_no,
+        date_of_joining: data.appointment_date.toISOString(),
+        address: data.address,
+    });
+
+    data.academic_history?.forEach(history => {
+        addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
+    });
+
+    for (const doc of data.documents || []) {
+        const fileReader = new FileReader();
+        fileReader.readAsDataURL(doc.file);
+        fileReader.onload = () => {
+            addStaffDocument({
+                staff_id: newStaff.staff_id,
+                document_name: doc.name,
+                file: fileReader.result as string
+            });
+        };
+    }
+
+    addStaffAppointmentHistory({
+        staff_id: newStaff.staff_id,
+        appointment_date: data.appointment_date.toISOString(),
+        role: data.role,
+        class_assigned: data.class_assigned,
+        subjects_assigned: data.subjects_assigned,
+        appointment_status: data.appointment_status,
+    });
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     setIsLoading(false);
     toast({
-        title: 'Staff Member Added (Simulated)',
+        title: 'Staff Member Added',
         description: `${data.first_name} ${data.last_name} has been added.`
     });
     router.push(`/staff-management`);
@@ -326,24 +379,24 @@ export function AddStaffForm() {
               <TabsContent value="2">
                  <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <FormField name="country" render={({ field }) => (
+                         <FormField name="address.country" render={({ field }) => (
                             <FormItem><FormLabel>Country *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
-                         <FormField name="city" render={({ field }) => (
+                         <FormField name="address.city" render={({ field }) => (
                             <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
-                         <FormField name="hometown" render={({ field }) => (
+                         <FormField name="address.hometown" render={({ field }) => (
                             <FormItem><FormLabel>Hometown *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <FormField name="residence" render={({ field }) => (
+                         <FormField name="address.residence" render={({ field }) => (
                             <FormItem><FormLabel>Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
-                         <FormField name="house_no" render={({ field }) => (
+                         <FormField name="address.house_no" render={({ field }) => (
                             <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
-                         <FormField name="gps_no" render={({ field }) => (
+                         <FormField name="address.gps_no" render={({ field }) => (
                             <FormItem><FormLabel>GPS No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
                     </div>
@@ -389,14 +442,63 @@ export function AddStaffForm() {
                         )}/>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <FormItem>
-                            <FormLabel>Assign Classes</FormLabel>
-                            {/* TODO: Replace with multi-select component */}
-                            <p className="text-sm text-muted-foreground p-2 border rounded-md min-h-10">Multi-select for classes will be implemented here.</p>
-                         </FormItem>
-                          <FormItem>
+                        <FormField
+                            control={methods.control}
+                            name="class_assigned"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Assign Classes</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className={cn("w-full justify-between", !field.value?.length && "text-muted-foreground")}
+                                        >
+                                        <div className="flex gap-1 flex-wrap">
+                                            {field.value?.map(classId => {
+                                                const cls = classes.find(c => c.id === classId);
+                                                return <Badge variant="secondary" key={classId}>{cls?.name}</Badge>
+                                            })}
+                                            {field.value?.length === 0 && "Select classes"}
+                                        </div>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search classes..." />
+                                        <CommandEmpty>No class found.</CommandEmpty>
+                                        <CommandGroup>
+                                        {classes.map(c => (
+                                            <CommandItem
+                                            value={c.id}
+                                            key={c.id}
+                                            onSelect={() => {
+                                                const selected = field.value || [];
+                                                const isSelected = selected.includes(c.id);
+                                                const newValue = isSelected
+                                                ? selected.filter(id => id !== c.id)
+                                                : [...selected, c.id];
+                                                field.onChange(newValue);
+                                            }}
+                                            >
+                                            <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(c.id) ? "opacity-100" : "opacity-0")} />
+                                            {c.name}
+                                            </CommandItem>
+                                        ))}
+                                        </CommandGroup>
+                                    </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormItem>
                             <FormLabel>Assign Subjects</FormLabel>
-                             {/* TODO: Replace with multi-select component */}
                             <p className="text-sm text-muted-foreground p-2 border rounded-md min-h-10">Multi-select for subjects will be implemented here.</p>
                          </FormItem>
                      </div>

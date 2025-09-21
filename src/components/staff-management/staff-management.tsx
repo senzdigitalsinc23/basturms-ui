@@ -1,11 +1,10 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { getStaffProfiles, getUsers, addUser, addAuditLog } from '@/lib/store';
-import { StaffProfile, User, Role } from '@/lib/types';
+import { getStaffProfiles, getUsers } from '@/lib/store';
+import { StaffProfile, User } from '@/lib/types';
 import { StaffDataTable } from './data-table';
 import { columns } from './columns';
-import { useAuth } from '@/hooks/use-auth';
 
 export type StaffDisplay = {
   user: User;
@@ -14,7 +13,6 @@ export type StaffDisplay = {
 
 export function StaffManagement() {
   const [staff, setStaff] = useState<StaffDisplay[]>([]);
-  const { user: currentUser } = useAuth();
 
   const refreshStaff = () => {
     const allUsers = getUsers();
@@ -34,26 +32,11 @@ export function StaffManagement() {
     refreshStaff();
   }, []);
 
-  const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: Role }) => {
-    const newUser = addUser(user);
-    refreshStaff();
-    if(currentUser) {
-        addAuditLog({
-            user: currentUser.email,
-            name: currentUser.name,
-            action: 'Create Staff User',
-            details: `Created staff user ${newUser.email} with role ${newUser.role}`,
-        });
-    }
-  };
 
   return (
     <StaffDataTable
-      columns={columns({
-        // onUpdateStatus: handleUpdateStatus,
-      })}
+      columns={columns({})}
       data={staff}
-      onAdd={handleAddUser}
     />
   );
 }
