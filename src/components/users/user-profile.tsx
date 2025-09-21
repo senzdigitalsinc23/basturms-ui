@@ -7,12 +7,41 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '../ui/button';
 import { Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { UserForm } from './user-form';
+import { useAuth } from '@/hooks/use-auth';
+import { updateUser as storeUpdateUser, addAuditLog } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
 
-export function UserProfile({ user }: { user: User }) {
+export function UserProfile({ user: initialUser }: { user: User }) {
+  const [user, setUser] = useState(initialUser);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const { user: currentUser } = useAuth();
+  const { toast } = useToast();
+
   const userInitials = user.name
     .split(' ')
     .map((n) => n[0])
     .join('');
+
+  const handleUpdate = (values: Partial<User>) => {
+    if (!currentUser) return;
+    const updated = storeUpdateUser({ ...user, ...values });
+    setUser(updated);
+    addAuditLog({
+      user: currentUser.email,
+      name: currentUser.name,
+      action: 'Update User Profile',
+      details: `User ${user.name} updated their own profile.`,
+    });
+    toast({
+        title: 'Profile Updated',
+        description: 'Your profile has been successfully updated.',
+    });
+    setIsEditOpen(false);
+  };
+
 
   return (
     <Card className="max-w-2xl mx-auto">
@@ -26,9 +55,20 @@ export function UserProfile({ user }: { user: User }) {
             <CardTitle className="text-3xl font-bold font-headline">{user.name}</CardTitle>
             <CardDescription className="text-lg text-muted-foreground">{user.role}</CardDescription>
           </div>
-           <Button variant="outline" size="sm">
-                <Pencil className="mr-2 h-4 w-4" /> Edit Profile
-            </Button>
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                        <Pencil className="mr-2 h-4 w-4" /> Edit Profile
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit Profile</DialogTitle>
+                    <DialogDescription>Update your personal information.</DialogDescription>
+                </DialogHeader>
+                <UserForm isEditMode defaultValues={user} onSubmit={handleUpdate} />
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent className="space-y-6 pt-6">

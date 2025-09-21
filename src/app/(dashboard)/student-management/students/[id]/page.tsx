@@ -27,7 +27,6 @@ import { AttendanceRecordForm } from '@/components/student-management/profile/at
 import { CommunicationLogForm } from '@/components/student-management/profile/communication-log-form';
 import { DocumentUploadForm } from '@/components/student-management/profile/document-upload-form';
 import { HealthRecordsForm } from '@/components/student-management/profile/health-records-form';
-import { CommunicationInterface } from '@/components/student-management/profile/communication-interface';
 
 const statusColors: Record<string, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -116,7 +115,6 @@ export default function StudentProfilePage() {
     const [isCommunicationFormOpen, setIsCommunicationFormOpen] = useState(false);
     const [isDocumentFormOpen, setIsDocumentFormOpen] = useState(false);
     const [isHealthFormOpen, setIsHealthFormOpen] = useState(false);
-    const [isCommunicateOpen, setIsCommunicateOpen] = useState(false);
     
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
@@ -143,41 +141,11 @@ export default function StudentProfilePage() {
     const handleUpdateProfile = (values: Partial<StudentProfile>) => {
         if (!currentUser || !profile) return;
         
-        // Compare values to generate detailed log
-        const changes: string[] = [];
-        const original = profile;
-
-        for (const section of Object.keys(values) as (keyof StudentProfile)[]) {
-            const originalSection = original[section];
-            const updatedSection = values[section];
-
-            if (originalSection && updatedSection && typeof updatedSection === 'object') {
-                for (const key of Object.keys(updatedSection)) {
-                    const originalValue = (originalSection as any)[key];
-                    const updatedValue = (updatedSection as any)[key];
-                    if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
-                        changes.push(`${section}.${key}`);
-                    }
-                }
-            }
-        }
-
         const updatedProfile = updateStudentProfile(profile.student.student_no, values, currentUser.id);
         if (updatedProfile) {
             setProfile(updatedProfile);
             fetchProfile(); // re-fetch to ensure all derived state is updated
             
-            const logDetails = changes.length > 0 
-                ? `Updated fields for student ${updatedProfile.student.first_name} ${updatedProfile.student.last_name}: ${changes.join(', ')}`
-                : `Updated details for student ${updatedProfile.student.first_name} ${updatedProfile.student.last_name} (no specific fields changed).`;
-
-            addAuditLog({
-                user: currentUser.email,
-                name: currentUser.name,
-                action: 'Update Student Profile',
-                details: logDetails,
-            });
-
             toast({
                 title: 'Profile Updated',
                 description: "The student's profile has been successfully updated.",
@@ -272,19 +240,19 @@ export default function StudentProfilePage() {
                             Back to List
                         </Link>
                     </Button>
-                     <Dialog open={isCommunicateOpen} onOpenChange={setIsCommunicateOpen}>
+                    <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
                         <DialogTrigger asChild>
                              <Button variant="outline" size="sm">
                                 <MessageSquare className="mr-2 h-4 w-4" />
-                                Communicate
+                                Log Communication
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl">
-                             <DialogHeader>
-                                <DialogTitle>Communicate</DialogTitle>
-                                <DialogDescription>Contact student or parent.</DialogDescription>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add Communication Log</DialogTitle>
+                                <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
                             </DialogHeader>
-                            <CommunicationInterface student={profile} />
+                            <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
                         </DialogContent>
                     </Dialog>
                     <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>

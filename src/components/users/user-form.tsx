@@ -76,22 +76,26 @@ export function UserForm({
   const selectedRole = form.watch('role');
 
   useEffect(() => {
-    if (selectedRole === 'Student') {
+    if (selectedRole === 'Student' && !isEditMode) {
       const allStudents = getStudentProfiles();
       const allUsers = getUsers();
       const linkedStudentEmails = new Set(
-        allUsers.filter(u => u.role === 'Student').map(u => u.email)
+        allUsers.filter(u => u.role === 'Student' && u.email).map(u => u.email)
       );
       
       const availableStudents = allStudents.filter(s => {
         const studentEmail = s.contactDetails.email;
+        // Check if a user already exists for the student's primary email
         if (studentEmail && linkedStudentEmails.has(studentEmail)) {
           return false;
         }
+        // Check if a user already exists for the auto-generated email
         const studentUsername = s.student.student_no.split('-').pop()?.toLowerCase();
-        const studentUserEmail = `${studentUsername}@student.com`;
-        if(!studentEmail && linkedStudentEmails.has(studentUserEmail)) {
-            return false;
+        if (studentUsername) {
+            const studentUserEmail = `${studentUsername}@student.com`;
+             if (linkedStudentEmails.has(studentUserEmail)) {
+                return false;
+            }
         }
         return true;
       });
@@ -99,7 +103,7 @@ export function UserForm({
     } else {
       setUnlinkedStudents([]);
     }
-  }, [selectedRole]);
+  }, [selectedRole, isEditMode]);
 
 
   const handleFormSubmit = async (values: z.infer<typeof createSchema | typeof editSchema>) => {
@@ -128,7 +132,7 @@ export function UserForm({
     }
   }
 
-  const allowManualEntry = selectedRole !== 'Student';
+  const allowManualEntry = selectedRole !== 'Student' || isEditMode;
 
 
   return (
@@ -148,7 +152,7 @@ export function UserForm({
                 </FormControl>
                 <SelectContent>
                   {ALL_ROLES.map((role: Role) => (
-                    <SelectItem key={role} value={role} disabled={role === 'Student' && isEditMode}>
+                    <SelectItem key={role} value={role}>
                       {role}
                     </SelectItem>
                   ))}
@@ -173,11 +177,11 @@ export function UserForm({
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            {unlinkedStudents.map(student => (
+                            {unlinkedStudents.length > 0 ? unlinkedStudents.map(student => (
                                 <SelectItem key={student.student.student_no} value={student.student.student_no}>
                                     {`${student.student.first_name} ${student.student.last_name} (${student.student.student_no})`}
                                 </SelectItem>
-                            ))}
+                            )) : <p className="p-2 text-sm text-muted-foreground">No unlinked students found.</p>}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -186,7 +190,7 @@ export function UserForm({
            />
         )}
         
-        {allowManualEntry || isEditMode ? (
+        {allowManualEntry ? (
             <>
                 <FormField
                 control={form.control}
@@ -195,7 +199,7 @@ export function UserForm({
                     <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                        <Input placeholder="John Doe" {...field} disabled={!allowManualEntry && !isEditMode} />
+                        <Input placeholder="John Doe" {...field} disabled={!allowManualEntry} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -208,7 +212,7 @@ export function UserForm({
                     <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                        <Input placeholder="name@example.com" {...field} disabled={!allowManualEntry && !isEditMode} />
+                        <Input placeholder="name@example.com" {...field} disabled={!allowManualEntry} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
