@@ -87,11 +87,13 @@ export function AttendanceTracker() {
                 description: `Attendance for ${successCount} student(s) has been saved successfully.`
             });
              const className = classes.find(c => c.id === selectedClass)?.name || 'Unknown Class';
+             const studentStatuses = students.map(s => `${s.name}: ${s.status}`).join(', ');
+             const logDetails = `Saved attendance for ${className} on ${format(attendanceDate, 'PPP')}. Details: ${studentStatuses}`;
             addAuditLog({
                 user: user.email,
                 name: user.name,
                 action: 'Save Attendance',
-                details: `Saved attendance for ${successCount} student(s) in ${className} for ${format(attendanceDate, 'PPP')}.`,
+                details: logDetails,
             });
         } else {
              toast({
