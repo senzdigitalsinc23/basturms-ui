@@ -50,7 +50,7 @@ const formSchema = z.object({
 
   // Parents
   guardian_name: z.string().min(2, "Guardian's name is required."),
-  guardian_phone: zstring().min(1, "Guardian's phone is required."),
+  guardian_phone: z.string().min(1, "Guardian's phone is required."),
   guardian_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   guardian_relationship: z.string().min(2, "Guardian's relationship is required."),
   father_name: z.string().optional(),
