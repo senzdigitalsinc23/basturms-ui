@@ -215,17 +215,23 @@ export interface Staff {
     other_name?: string;
     email: string;
     phone: string;
-    role: Role;
     id_type: 'Ghana Card' | 'Passport' | 'Voter ID' | 'Drivers License';
     id_no: string;
     snnit_no?: string;
-    date_of_joining: string;
+    address: {
+        country: string;
+        city?: string;
+        hometown: string;
+        residence: string;
+        house_no: string;
+        gps_no: string;
+    };
 }
 
 export interface StaffAcademicHistory {
     staff_id: string;
     school: string;
-    qualification: string;
+    program: string;
     year_completed: number;
 }
 
@@ -235,11 +241,16 @@ export interface StaffDocument {
     file: string; // URL or data URI
 }
 
+export type AppointmentStatus = 'Appointed' | 'Declined';
+export const ALL_APPOINTMENT_STATUSES: AppointmentStatus[] = ['Appointed', 'Declined'];
+
 export interface StaffAppointmentHistory {
     staff_id: string;
-    class_assigned: string; // Class ID
-    subjects_assigned: string[];
-    appointment_status: 'Active' | 'Ended';
+    appointment_date: string;
+    role: Role;
+    class_assigned?: string[]; // Class ID
+    subjects_assigned?: string[];
+    appointment_status: AppointmentStatus;
 }
 
 
@@ -268,3 +279,5 @@ export interface StaffProfile {
     // Re-using emergency contact type from student, could be different if needed
     emergencyContact?: Omit<EmergencyContact, 'student_no'> & { user_id: string };
 }
+
+    
