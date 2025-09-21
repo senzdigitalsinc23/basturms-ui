@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -91,19 +92,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       created_at: now,
       updated_at: now,
     },
-    {
-      id: '5',
-      name: 'Student Johnson',
-      username: 'studentjohnson',
-      email: 'student@campus.com',
-      password: 'password',
-      role_id: getRoleId('Student')!,
-      is_super_admin: false,
-      avatarUrl: 'https://picsum.photos/seed/avatar5/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
+    // Don't create a default user for the student, let the logic handle it
   ];
 };
 
@@ -266,7 +255,7 @@ export const getUserByEmail = (email: string): User | undefined => {
   return user ? mapUser(user) : undefined;
 }
 
-export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string }): User => {
+export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, status?: 'active' | 'frozen' }): User => {
   const users = getUsersInternal();
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
@@ -276,11 +265,11 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   const newUser: UserStorage = {
     ...user,
     id: nextId,
-    username: user.name.replace(/\s/g, '').toLowerCase(),
+    username: user.username || user.email,
     role_id: role!.id,
     is_super_admin: false,
     avatarUrl: `https://picsum.photos/seed/avatar${nextId}/40/40`,
-    status: 'active',
+    status: user.status || 'active',
     created_at: now,
     updated_at: now,
   };
@@ -409,6 +398,23 @@ export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student
     };
 
     saveToStorage(STUDENTS_KEY, [...profiles, newProfile]);
+    
+    // --- Create corresponding user account ---
+    const hasEmail = !!newProfile.contactDetails.email;
+    const lastName = newProfile.student.last_name.toLowerCase();
+    const studentNoSuffix = newProfile.student.student_no.slice(-3);
+    const usernameFromStudentNo = newProfile.student.student_no.split('-').pop()!.toLowerCase();
+
+    const userToCreate = {
+        name: `${newProfile.student.first_name} ${newProfile.student.last_name}`,
+        email: hasEmail ? newProfile.contactDetails.email! : `${usernameFromStudentNo}@student.com`,
+        username: hasEmail ? newProfile.contactDetails.email! : usernameFromStudentNo,
+        password: `${lastName}${studentNoSuffix}`,
+        role: 'Student' as Role,
+        status: 'frozen' as 'frozen',
+    };
+    addUser(userToCreate);
+
     return newProfile;
 };
 
