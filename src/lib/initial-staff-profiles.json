@@ -4,6 +4,7 @@
         "user_id": "1",
         "employmentDetails": {
             "user_id": "1",
+            "staff_id": "STF001",
             "hire_date": "2022-01-10",
             "contract_type": "Full-time",
             "status": "Active"
@@ -20,6 +21,7 @@
         "user_id": "2",
         "employmentDetails": {
             "user_id": "2",
+            "staff_id": "STF002",
             "hire_date": "2022-08-15",
             "contract_type": "Full-time",
             "status": "Active"
@@ -36,6 +38,7 @@
         "user_id": "3",
         "employmentDetails": {
             "user_id": "3",
+            "staff_id": "STF003",
             "hire_date": "2020-03-01",
             "contract_type": "Full-time",
             "status": "Active"

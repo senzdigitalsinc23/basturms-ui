@@ -26,11 +26,12 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useState } from 'react';
 import { StaffDisplay } from './staff-management';
-import { PlusCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
-import { ALL_ROLES, User } from '@/lib/types';
+import { ALL_ROLES, User, ALL_EMPLOYMENT_STATUSES } from '@/lib/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { UserForm } from '../users/user-form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface StaffDataTableProps {
   columns: ColumnDef<StaffDisplay>[];
@@ -43,10 +44,10 @@ const roleOptions = ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent').map
     label: role,
 }));
 
-const statusOptions = [
-    { value: 'active', label: 'Active' },
-    { value: 'frozen', label: 'Frozen' },
-];
+const statusOptions = ALL_EMPLOYMENT_STATUSES.map(status => ({
+    value: status,
+    label: status,
+}));
 
 
 export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
@@ -67,6 +68,11 @@ export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    initialState: {
+        pagination: {
+            pageSize: 7
+        }
+    },
     state: {
       sorting,
       columnFilters,
@@ -81,13 +87,13 @@ export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
        <div className="flex items-center justify-between">
             <div>
                 <h1 className="text-2xl font-bold font-headline">Staff List</h1>
-                <p className="text-muted-foreground">Manage and view the list of all staff members.</p>
+                <p className="text-muted-foreground">Manage all staff members including teachers and administrators.</p>
             </div>
             <div className="flex items-center gap-2">
                  <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
                         <Button size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Staff Member
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Staff
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
@@ -105,20 +111,15 @@ export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
                         />
                     </DialogContent>
                 </Dialog>
+                <Button size="sm" variant="outline">
+                    <Download className="mr-2 h-4 w-4" /> Export
+                </Button>
             </div>
         </div>
 
         <div className="flex items-center justify-between gap-2">
             <div className="flex flex-1 items-center space-x-2">
-                <Input
-                    placeholder="Search by name or email..."
-                    value={globalFilter ?? ''}
-                    onChange={(event) =>
-                        setGlobalFilter(event.target.value)
-                    }
-                    className="h-8 w-[150px] lg:w-[250px]"
-                />
-                {table.getColumn("role") && (
+                 {table.getColumn("role") && (
                     <DataTableFacetedFilter
                     column={table.getColumn("role")}
                     title="Role"
@@ -145,6 +146,26 @@ export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
                     <X className="ml-2 h-4 w-4" />
                     </Button>
                 )}
+            </div>
+             <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">Rows:</p>
+                <Select
+                    value={`${table.getState().pagination.pageSize}`}
+                    onValueChange={(value) => {
+                        table.setPageSize(Number(value))
+                    }}
+                    >
+                    <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue placeholder={table.getState().pagination.pageSize} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                        {[7, 10, 20, 30, 40, 50].map((pageSize) => (
+                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                            {pageSize}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
         </div>
         <div className="rounded-md border">
@@ -199,7 +220,7 @@ export function StaffDataTable({ columns, data, onAdd }: StaffDataTableProps) {
         </div>
         <div className="flex items-center justify-between py-4">
             <div className="text-sm text-muted-foreground">
-              Showing {table.getRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of {table.getFilteredRowModel().rows.length} staff members
+              Showing {table.getRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of {table.getFilteredRowModel().rows.length} staff
             </div>
             <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium">

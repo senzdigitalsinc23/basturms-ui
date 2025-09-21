@@ -2,7 +2,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Eye } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Eye, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,19 +11,53 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Role } from '@/lib/types';
+import { Role, EmploymentStatus, ALL_EMPLOYMENT_STATUSES } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { StaffDisplay } from './staff-management';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { Checkbox } from '../ui/checkbox';
 
 
 type ColumnsProps = {
     // onUpdateStatus: (userId: string, status: 'active' | 'frozen') => void;
 };
 
+const statusColors: Record<EmploymentStatus, string> = {
+    Active: 'bg-green-100 text-green-800',
+    'On-leave': 'bg-yellow-100 text-yellow-800',
+    Inactive: 'bg-red-100 text-red-800',
+};
+
 export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
+    {
+        id: 'select',
+        header: ({ table }) => (
+        <Checkbox
+            checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+        />
+        ),
+        cell: ({ row }) => (
+        <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+        />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+    },
+    {
+        accessorKey: 'staff_id',
+        header: 'Staff ID',
+        accessorFn: row => row.profile?.employmentDetails.staff_id,
+    },
     {
         accessorKey: 'name',
         header: ({ column }) => {
@@ -44,20 +78,15 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
                 .map((n) => n[0])
                 .join('');
             return (
-                <div className="flex items-center gap-3">
-                <Avatar>
-                    <AvatarImage src={user.avatarUrl} alt={user.name} />
-                    <AvatarFallback>{userInitials}</AvatarFallback>
-                </Avatar>
-                <span className="font-medium">{user.name}</span>
-                </div>
+                 <Link href={`/users/${user.id}`} className="flex items-center gap-3 group">
+                    <Avatar>
+                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                        <AvatarFallback>{userInitials}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium group-hover:text-primary group-hover:underline">{user.name}</span>
+                </Link>
             );
         },
-    },
-    {
-        accessorKey: 'email',
-        header: 'Email',
-        accessorFn: row => row.user.email,
     },
     {
         accessorKey: 'role',
@@ -72,28 +101,25 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
         },
     },
     {
+        accessorKey: 'status',
+        header: 'Status',
+        accessorFn: row => row.profile?.employmentDetails.status,
+        cell: ({ row }) => {
+            const status = row.getValue('status') as EmploymentStatus;
+            const colorClass = statusColors[status] || 'bg-gray-100 text-gray-800';
+            return <Badge className={`${colorClass} border-none`}>{status}</Badge>;
+        },
+        filterFn: (row, id, value) => {
+            return value.includes(row.getValue(id))
+        },
+    },
+    {
         accessorKey: 'hire_date',
-        header: 'Hire Date',
+        header: 'Joining Date',
         accessorFn: row => row.profile?.employmentDetails.hire_date,
         cell: ({ row }) => {
             const date = row.getValue('hire_date') as string;
             return date ? <div>{format(new Date(date), "MMMM do, yyyy")}</div> : 'N/A';
-        },
-    },
-    {
-        accessorKey: 'status',
-        header: 'Status',
-        accessorFn: row => row.user.status,
-        cell: ({ row }) => {
-            const status = row.getValue('status') as string;
-            return (
-                <Badge variant={status === 'active' ? 'secondary' : 'destructive'}>
-                {status}
-                </Badge>
-            );
-        },
-        filterFn: (row, id, value) => {
-            return value.includes(row.getValue(id))
         },
     },
     {

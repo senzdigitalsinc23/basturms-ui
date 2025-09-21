@@ -100,7 +100,15 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/#', label: 'Classes' },
       ],
     },
-    { href: '/staff-management', label: 'Staff Management', icon: BookUser },
+     {
+      label: 'Staff Management',
+      icon: BookUser,
+      items: [
+        { href: '/staff-management', label: 'Staff List' },
+        { href: '/staff-management/add', label: 'Add Staff' },
+        { href: '/staff-management/attendance', label: 'Staff Attendance' },
+      ]
+    },
     { href: '/users', label: 'User Management', icon: Users },
     { href: '/notifications', label: 'Notifications', icon: Bell },
     { href: '/#', label: 'Attendance', icon: Calendar },
@@ -136,7 +144,15 @@ const menuItems: Record<Role, NavItem[]> = {
   ],
   Headmaster: [
     { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/staff-management', label: 'Staff Management', icon: BookUser },
+     {
+      label: 'Staff Management',
+      icon: BookUser,
+      items: [
+        { href: '/staff-management', label: 'Staff List' },
+        { href: '/staff-management/add', label: 'Add Staff' },
+        { href: '/staff-management/attendance', label: 'Staff Attendance' },
+      ]
+    },
     { href: '/#', label: 'Curriculum', icon: BookUser },
   ],
   Librarian: [

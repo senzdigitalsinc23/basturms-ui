@@ -7,6 +7,7 @@
 
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -214,11 +215,13 @@ export interface StudentProfile {
 }
 
 // Staff Management Types
-export type EmploymentStatus = 'Active' | 'On Leave' | 'Terminated';
+export type EmploymentStatus = 'Active' | 'On-leave' | 'Inactive';
+export const ALL_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['Active', 'On-leave', 'Inactive'];
 export type ContractType = 'Full-time' | 'Part-time' | 'Contract';
 
 export interface StaffEmploymentDetails {
     user_id: string;
+    staff_id: string;
     hire_date: string;
     contract_type: ContractType;
     status: EmploymentStatus;
