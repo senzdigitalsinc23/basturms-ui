@@ -18,8 +18,10 @@ import {
   UploadedDocument,
   AttendanceRecord,
   HealthRecords,
+  StaffProfile,
 } from './types';
 import { format } from 'date-fns';
+import initialStaffProfiles from './initial-staff-profiles.json';
 
 
 const USERS_KEY = 'campusconnect_users';
@@ -28,6 +30,7 @@ const LOGS_KEY = 'campusconnect_logs';
 const AUTH_LOGS_KEY = 'campusconnect_auth_logs';
 const STUDENTS_KEY = 'campusconnect_students';
 const CLASSES_KEY = 'campusconnect_classes';
+const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 
 
 const getInitialRoles = (): RoleStorage[] => {
@@ -120,7 +123,7 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
         {
             student: { student_no: student1StudentNo, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser, avatarUrl: 'https://picsum.photos/seed/student1/200/200' },
             contactDetails: { student_no: student1StudentNo, email: 'john.doe@example.com', phone: '123-456-7890', country: 'Ghana', city: 'Accra', hometown: 'Accra', residence: 'East Legon', house_no: 'H23', gps_no: 'GA-123-456' },
-            guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother', guardian_email: 'jane.doe@example.com', father_name: 'John Doe Sr.', father_phone: '111-222-3333', mother_name: 'Jane Doe', mother_phone: '098-765-4321' },
+            guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother', guardian_email: 'jane.doe@example.com', father_name: 'John Doe Sr.', father_phone: '111-222-3333', father_occupation: 'Engineer', mother_name: 'Jane Doe', mother_phone: '098-765-4321', mother_occupation: 'Doctor' },
             emergencyContact: { student_no: student1StudentNo, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
             admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' },
             healthRecords: {
@@ -222,6 +225,9 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(CLASSES_KEY)) {
         saveToStorage(CLASSES_KEY, getInitialClasses());
     }
+    if (!window.localStorage.getItem(STAFF_PROFILES_KEY)) {
+        saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
+    }
   }
 };
 
@@ -262,6 +268,15 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
   const now = new Date().toISOString();
+  
+  const existingUser = users.find(u => u.email === user.email);
+  if (existingUser) {
+    // To prevent duplicates, especially with automated creation.
+    // In a real app, you might throw an error or return the existing user.
+    console.warn(`User with email ${user.email} already exists.`);
+    return mapUser(existingUser);
+  }
+
   const nextId = users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1).toString() : '1';
 
   const newUser: UserStorage = {
@@ -646,4 +661,13 @@ export const graduateStudents = (studentIds: string[], editorId: string): number
         saveToStorage(STUDENTS_KEY, profiles);
     }
     return updatedCount;
+}
+
+
+// Staff Management Functions
+export const getStaffProfiles = (): StaffProfile[] => getFromStorage<StaffProfile[]>(STAFF_PROFILES_KEY, []);
+
+export const getStaffProfileByUserId = (userId: string): StaffProfile | undefined => {
+    const profiles = getStaffProfiles();
+    return profiles.find(p => p.user_id === userId);
 }

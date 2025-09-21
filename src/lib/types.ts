@@ -6,6 +6,7 @@
 
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -210,4 +211,29 @@ export interface StudentProfile {
     attendanceRecords?: AttendanceRecord[];
     communicationLogs?: CommunicationLog[];
     uploadedDocuments?: UploadedDocument[];
+}
+
+// Staff Management Types
+export type EmploymentStatus = 'Active' | 'On Leave' | 'Terminated';
+export type ContractType = 'Full-time' | 'Part-time' | 'Contract';
+
+export interface StaffEmploymentDetails {
+    user_id: string;
+    hire_date: string;
+    contract_type: ContractType;
+    status: EmploymentStatus;
+}
+
+export interface StaffQualification {
+    degree: string;
+    institution: string;
+    year: number;
+}
+
+export interface StaffProfile {
+    user_id: string; // links to User.id
+    employmentDetails: StaffEmploymentDetails;
+    qualifications?: StaffQualification[];
+    // Re-using emergency contact type from student, could be different if needed
+    emergencyContact?: Omit<EmergencyContact, 'student_no'> & { user_id: string };
 }

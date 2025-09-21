@@ -1,0 +1,51 @@
+
+[
+    {
+        "user_id": "1",
+        "employmentDetails": {
+            "user_id": "1",
+            "hire_date": "2022-01-10",
+            "contract_type": "Full-time",
+            "status": "Active"
+        },
+        "qualifications": [
+            {
+                "degree": "MSc in Computer Science",
+                "institution": "University of Example",
+                "year": 2020
+            }
+        ]
+    },
+    {
+        "user_id": "2",
+        "employmentDetails": {
+            "user_id": "2",
+            "hire_date": "2022-08-15",
+            "contract_type": "Full-time",
+            "status": "Active"
+        },
+        "qualifications": [
+            {
+                "degree": "B.Ed in Basic Education",
+                "institution": "UCC",
+                "year": 2018
+            }
+        ]
+    },
+    {
+        "user_id": "3",
+        "employmentDetails": {
+            "user_id": "3",
+            "hire_date": "2020-03-01",
+            "contract_type": "Full-time",
+            "status": "Active"
+        },
+        "qualifications": [
+            {
+                "degree": "M.Phil in Educational Leadership",
+                "institution": "University of Ghana",
+                "year": 2015
+            }
+        ]
+    }
+]

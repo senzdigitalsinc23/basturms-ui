@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -99,6 +100,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/#', label: 'Classes' },
       ],
     },
+    { href: '/staff-management', label: 'Staff Management', icon: BookUser },
     { href: '/users', label: 'User Management', icon: Users },
     { href: '/notifications', label: 'Notifications', icon: Bell },
     { href: '/#', label: 'Attendance', icon: Calendar },
@@ -134,7 +136,7 @@ const menuItems: Record<Role, NavItem[]> = {
   ],
   Headmaster: [
     { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/#', label: 'Staff', icon: Users },
+    { href: '/staff-management', label: 'Staff Management', icon: BookUser },
     { href: '/#', label: 'Curriculum', icon: BookUser },
   ],
   Librarian: [
