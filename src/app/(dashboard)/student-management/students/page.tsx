@@ -1,3 +1,4 @@
+'use client';
 import { ProtectedRoute } from '@/components/protected-route';
 import { StudentManagement } from '@/components/student-management/student-management';
 
