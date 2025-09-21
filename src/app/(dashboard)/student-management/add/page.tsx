@@ -14,14 +14,21 @@ export default function AddStudentPage() {
     doc.text("Student Admission Form", 105, 20, { align: 'center' });
 
     const fields = [
-        { group: "Personal Details", items: ["Full Name", "Date of Birth", "Gender"] },
-        { group: "Contact & Address", items: ["Residence", "Hometown", "GPS No", "Email", "Phone"] },
-        { group: "Guardian's Information", items: ["Guardian Name", "Guardian Phone", "Relationship"] },
+        { group: "Personal Details", items: ["Full Name", "Date of Birth", "Gender", "NHIS Number"] },
+        { group: "Contact & Address", items: ["Residence", "Hometown", "City", "Country", "GPS No", "Email", "Phone"] },
+        { group: "Guardian's Information", items: ["Guardian Name", "Guardian Phone", "Guardian Email", "Relationship"] },
+        { group: "Father's Details", items: ["Father's Name", "Father's Phone", "Father's Email"] },
+        { group: "Mother's Details", items: ["Mother's Name", "Mother's Phone", "Mother's Email"] },
+        { group: "Emergency Contact", items: ["Emergency Contact Name", "Emergency Contact Phone", "Relationship"] },
         { group: "Admission Details", items: ["Enrollment Date", "Class Assigned"] },
     ];
     
     let y = 40;
     fields.forEach(fieldGroup => {
+        if (y > 260) { // Add new page if content overflows
+            doc.addPage();
+            y = 20;
+        }
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text(fieldGroup.group, 15, y);
