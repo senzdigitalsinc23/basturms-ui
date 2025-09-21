@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ProtectedRoute } from '@/components/protected-route';
@@ -8,7 +9,7 @@ import jsPDF from 'jspdf';
 
 export default function AddStudentPage() {
 
-    const handleDownloadBlankForm = () => {
+    const handleDownloadAdmissionForm = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text("Student Admission Form", 105, 20, { align: 'center' });
@@ -20,7 +21,7 @@ export default function AddStudentPage() {
         { group: "Father's Details", items: ["Father's Name", "Father's Phone", "Father's Email"] },
         { group: "Mother's Details", items: ["Mother's Name", "Mother's Phone", "Mother's Email"] },
         { group: "Emergency Contact", items: ["Emergency Contact Name", "Emergency Contact Phone", "Relationship"] },
-        { group: "Admission Details", items: ["Enrollment Date", "Class Assigned"] },
+        { group: "Admission Details (To be filled by school)", items: ["Enrollment Date", "Class Assigned"] },
     ];
     
     let y = 40;
@@ -42,7 +43,7 @@ export default function AddStudentPage() {
         y += 5;
     });
 
-    doc.save('blank_admission_form.pdf');
+    doc.save('Student admission form.pdf');
   };
 
 
@@ -56,9 +57,9 @@ export default function AddStudentPage() {
               Fill in the details below to enroll a new student.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleDownloadBlankForm}>
+          <Button variant="outline" size="sm" onClick={handleDownloadAdmissionForm}>
             <FileDown className="mr-2 h-4 w-4" />
-            Download Blank Form
+            Download Admission Form
           </Button>
         </div>
         <AddStudentForm />
