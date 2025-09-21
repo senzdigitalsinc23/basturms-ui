@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
@@ -20,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, addUser } from '@/lib/store';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument } from '@/lib/store';
 import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../ui/command';
 import { Badge } from '../ui/badge';
@@ -43,7 +44,7 @@ const formSchema = z.object({
   first_name: z.string().min(1, 'First Name is required.'),
   last_name: z.string().min(1, 'Last Name is required.'),
   other_name: z.string().optional(),
-  email: z.string().email('A valid email is required.'),
+  email: z.string().email('A valid email is required.').optional().or(z.literal('')),
   phone: z.string().min(1, 'Phone number is required.'),
   id_type: z.enum(['Ghana Card', 'Passport', 'Voter ID', 'Drivers License']).default('Ghana Card'),
   id_no: z.string().min(1, 'ID number is required'),
@@ -106,7 +107,7 @@ function AcademicHistoryFields() {
                             control={control}
                             name={`academic_history.${index}.year_completed`}
                             render={({ field }) => (
-                                <FormItem><FormLabel>Year of Completion</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Year of Completion</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} /></FormControl><FormMessage /></FormItem>
                             )}
                         />
                     </div>
@@ -259,21 +260,12 @@ export function AddStaffForm() {
     }
     setIsLoading(true);
 
-    const newUser = addUser({
-      name: `${data.first_name} ${data.last_name}`,
-      email: data.email,
-      role: data.role,
-      password: 'password', // Default password
-      status: 'active'
-    });
-
     const newStaff = addStaff({
         staff_id: generatedStaffId,
-        user_id: newUser.id,
         first_name: data.first_name,
         last_name: data.last_name,
         other_name: data.other_name,
-        email: data.email,
+        email: data.email || '',
         phone: data.phone,
         role: data.role,
         id_type: data.id_type,
@@ -281,7 +273,7 @@ export function AddStaffForm() {
         snnit_no: data.snnit_no,
         date_of_joining: data.appointment_date.toISOString(),
         address: data.address,
-    });
+    }, user.id);
 
     data.academic_history?.forEach(history => {
         addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
@@ -347,7 +339,7 @@ export function AddStaffForm() {
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField name="email" render={({ field }) => (
-                            <FormItem><FormLabel>Email *</FormLabel><FormControl><Input {...field} placeholder="staff@example.com" /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} placeholder="staff@example.com" /></FormControl><FormMessage /></FormItem>
                         )}/>
                         <FormField name="phone" render={({ field }) => (
                             <FormItem><FormLabel>Phone *</FormLabel><FormControl><Input {...field} placeholder="233-555-1234" /></FormControl><FormMessage /></FormItem>
@@ -454,7 +446,7 @@ export function AddStaffForm() {
                                         <Button
                                         variant="outline"
                                         role="combobox"
-                                        className={cn("w-full justify-between", !field.value?.length && "text-muted-foreground")}
+                                        className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
                                         >
                                         <div className="flex gap-1 flex-wrap">
                                             {field.value?.map(classId => {

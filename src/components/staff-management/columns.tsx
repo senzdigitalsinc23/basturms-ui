@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -56,7 +57,7 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
     {
         accessorKey: 'staff_id',
         header: 'Staff ID',
-        accessorFn: row => row.profile?.employmentDetails.staff_id,
+        accessorFn: row => row.staff_id,
     },
     {
         accessorKey: 'name',
@@ -78,7 +79,7 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
                 .map((n) => n[0])
                 .join('');
             return (
-                 <Link href={`/users/${user.id}`} className="flex items-center gap-3 group">
+                 <Link href={`/staff-management/${row.original.staff_id}`} className="flex items-center gap-3 group">
                     <Avatar>
                         <AvatarImage src={user.avatarUrl} alt={user.name} />
                         <AvatarFallback>{userInitials}</AvatarFallback>
@@ -103,7 +104,7 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
     {
         accessorKey: 'status',
         header: 'Status',
-        accessorFn: row => row.profile?.employmentDetails.status,
+        accessorFn: row => row.status,
         cell: ({ row }) => {
             const status = row.getValue('status') as EmploymentStatus;
             const colorClass = statusColors[status] || 'bg-gray-100 text-gray-800';
@@ -114,11 +115,11 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
         },
     },
     {
-        accessorKey: 'hire_date',
+        accessorKey: 'joining_date',
         header: 'Joining Date',
-        accessorFn: row => row.profile?.employmentDetails.hire_date,
+        accessorFn: row => row.joining_date,
         cell: ({ row }) => {
-            const date = row.getValue('hire_date') as string;
+            const date = row.getValue('joining_date') as string;
             return date ? <div>{format(new Date(date), "MMMM do, yyyy")}</div> : 'N/A';
         },
     },
@@ -138,7 +139,7 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                            <Link href={`/users/${staff.user.id}`}>
+                            <Link href={`/staff-management/${staff.staff_id}`}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Profile
                             </Link>

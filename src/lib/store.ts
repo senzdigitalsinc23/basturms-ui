@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -286,7 +287,7 @@ export const getUserByEmail = (email: string): User | undefined => {
   return user ? mapUser(user) : undefined;
 }
 
-export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, status?: 'active' | 'frozen' }): User => {
+export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'is_super_admin' | 'role_id'>): User => {
   const users = getUsersInternal();
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
@@ -305,7 +306,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   const newUser: UserStorage = {
     ...user,
     id: nextId,
-    username: user.username || user.email,
+    username: user.username,
     password: user.password || 'password',
     role_id: role!.id,
     is_super_admin: false,
@@ -694,10 +695,30 @@ export const getStaffAcademicHistory = (): StaffAcademicHistory[] => getFromStor
 export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
-export const addStaff = (staff: Staff): Staff => {
+export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staff => {
     const staffList = getStaff();
-    saveToStorage(STAFF_KEY, [...staffList, staff]);
-    return staff;
+
+    const username = staff.email ? staff.email : `${staff.staff_id.toLowerCase()}@teacher.com`;
+    const user = addUser({
+      name: `${staff.first_name} ${staff.last_name}`,
+      email: staff.email || username,
+      username: username,
+      password: staff.staff_id.toLowerCase(),
+      role: staff.role,
+      status: 'active',
+    });
+
+    const newStaff = { ...staff, user_id: user.id };
+    saveToStorage(STAFF_KEY, [...staffList, newStaff]);
+
+    addAuditLog({
+        user: getUserById(creatorId)?.email || 'Unknown',
+        name: getUserById(creatorId)?.name || 'Unknown',
+        action: 'Create Staff',
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} with Staff ID ${newStaff.staff_id} and User ID ${newStaff.user_id}`
+    });
+
+    return newStaff;
 };
 
 export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {
@@ -716,6 +737,26 @@ export const addStaffAppointmentHistory = (appointment: StaffAppointmentHistory)
     const appointments = getStaffAppointmentHistory();
     saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, [...appointments, appointment]);
     return appointment;
+};
+
+export const getStaffByStaffId = (staffId: string): Staff | undefined => {
+    const staffList = getStaff();
+    return staffList.find(s => s.staff_id === staffId);
+};
+
+export const getStaffDocumentsByStaffId = (staffId: string): StaffDocument[] => {
+    const documents = getStaffDocuments();
+    return documents.filter(d => d.staff_id === staffId);
+};
+
+export const deleteStaffDocument = (staffId: string, documentName: string): boolean => {
+    const documents = getStaffDocuments();
+    const newDocuments = documents.filter(d => !(d.staff_id === staffId && d.document_name === documentName));
+    if (newDocuments.length < documents.length) {
+        saveToStorage(STAFF_DOCUMENTS_KEY, newDocuments);
+        return true;
+    }
+    return false;
 };
 
 export const getStaffProfileByUserId = (userId: string): StaffProfile | undefined => {
