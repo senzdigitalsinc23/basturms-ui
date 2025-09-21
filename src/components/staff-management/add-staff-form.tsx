@@ -118,7 +118,7 @@ function AcademicHistoryFields() {
                 Add Academic History
             </Button>
         </div>
-    )
+    );
 }
 
 function DocumentsFields() {
@@ -321,7 +321,7 @@ export function AddStaffForm() {
                             <FormItem><FormLabel>Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
                          <FormField name="house_no" render={({ field }) => (
-                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl></FormMessage>
+                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormMessage>
                          )} />
                          <FormField name="gps_no" render={({ field }) => (
                             <FormItem><FormLabel>GPS No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -421,5 +421,3 @@ export function AddStaffForm() {
     </Card>
   );
 }
-
-    
