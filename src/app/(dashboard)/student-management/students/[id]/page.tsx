@@ -551,7 +551,7 @@ export default function StudentProfilePage() {
                                 <TableCell>{format(new Date(rec.uploaded_at), 'do MMM, yyyy')}</TableCell>
                                 <TableCell className="flex gap-2">
                                     <Button variant="link" size="sm" asChild>
-                                        <Link href={rec.url} target="_blank" rel="noopener noreferrer">View</Link>
+                                        <Link href={rec.url} target="_blank" rel="noopener noreferrer" download={rec.name}>View</Link>
                                     </Button>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
