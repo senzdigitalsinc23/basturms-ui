@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, addAttendanceRecord, getStudentProfileById } from '@/lib/store';
+import { getClasses, getStudentProfiles, addAttendanceRecord, getStudentProfileById, addAuditLog } from '@/lib/store';
 import { Class, StudentProfile, AttendanceRecord } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -85,6 +85,13 @@ export function AttendanceTracker() {
             toast({
                 title: "Attendance Saved",
                 description: `Attendance for ${successCount} student(s) has been saved successfully.`
+            });
+             const className = classes.find(c => c.id === selectedClass)?.name || 'Unknown Class';
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Save Attendance',
+                details: `Saved attendance for ${successCount} student(s) in ${className} for ${format(attendanceDate, 'PPP')}.`,
             });
         } else {
              toast({
