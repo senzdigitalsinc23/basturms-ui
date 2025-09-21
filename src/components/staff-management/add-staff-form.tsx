@@ -19,7 +19,7 @@ import { Loader2, CalendarIcon, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { ALL_ROLES, Role, EmploymentStatus, AppointmentStatus, ALL_APPOINTMENT_STATUSES } from '@/lib/types';
+import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES } from '@/lib/types';
 import { getStaffAppointmentHistory, getClasses } from '@/lib/store';
 import type { Class } from '@/lib/types';
 
@@ -321,7 +321,7 @@ export function AddStaffForm() {
                             <FormItem><FormLabel>Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
                          <FormField name="house_no" render={({ field }) => (
-                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormMessage>
+                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
                          <FormField name="gps_no" render={({ field }) => (
                             <FormItem><FormLabel>GPS No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
