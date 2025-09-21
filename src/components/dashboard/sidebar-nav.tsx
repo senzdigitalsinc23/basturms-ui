@@ -32,6 +32,7 @@ import {
   Megaphone,
   Fingerprint,
   Bell,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -94,6 +95,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/student-management/students', label: 'Students' },
         { href: '/student-management/promotions', label: 'Promotion/Graduation' },
         { href: '/student-management/add', label: 'Add Student' },
+        { href: '/student-management/attendance', label: 'Student Register' },
         { href: '/#', label: 'Classes' },
       ],
     },

@@ -6,6 +6,7 @@ import { AddStudentForm } from '@/components/student-management/add-student-form
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function AddStudentPage() {
 
