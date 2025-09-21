@@ -93,7 +93,7 @@ const menuItems: Record<Role, NavItem[]> = {
       items: [
         { href: '/student-management/students', label: 'Students' },
         { href: '/student-management/promotions', label: 'Promotion/Graduation' },
-        { href: '/#', label: 'Add Student' },
+        { href: '/student-management/add', label: 'Add Student' },
         { href: '/#', label: 'Classes' },
       ],
     },
