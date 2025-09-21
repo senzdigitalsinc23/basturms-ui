@@ -178,7 +178,27 @@ export function AddStaffForm() {
     resolver: zodResolver(formSchema),
     mode: 'onChange',
     defaultValues: {
+      first_name: '',
+      last_name: '',
+      other_name: '',
+      email: '',
+      phone: '',
+      id_type: 'Ghana Card',
+      id_no: '',
+      snnit_no: '',
       country: "Ghana",
+      city: '',
+      hometown: '',
+      residence: '',
+      house_no: '',
+      gps_no: '',
+      academic_history: [],
+      documents: [],
+      appointment_date: undefined,
+      role: undefined,
+      class_assigned: [],
+      subjects_assigned: [],
+      appointment_status: undefined,
     }
   });
 
