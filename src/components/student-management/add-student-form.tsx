@@ -53,12 +53,15 @@ const formSchema = z.object({
   guardian_phone: z.string().min(1, "Guardian's phone is required."),
   guardian_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   guardian_relationship: z.string().min(2, "Guardian's relationship is required."),
+  guardian_occupation: z.string().optional(),
   father_name: z.string().optional(),
   father_phone: z.string().optional(),
   father_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
+  father_occupation: z.string().optional(),
   mother_name: z.string().optional(),
   mother_phone: z.string().optional(),
   mother_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
+  mother_occupation: z.string().optional(),
 
   // Emergency
   emergency_name: z.string().min(2, "Emergency contact name is required."),
@@ -100,28 +103,33 @@ function ParentGuardianFields() {
     const fatherName = watch('father_name');
     const fatherPhone = watch('father_phone');
     const fatherEmail = watch('father_email');
+    const fatherOccupation = watch('father_occupation');
     const motherName = watch('mother_name');
     const motherPhone = watch('mother_phone');
     const motherEmail = watch('mother_email');
+    const motherOccupation = watch('mother_occupation');
 
     useEffect(() => {
         if (guardianSource === 'father') {
             setValue('guardian_name', fatherName || '');
             setValue('guardian_phone', fatherPhone || '');
             setValue('guardian_email', fatherEmail || '');
+            setValue('guardian_occupation', fatherOccupation || '');
             setValue('guardian_relationship', 'Father');
         } else if (guardianSource === 'mother') {
             setValue('guardian_name', motherName || '');
             setValue('guardian_phone', motherPhone || '');
             setValue('guardian_email', motherEmail || '');
+            setValue('guardian_occupation', motherOccupation || '');
             setValue('guardian_relationship', 'Mother');
         } else {
              setValue('guardian_name', '');
              setValue('guardian_phone', '');
              setValue('guardian_email', '');
+             setValue('guardian_occupation', '');
              setValue('guardian_relationship', '');
         }
-    }, [guardianSource, fatherName, fatherPhone, fatherEmail, motherName, motherPhone, motherEmail, setValue]);
+    }, [guardianSource, fatherName, fatherPhone, fatherEmail, fatherOccupation, motherName, motherPhone, motherEmail, motherOccupation, setValue]);
 
     const isGuardianFieldsDisabled = guardianSource !== 'other';
 
@@ -163,6 +171,9 @@ function ParentGuardianFields() {
                     <FormItem><FormLabel>Guardian's Email</FormLabel><FormControl><Input {...field} disabled={isGuardianFieldsDisabled} /></FormControl><FormMessage /></FormItem>
                 )}/>
             </div>
+            <FormField name="guardian_occupation" control={control} render={({ field }) => (
+                <FormItem><FormLabel>Guardian's Occupation</FormLabel><FormControl><Input {...field} disabled={isGuardianFieldsDisabled} /></FormControl><FormMessage /></FormItem>
+            )}/>
             
             <h3 className="text-md font-semibold text-primary pt-4">Father's Details</h3>
             <Separator />
@@ -174,9 +185,14 @@ function ParentGuardianFields() {
                     <FormItem><FormLabel>Father's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                  )} />
             </div>
-            <FormField name="father_email" control={control} render={({ field }) => (
-                <FormItem><FormLabel>Father's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )}/>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="father_email" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Father's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField name="father_occupation" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Father's Occupation</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+            </div>
 
             <h3 className="text-md font-semibold text-primary pt-4">Mother's Details</h3>
             <Separator />
@@ -188,9 +204,14 @@ function ParentGuardianFields() {
                     <FormItem><FormLabel>Mother's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                  )} />
             </div>
-            <FormField name="mother_email" control={control} render={({ field }) => (
-                <FormItem><FormLabel>Mother's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )}/>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="mother_email" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Mother's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                 <FormField name="mother_occupation" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Mother's Occupation</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+            </div>
         </div>
     );
 }
@@ -231,12 +252,15 @@ export function AddStudentForm() {
         guardian_phone: '',
         guardian_email: '',
         guardian_relationship: '',
+        guardian_occupation: '',
         father_name: '',
         father_phone: '',
         father_email: '',
+        father_occupation: '',
         mother_name: '',
         mother_phone: '',
         mother_email: '',
+        mother_occupation: '',
         emergency_name: '',
         emergency_phone: '',
         emergency_relationship: undefined,
@@ -324,8 +348,10 @@ export function AddStudentForm() {
             ['Guardian Name', data.guardian_name],
             ['Guardian Phone', data.guardian_phone],
             ['Relationship', data.guardian_relationship],
+            ['Occupation', data.guardian_occupation || 'N/A'],
 
-            [{ content: 'Admission Details', colSpan: 2, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' }}],
+
+            [{ content: 'Admission Details (For Official Use Only)', colSpan: 2, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' }}],
             ['Enrollment Date', format(data.enrollment_date, 'PPP')],
             ['Class Assigned', className],
             ['Admission Status', data.admission_status],
@@ -369,6 +395,15 @@ We look forward to welcoming you to our school community.`;
 
         return doc.output('datauristring');
     };
+
+    const downloadPdf = (dataUri: string, filename: string) => {
+        const link = document.createElement('a');
+        link.href = dataUri;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
   
   const processSubmit = async (data: FormData) => {
     if (!user) {
@@ -400,12 +435,15 @@ We look forward to welcoming you to our school community.`;
             guardian_phone: data.guardian_phone,
             guardian_email: data.guardian_email,
             guardian_relationship: data.guardian_relationship,
+            guardian_occupation: data.guardian_occupation,
             father_name: data.father_name,
             father_phone: data.father_phone,
             father_email: data.father_email,
+            father_occupation: data.father_occupation,
             mother_name: data.mother_name,
             mother_phone: data.mother_phone,
             mother_email: data.mother_email,
+            mother_occupation: data.mother_occupation,
         },
         emergencyContact: {
             emergency_name: data.emergency_name,
@@ -421,16 +459,9 @@ We look forward to welcoming you to our school community.`;
     
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const newProfile = addStudentProfile(profileData, user.id);
+    const newProfile = addStudentProfile(profileData, user.id, classes);
 
-    addAuditLog({
-        user: user.email,
-        name: user.name,
-        action: 'Create Student',
-        details: `Enrolled new student: ${newProfile.student.first_name} ${newProfile.student.last_name} (ID: ${newProfile.student.student_no})`
-    });
-    
-    // Generate and add admission form PDF
+    // Generate admission form PDF
     const admissionFormPdf = generateAdmissionFormPdf(data, newProfile.student.student_no, newProfile.admissionDetails.admission_no);
     addUploadedDocument(newProfile.student.student_no, {
         name: 'Admission Form.pdf',
@@ -439,7 +470,7 @@ We look forward to welcoming you to our school community.`;
         uploaded_at: new Date().toISOString()
     }, user.id);
     
-    // Generate and add admission letter PDF
+    // Generate admission letter PDF
     const admissionLetterPdf = generateAdmissionLetterPdf(data, newProfile.student.student_no, newProfile.admissionDetails.admission_no);
     addUploadedDocument(newProfile.student.student_no, {
         name: 'Admission Letter.pdf',
@@ -447,6 +478,12 @@ We look forward to welcoming you to our school community.`;
         url: admissionLetterPdf,
         uploaded_at: new Date().toISOString()
     }, user.id);
+
+    // Download the generated documents
+    const studentNameForFile = `${newProfile.student.first_name}_${newProfile.student.last_name}`;
+    const studentNoForFile = newProfile.student.student_no;
+    downloadPdf(admissionFormPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Form.pdf`);
+    downloadPdf(admissionLetterPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Letter.pdf`);
 
     setIsLoading(false);
     toast({
@@ -538,7 +575,7 @@ We look forward to welcoming you to our school community.`;
                             <FormItem><FormLabel>Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
                          <FormField name="house_no" render={({ field }) => (
-                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormMessage>
                          )} />
                          <FormField name="gps_no" render={({ field }) => (
                             <FormItem><FormLabel>GPS No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -668,12 +705,15 @@ We look forward to welcoming you to our school community.`;
                         <PreviewItem label="Guardian's Name" value={watch('guardian_name')} />
                         <PreviewItem label="Guardian's Phone" value={watch('guardian_phone')} />
                         <PreviewItem label="Guardian's Relationship" value={watch('guardian_relationship')} />
+                        <PreviewItem label="Guardian's Occupation" value={watch('guardian_occupation')} />
                         <PreviewItem label="Father's Name" value={watch('father_name')} />
                         <PreviewItem label="Father's Phone" value={watch('father_phone')} />
                         <PreviewItem label="Father's Email" value={watch('father_email')} />
+                        <PreviewItem label="Father's Occupation" value={watch('father_occupation')} />
                         <PreviewItem label="Mother's Name" value={watch('mother_name')} />
                         <PreviewItem label="Mother's Phone" value={watch('mother_phone')} />
                         <PreviewItem label="Mother's Email" value={watch('mother_email')} />
+                         <PreviewItem label="Mother's Occupation" value={watch('mother_occupation')} />
                     </div>
 
                      <h4 className="text-md font-semibold text-primary pt-4">Emergency Contact</h4>

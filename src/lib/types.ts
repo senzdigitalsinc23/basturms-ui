@@ -5,6 +5,7 @@
 
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -126,12 +127,15 @@ export interface GuardianInfo {
     guardian_phone: string;
     guardian_email?: string;
     guardian_relationship: string;
+    guardian_occupation?: string;
     father_name?: string;
     father_phone?: string;
     father_email?: string;
+    father_occupation?: string;
     mother_name?: string;
     mother_phone?: string;
     mother_email?: string;
+    mother_occupation?: string;
 }
 
 export interface EmergencyContact {

@@ -19,6 +19,8 @@ import {
   AttendanceRecord,
   HealthRecords,
 } from './types';
+import { format } from 'date-fns';
+
 
 const USERS_KEY = 'campusconnect_users';
 const ROLES_KEY = 'campusconnect_roles';
@@ -266,6 +268,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     ...user,
     id: nextId,
     username: user.username || user.email,
+    password: user.password || 'password',
     role_id: role!.id,
     is_super_admin: false,
     avatarUrl: `https://picsum.photos/seed/avatar${nextId}/40/40`,
@@ -357,15 +360,17 @@ export const getStudentProfileById = (studentId: string): StudentProfile | undef
     return profiles.find(p => p.student.student_no === studentId);
 }
 
-export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, creatorId: string): StudentProfile => {
+export const addStudentProfile = (
+    profile: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, 
+    creatorId: string,
+    classes: Class[]
+): StudentProfile => {
     const profiles = getStudentProfiles();
     const now = new Date();
     
-    // Determine admission year and format it
     const admissionYear = new Date(profile.admissionDetails.enrollment_date).getFullYear();
     const yearYY = admissionYear.toString().slice(-2);
 
-    // Find the number of students already admitted in that year
     const studentsInYear = profiles.filter(p => {
         const pYear = new Date(p.admissionDetails.enrollment_date).getFullYear();
         return pYear === admissionYear;
@@ -373,7 +378,6 @@ export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student
     const nextInYear = studentsInYear.length + 1;
     const nextNumberPadded = nextInYear.toString().padStart(3, '0');
 
-    // Generate the new student and admission numbers
     const newStudentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
     const newAdmissionNo = `ADM${yearYY}${nextNumberPadded}`;
     
@@ -399,7 +403,6 @@ export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student
 
     saveToStorage(STUDENTS_KEY, [...profiles, newProfile]);
     
-    // --- Create corresponding user account ---
     const hasEmail = !!newProfile.contactDetails.email;
     const lastName = newProfile.student.last_name.toLowerCase();
     const studentNoSuffix = newProfile.student.student_no.slice(-3);
@@ -414,6 +417,16 @@ export const addStudentProfile = (profile: Omit<StudentProfile, 'student.student
         status: 'frozen' as 'frozen',
     };
     addUser(userToCreate);
+
+    const className = classes.find(c => c.id === newProfile.admissionDetails.class_assigned)?.name || 'Unknown Class';
+    const enrollmentDateTime = format(new Date(newProfile.admissionDetails.enrollment_date), 'PPP p');
+
+    addAuditLog({
+        user: getUserById(creatorId)?.email || 'Unknown',
+        name: getUserById(creatorId)?.name || 'Unknown',
+        action: 'Create Student',
+        details: `Enrolled: ${newProfile.student.first_name} ${newProfile.student.last_name} (ID: ${newProfile.student.student_no}) into ${className} on ${enrollmentDateTime}`
+    });
 
     return newProfile;
 };
@@ -451,6 +464,33 @@ export const updateStudentProfile = (studentId: string, updatedData: Partial<Stu
         
         profiles[profileIndex] = newProfile;
         saveToStorage(STUDENTS_KEY, profiles);
+
+        const changes: string[] = [];
+        // Deep compare to find changes for audit log
+        Object.keys(updatedData).forEach(sectionKey => {
+            const section = sectionKey as keyof StudentProfile;
+            const originalSection = existingProfile[section];
+            const updatedSection = updatedData[section];
+
+            if (typeof updatedSection === 'object' && updatedSection !== null && originalSection) {
+                 Object.keys(updatedSection).forEach(fieldKey => {
+                    const originalValue = (originalSection as any)[fieldKey];
+                    const updatedValue = (updatedSection as any)[fieldKey];
+                    if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
+                        changes.push(`${section}.${fieldKey}`);
+                    }
+                });
+            }
+        });
+        const logDetails = `Updated fields for ${newProfile.student.first_name} ${newProfile.student.last_name}: ${changes.join(', ')}`;
+        
+        addAuditLog({
+            user: getUserById(editorId)?.email || 'Unknown',
+            name: getUserById(editorId)?.name || 'Unknown',
+            action: 'Update Student Profile',
+            details: logDetails,
+        });
+
         return newProfile;
     }
     return null;
