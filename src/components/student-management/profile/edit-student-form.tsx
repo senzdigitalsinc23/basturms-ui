@@ -36,13 +36,13 @@ const editStudentSchema = z.object({
     dob: z.date({ required_error: 'Date of birth is required.' }),
     gender: z.enum(['Male', 'Female', 'Other'], { required_error: 'Please select a gender.' }),
     
-    email: z.string().email('Invalid email address.').optional(),
+    email: z.string().email('Invalid email address.').optional().or(z.literal('')),
     phone: z.string().optional(),
     residence: z.string().optional(),
     
     guardian_name: z.string().min(2, "Guardian's name is required."),
     guardian_phone: z.string().min(1, "Guardian's phone is required."),
-    guardian_email: z.string().email('Invalid email address.').optional(),
+    guardian_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
     guardian_relationship: z.string().min(2, "Guardian's relationship is required."),
 
     class_assigned: z.string({ required_error: 'Please select a class.' }),

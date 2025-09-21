@@ -49,6 +49,12 @@ const formSchema = z.object({
   guardian_phone: z.string().min(1, "Guardian's phone is required."),
   guardian_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   guardian_relationship: z.string().min(2, "Guardian's relationship is required."),
+  father_name: z.string().optional(),
+  father_phone: z.string().optional(),
+  father_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
+  mother_name: z.string().optional(),
+  mother_phone: z.string().optional(),
+  mother_email: z.string().email('Invalid email address.').optional().or(z.literal('')),
 
   // Emergency
   emergency_name: z.string().min(2, "Emergency contact name is required."),
@@ -107,7 +113,7 @@ export function AddStudentForm() {
   const tabs = [
     { id: 1, name: 'Personal', fields: ['first_name', 'last_name', 'dob', 'gender'] },
     { id: 2, name: 'Contact/Address', fields: ['residence', 'country', 'hometown', 'house_no', 'gps_no'] },
-    { id: 3, name: 'Parents Details', fields: ['guardian_name', 'guardian_phone', 'guardian_relationship'] },
+    { id: 3, name: 'Parents Details', fields: [] },
     { id: 4, name: 'Emergency Contact', fields: ['emergency_name', 'emergency_phone', 'emergency_relationship'] },
     { id: 5, name: 'Admission Info', fields: ['enrollment_date', 'class_assigned'] },
     { id: 6, name: 'Preview', fields: [] },
@@ -155,6 +161,12 @@ export function AddStudentForm() {
             guardian_phone: data.guardian_phone,
             guardian_email: data.guardian_email,
             guardian_relationship: data.guardian_relationship,
+            father_name: data.father_name,
+            father_phone: data.father_phone,
+            father_email: data.father_email,
+            mother_name: data.mother_name,
+            mother_phone: data.mother_phone,
+            mother_email: data.mother_email,
         },
         emergencyContact: {
             emergency_name: data.emergency_name,
@@ -272,26 +284,42 @@ export function AddStudentForm() {
               </TabsContent>
               
                <TabsContent value="3">
-                 <div className="space-y-6">
-                    <FormField name="guardian_name" render={({ field }) => (
-                        <FormItem><FormLabel>Guardian's Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
+                <div className="space-y-6">
+                    <h3 className="text-md font-semibold text-primary pt-4">Father's Details</h3>
+                    <Separator />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField name="guardian_phone" render={({ field }) => (
-                            <FormItem><FormLabel>Guardian's Phone *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField name="guardian_relationship" render={({ field }) => (
-                            <FormItem><FormLabel>Relationship to Student *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
+                         <FormField name="father_name" render={({ field }) => (
+                            <FormItem><FormLabel>Father's Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
+                         <FormField name="father_phone" render={({ field }) => (
+                            <FormItem><FormLabel>Father's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
                     </div>
-                     <FormField name="guardian_email" render={({ field }) => (
-                        <FormItem><FormLabel>Guardian's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormField name="father_email" render={({ field }) => (
+                        <FormItem><FormLabel>Father's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
-                 </div>
+
+                    <h3 className="text-md font-semibold text-primary pt-4">Mother's Details</h3>
+                    <Separator />
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <FormField name="mother_name" render={({ field }) => (
+                            <FormItem><FormLabel>Mother's Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
+                         <FormField name="mother_phone" render={({ field }) => (
+                            <FormItem><FormLabel>Mother's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                         )} />
+                    </div>
+                    <FormField name="mother_email" render={({ field }) => (
+                        <FormItem><FormLabel>Mother's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                </div>
               </TabsContent>
               
                <TabsContent value="4">
                  <div className="space-y-6">
+                    <h3 className="text-md font-semibold text-primary pt-4">Primary Emergency Contact</h3>
+                    <p className="text-sm text-muted-foreground">This person will be contacted first in case of an emergency.</p>
+                    <Separator />
                     <FormField name="emergency_name" render={({ field }) => (
                         <FormItem><FormLabel>Emergency Contact Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
@@ -364,11 +392,13 @@ export function AddStudentForm() {
 
                     <h4 className="text-md font-semibold text-primary pt-4">Parent's Details</h4>
                      <Separator />
-                     <div className="grid md:grid-cols-2 gap-4">
-                        <PreviewItem label="Guardian's Name" value={watch('guardian_name')} />
-                        <PreviewItem label="Guardian's Phone" value={watch('guardian_phone')} />
-                        <PreviewItem label="Relationship" value={watch('guardian_relationship')} />
-                        <PreviewItem label="Guardian's Email" value={watch('guardian_email')} />
+                     <div className="grid md:grid-cols-3 gap-4">
+                        <PreviewItem label="Father's Name" value={watch('father_name')} />
+                        <PreviewItem label="Father's Phone" value={watch('father_phone')} />
+                        <PreviewItem label="Father's Email" value={watch('father_email')} />
+                        <PreviewItem label="Mother's Name" value={watch('mother_name')} />
+                        <PreviewItem label="Mother's Phone" value={watch('mother_phone')} />
+                        <PreviewItem label="Mother's Email" value={watch('mother_email')} />
                     </div>
 
                      <h4 className="text-md font-semibold text-primary pt-4">Emergency Contact</h4>
