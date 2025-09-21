@@ -19,6 +19,10 @@ import {
   AttendanceRecord,
   HealthRecords,
   StaffProfile,
+  Staff,
+  StaffAcademicHistory,
+  StaffDocument,
+  StaffAppointmentHistory,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -31,6 +35,12 @@ const AUTH_LOGS_KEY = 'campusconnect_auth_logs';
 const STUDENTS_KEY = 'campusconnect_students';
 const CLASSES_KEY = 'campusconnect_classes';
 const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
+
+// New keys for staff management
+const STAFF_KEY = 'campusconnect_staff';
+const STAFF_ACADEMIC_HISTORY_KEY = 'campusconnect_staff_academic_history';
+const STAFF_DOCUMENTS_KEY = 'campusconnect_staff_documents';
+const STAFF_APPOINTMENT_HISTORY_KEY = 'campusconnect_staff_appointment_history';
 
 
 const getInitialRoles = (): RoleStorage[] => {
@@ -227,6 +237,19 @@ export const initializeStore = () => {
     }
     if (!window.localStorage.getItem(STAFF_PROFILES_KEY)) {
         saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
+    }
+    // Initialize new staff storages
+    if (!window.localStorage.getItem(STAFF_KEY)) {
+        saveToStorage(STAFF_KEY, []);
+    }
+    if (!window.localStorage.getItem(STAFF_ACADEMIC_HISTORY_KEY)) {
+        saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, []);
+    }
+    if (!window.localStorage.getItem(STAFF_DOCUMENTS_KEY)) {
+        saveToStorage(STAFF_DOCUMENTS_KEY, []);
+    }
+    if (!window.localStorage.getItem(STAFF_APPOINTMENT_HISTORY_KEY)) {
+        saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, []);
     }
   }
 };
@@ -666,6 +689,10 @@ export const graduateStudents = (studentIds: string[], editorId: string): number
 
 // Staff Management Functions
 export const getStaffProfiles = (): StaffProfile[] => getFromStorage<StaffProfile[]>(STAFF_PROFILES_KEY, []);
+export const getStaff = (): Staff[] => getFromStorage<Staff[]>(STAFF_KEY, []);
+export const getStaffAcademicHistory = (): StaffAcademicHistory[] => getFromStorage<StaffAcademicHistory[]>(STAFF_ACADEMIC_HISTORY_KEY, []);
+export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
+export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
 export const getStaffProfileByUserId = (userId: string): StaffProfile | undefined => {
     const profiles = getStaffProfiles();

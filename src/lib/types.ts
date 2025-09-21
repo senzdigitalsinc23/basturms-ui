@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -215,6 +206,43 @@ export interface StudentProfile {
 }
 
 // Staff Management Types
+
+export interface Staff {
+    staff_id: string;
+    user_id: string; // links to User.id
+    first_name: string;
+    last_name: string;
+    other_name?: string;
+    email: string;
+    phone: string;
+    role: Role;
+    id_type: 'Ghana Card' | 'Passport' | 'Voter ID' | 'Drivers License';
+    id_no: string;
+    snnit_no?: string;
+    date_of_joining: string;
+}
+
+export interface StaffAcademicHistory {
+    staff_id: string;
+    school: string;
+    qualification: string;
+    year_completed: number;
+}
+
+export interface StaffDocument {
+    staff_id: string;
+    document_name: string;
+    file: string; // URL or data URI
+}
+
+export interface StaffAppointmentHistory {
+    staff_id: string;
+    class_assigned: string; // Class ID
+    subjects_assigned: string[];
+    appointment_status: 'Active' | 'Ended';
+}
+
+
 export type EmploymentStatus = 'Active' | 'On-leave' | 'Inactive';
 export const ALL_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['Active', 'On-leave', 'Inactive'];
 export type ContractType = 'Full-time' | 'Part-time' | 'Contract';
