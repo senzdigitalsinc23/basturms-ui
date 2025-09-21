@@ -5,7 +5,7 @@
             "title": "Pending Student Promotions",
             "description": "Review and approve the promotion list for several classes.",
             "read": false,
-            "href": "/student-management/promotions"
+            "href": "/dashboard/admin#promotions"
         },
         {
             "id": "2",
