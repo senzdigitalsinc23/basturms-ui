@@ -5,7 +5,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Users, DollarSign, BarChart3, CalendarCheck } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { PromotionSuggestions } from '@/components/dashboard/admin/promotion-suggestions';
 
 function RecentNotices() {
   const notices = [
@@ -140,6 +140,8 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <PromotionSuggestions />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">

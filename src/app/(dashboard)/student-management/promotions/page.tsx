@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getClasses, getStudentProfiles, promoteStudents, graduateStudents, addAuditLog } from '@/lib/store';
 import { Class, StudentProfile } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
@@ -26,8 +27,11 @@ type StudentForPromotion = {
 }
 
 export default function PromotionsPage() {
+    const searchParams = useSearchParams();
+    const preselectedClass = searchParams.get('classId');
+
     const [classes, setClasses] = useState<Class[]>([]);
-    const [fromClass, setFromClass] = useState<string | undefined>();
+    const [fromClass, setFromClass] = useState<string | undefined>(preselectedClass || undefined);
     const [toClass, setToClass] = useState<string | undefined>();
     const [studentsInClass, setStudentsInClass] = useState<StudentForPromotion[]>([]);
     const [selectedStudents, setSelectedStudents] = useState<Record<string, boolean>>({});

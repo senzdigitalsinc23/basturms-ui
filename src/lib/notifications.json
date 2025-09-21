@@ -1,0 +1,25 @@
+{
+    "notifications": [
+        {
+            "id": "1",
+            "title": "Pending Student Promotions",
+            "description": "Review and approve the promotion list for 12 classes.",
+            "read": false,
+            "href": "/dashboard/admin#promotions"
+        },
+        {
+            "id": "2",
+            "title": "New Security Alert",
+            "description": "Unauthorized access attempt detected at the main gate.",
+            "read": false,
+            "href": "/dashboard/security"
+        },
+        {
+            "id": "3",
+            "title": "System Update Complete",
+            "description": "The system has been updated to version 2.1.0.",
+            "read": true,
+            "href": "#"
+        }
+    ]
+}
