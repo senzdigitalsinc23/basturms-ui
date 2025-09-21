@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getClasses, addStudentProfile } from '@/lib/store';
+import { getClasses, addStudentProfile, addAuditLog } from '@/lib/store';
 import { Class, StudentProfile, AdmissionStatus, ALL_ADMISSION_STATUSES } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -324,6 +324,13 @@ export function AddStudentForm() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const newProfile = addStudentProfile(profileData, user.id);
+
+    addAuditLog({
+        user: user.email,
+        name: user.name,
+        action: 'Create Student',
+        details: `Enrolled new student: ${newProfile.student.first_name} ${newProfile.student.last_name} (ID: ${newProfile.student.student_no})`
+    });
     
     setIsLoading(false);
     toast({

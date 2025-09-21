@@ -142,16 +142,42 @@ export default function StudentProfilePage() {
 
     const handleUpdateProfile = (values: Partial<StudentProfile>) => {
         if (!currentUser || !profile) return;
+        
+        // Compare values to generate detailed log
+        const changes: string[] = [];
+        const original = profile;
+
+        for (const section of Object.keys(values) as (keyof StudentProfile)[]) {
+            const originalSection = original[section];
+            const updatedSection = values[section];
+
+            if (originalSection && updatedSection && typeof updatedSection === 'object') {
+                for (const key of Object.keys(updatedSection)) {
+                    const originalValue = (originalSection as any)[key];
+                    const updatedValue = (updatedSection as any)[key];
+                    if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
+                        changes.push(`${section}.${key}`);
+                    }
+                }
+            }
+        }
+
         const updatedProfile = updateStudentProfile(profile.student.student_no, values, currentUser.id);
         if (updatedProfile) {
             setProfile(updatedProfile);
             fetchProfile(); // re-fetch to ensure all derived state is updated
+            
+            const logDetails = changes.length > 0 
+                ? `Updated fields for student ${updatedProfile.student.first_name} ${updatedProfile.student.last_name}: ${changes.join(', ')}`
+                : `Updated details for student ${updatedProfile.student.first_name} ${updatedProfile.student.last_name} (no specific fields changed).`;
+
             addAuditLog({
                 user: currentUser.email,
                 name: currentUser.name,
                 action: 'Update Student Profile',
-                details: `Updated details for student ${updatedProfile.student.first_name} ${updatedProfile.student.last_name}`,
+                details: logDetails,
             });
+
             toast({
                 title: 'Profile Updated',
                 description: "The student's profile has been successfully updated.",
