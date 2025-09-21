@@ -31,6 +31,7 @@ import {
   Calendar,
   Megaphone,
   Fingerprint,
+  Bell,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -97,6 +98,7 @@ const menuItems: Record<Role, NavItem[]> = {
       ],
     },
     { href: '/users', label: 'User Management', icon: Users },
+    { href: '/notifications', label: 'Notifications', icon: Bell },
     { href: '/#', label: 'Attendance', icon: Calendar },
     { href: '/#', label: 'Timetable', icon: Calendar },
     {

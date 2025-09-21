@@ -1,15 +1,24 @@
 'use client';
 import { useAuth } from '@/hooks/use-auth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { OnboardingTips } from '@/components/dashboard/onboarding-tips';
-import { Camera, Shield, UserCheck } from 'lucide-react';
+import { Camera, Shield, UserCheck, Clock } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+
+const recentEvents = [
+    { time: '2 mins ago', event: 'Unauthorized Access Attempt', location: 'Main Gate', status: 'Alert' },
+    { time: '1 hour ago', event: 'Scheduled Patrol', location: 'Zone 2', status: 'Normal' },
+    { time: '3 hours ago', event: 'Visitor Checkout Overdue', location: 'Reception', status: 'Warning' },
+    { time: '8 hours ago', event: 'Perimeter Check', location: 'All Zones', status: 'Normal' },
+];
 
 export default function SecurityDashboardPage() {
   const { user } = useAuth();
 
   return (
-    <ProtectedRoute allowedRoles={['Security']}>
+    <ProtectedRoute allowedRoles={['Security', 'Admin']}>
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">Security Command Center</h1>
@@ -48,6 +57,41 @@ export default function SecurityDashboardPage() {
             </CardContent>
           </Card>
         </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Recent Security Events</CardTitle>
+                <CardDescription>A log of the most recent events on campus.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Time</TableHead>
+                            <TableHead>Event</TableHead>
+                            <TableHead>Location</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {recentEvents.map((event, index) => (
+                            <TableRow key={index}>
+                                <TableCell className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-muted-foreground"/>
+                                    {event.time}
+                                </TableCell>
+                                <TableCell>{event.event}</TableCell>
+                                <TableCell>{event.location}</TableCell>
+                                <TableCell>
+                                    <Badge variant={event.status === 'Alert' ? 'destructive' : (event.status === 'Warning' ? 'secondary' : 'outline')}>
+                                        {event.status}
+                                    </Badge>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
       </div>
     </ProtectedRoute>
   );
