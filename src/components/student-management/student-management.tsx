@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import { getStudentProfiles, addStudentProfile, updateStudentStatus, addAuditLog, getClasses, deleteStudentProfile } from '@/lib/store';
@@ -243,7 +244,6 @@ export function StudentManagement() {
       data={students}
       classes={classes}
       onImport={handleImportStudents}
-      onAdd={handleAddStudent}
       onBulkUpdateStatus={handleBulkUpdateStatus}
       onBulkDelete={handleBulkDelete}
     />

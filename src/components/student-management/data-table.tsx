@@ -40,10 +40,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuSeparator } from '../ui/dropdown-menu';
 import { DateRange } from 'react-day-picker';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { StudentForm } from './student-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import Link from 'next/link';
 
 
 interface StudentDataTableProps {
@@ -51,7 +50,6 @@ interface StudentDataTableProps {
   data: StudentDisplay[];
   classes: Class[];
   onImport: (data: any[]) => void;
-  onAdd: (profile: any) => void;
   onBulkUpdateStatus: (studentIds: string[], status: AdmissionStatus) => void;
   onBulkDelete: (studentIds: string[]) => void;
 }
@@ -62,7 +60,7 @@ const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
 }));
 
 
-export function StudentDataTable({ columns, data, classes, onImport, onAdd, onBulkUpdateStatus, onBulkDelete }: StudentDataTableProps) {
+export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdateStatus, onBulkDelete }: StudentDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -70,7 +68,6 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd, onBu
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
@@ -236,26 +233,11 @@ export function StudentDataTable({ columns, data, classes, onImport, onAdd, onBu
                     <DropdownMenuItem onClick={handleExportPDF}>Export as PDF</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                 <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Student</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Add New Student</DialogTitle>
-                            <DialogDescription>
-                                Fill in the details to create a new student profile.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <StudentForm
-                            classes={classes}
-                            onSubmit={(values) => {
-                                onAdd(values);
-                                setIsAddFormOpen(false);
-                            }}
-                        />
-                    </DialogContent>
-                </Dialog>
+                <Button asChild size="sm">
+                    <Link href="/student-management/add">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Student
+                    </Link>
+                </Button>
             </div>
         </div>
 
