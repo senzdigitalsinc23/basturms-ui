@@ -1,10 +1,11 @@
+
 'use client';
 import { useState, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getClasses, addStudentProfile } from '@/lib/store';
-import { Class, StudentProfile } from '@/lib/types';
+import { Class, StudentProfile, AdmissionStatus, ALL_ADMISSION_STATUSES } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -22,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const MAX_STEPS = 6;
 
@@ -64,6 +66,7 @@ const formSchema = z.object({
   // Admission
   enrollment_date: z.date({ required_error: 'Enrollment date is required.' }),
   class_assigned: z.string({ required_error: 'Please select a class.' }),
+  admission_status: z.enum(ALL_ADMISSION_STATUSES).default('Admitted'),
 }).refine(data => {
     return !(data.father_name && !data.father_phone);
 }, {
@@ -88,6 +91,107 @@ function PreviewItem({ label, value }: { label: string, value?: string | null })
     )
 }
 
+function ParentGuardianFields() {
+    const { control, watch, setValue } = useFormContext<FormData>();
+    const [guardianSource, setGuardianSource] = useState<'father' | 'mother' | 'other'>('other');
+    
+    const fatherName = watch('father_name');
+    const fatherPhone = watch('father_phone');
+    const fatherEmail = watch('father_email');
+    const motherName = watch('mother_name');
+    const motherPhone = watch('mother_phone');
+    const motherEmail = watch('mother_email');
+
+    useEffect(() => {
+        if (guardianSource === 'father') {
+            setValue('guardian_name', fatherName || '');
+            setValue('guardian_phone', fatherPhone || '');
+            setValue('guardian_email', fatherEmail || '');
+            setValue('guardian_relationship', 'Father');
+        } else if (guardianSource === 'mother') {
+            setValue('guardian_name', motherName || '');
+            setValue('guardian_phone', motherPhone || '');
+            setValue('guardian_email', motherEmail || '');
+            setValue('guardian_relationship', 'Mother');
+        } else {
+             setValue('guardian_name', '');
+             setValue('guardian_phone', '');
+             setValue('guardian_email', '');
+             setValue('guardian_relationship', '');
+        }
+    }, [guardianSource, fatherName, fatherPhone, fatherEmail, motherName, motherPhone, motherEmail, setValue]);
+
+    const isGuardianFieldsDisabled = guardianSource !== 'other';
+
+    return (
+        <div className="space-y-6">
+            <div className='space-y-2'>
+                <FormLabel>Who is the main guardian?</FormLabel>
+                 <RadioGroup onValueChange={(value) => setGuardianSource(value as any)} defaultValue={guardianSource} className="flex gap-4">
+                    <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value="father" /></FormControl>
+                        <FormLabel className="font-normal">Father</FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value="mother" /></FormControl>
+                        <FormLabel className="font-normal">Mother</FormLabel>
+                    </FormItem>
+                     <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value="other" /></FormControl>
+                        <FormLabel className="font-normal">Other</FormLabel>
+                    </FormItem>
+                </RadioGroup>
+            </div>
+
+            <h3 className="text-md font-semibold text-primary pt-4">Main Guardian's Details *</h3>
+            <Separator />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="guardian_name" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Guardian's Name *</FormLabel><FormControl><Input {...field} disabled={isGuardianFieldsDisabled} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField name="guardian_phone" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Guardian's Phone *</FormLabel><FormControl><Input {...field} disabled={isGuardianFieldsDisabled} /></FormControl><FormMessage /></FormItem>
+                )}/>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="guardian_relationship" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Relationship to Student *</FormLabel><FormControl><Input {...field} disabled={isGuardianFieldsDisabled} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField name="guardian_email" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Guardian's Email</FormLabel><FormControl><Input {...field} disabled={isGuardianFieldsDisabled} /></FormControl><FormMessage /></FormItem>
+                )}/>
+            </div>
+            
+            <h3 className="text-md font-semibold text-primary pt-4">Father's Details</h3>
+            <Separator />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormField name="father_name" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Father's Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                 )} />
+                 <FormField name="father_phone" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Father's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                 )} />
+            </div>
+            <FormField name="father_email" control={control} render={({ field }) => (
+                <FormItem><FormLabel>Father's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+
+            <h3 className="text-md font-semibold text-primary pt-4">Mother's Details</h3>
+            <Separator />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormField name="mother_name" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Mother's Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                 )} />
+                 <FormField name="mother_phone" control={control} render={({ field }) => (
+                    <FormItem><FormLabel>Mother's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                 )} />
+            </div>
+            <FormField name="mother_email" control={control} render={({ field }) => (
+                <FormItem><FormLabel>Mother's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+        </div>
+    );
+}
 
 export function AddStudentForm() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -107,10 +211,37 @@ export function AddStudentForm() {
     mode: 'onChange',
     defaultValues: {
         country: "Ghana",
+        first_name: '',
+        last_name: '',
+        other_name: '',
+        gender: undefined,
+        nhis_number: '',
+        email: '',
+        phone: '',
+        city: '',
+        hometown: '',
+        residence: '',
+        house_no: '',
+        gps_no: '',
+        guardian_name: '',
+        guardian_phone: '',
+        guardian_email: '',
+        guardian_relationship: '',
+        father_name: '',
+        father_phone: '',
+        father_email: '',
+        mother_name: '',
+        mother_phone: '',
+        mother_email: '',
+        emergency_name: '',
+        emergency_phone: '',
+        emergency_relationship: undefined,
+        class_assigned: undefined,
+        admission_status: 'Admitted',
     }
   });
 
-  const { handleSubmit, trigger, watch, formState: { errors } } = methods;
+  const { handleSubmit, trigger, watch } = methods;
   const dob = watch('dob');
   const [age, setAge] = useState<number | null>(null);
 
@@ -125,7 +256,7 @@ export function AddStudentForm() {
     { id: 2, name: 'Contact/Address', fields: ['residence', 'country', 'hometown', 'house_no', 'gps_no'] },
     { id: 3, name: 'Parents Details', fields: ['guardian_name', 'guardian_phone', 'guardian_relationship', 'father_phone', 'mother_phone'] },
     { id: 4, name: 'Emergency Contact', fields: ['emergency_name', 'emergency_phone', 'emergency_relationship'] },
-    { id: 5, name: 'Admission Info', fields: ['enrollment_date', 'class_assigned'] },
+    { id: 5, name: 'Admission Info', fields: ['enrollment_date', 'class_assigned', 'admission_status'] },
     { id: 6, name: 'Preview', fields: [] },
   ];
 
@@ -186,7 +317,7 @@ export function AddStudentForm() {
         admissionDetails: {
             enrollment_date: data.enrollment_date.toISOString(),
             class_assigned: data.class_assigned,
-            admission_status: 'Admitted',
+            admission_status: data.admission_status,
         },
     };
     
@@ -294,54 +425,7 @@ export function AddStudentForm() {
               </TabsContent>
               
                <TabsContent value="3">
-                <div className="space-y-6">
-                    <h3 className="text-md font-semibold text-primary pt-4">Main Guardian's Details *</h3>
-                    <Separator />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField name="guardian_name" render={({ field }) => (
-                            <FormItem><FormLabel>Guardian's Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField name="guardian_phone" render={({ field }) => (
-                            <FormItem><FormLabel>Guardian's Phone *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField name="guardian_relationship" render={({ field }) => (
-                            <FormItem><FormLabel>Relationship to Student *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField name="guardian_email" render={({ field }) => (
-                            <FormItem><FormLabel>Guardian's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                    </div>
-                    
-                    <h3 className="text-md font-semibold text-primary pt-4">Father's Details</h3>
-                    <Separator />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <FormField name="father_name" render={({ field }) => (
-                            <FormItem><FormLabel>Father's Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="father_phone" render={({ field }) => (
-                            <FormItem><FormLabel>Father's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                    </div>
-                    <FormField name="father_email" render={({ field }) => (
-                        <FormItem><FormLabel>Father's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-
-                    <h3 className="text-md font-semibold text-primary pt-4">Mother's Details</h3>
-                    <Separator />
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <FormField name="mother_name" render={({ field }) => (
-                            <FormItem><FormLabel>Mother's Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="mother_phone" render={({ field }) => (
-                            <FormItem><FormLabel>Mother's Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                    </div>
-                    <FormField name="mother_email" render={({ field }) => (
-                        <FormItem><FormLabel>Mother's Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                </div>
+                <ParentGuardianFields />
               </TabsContent>
               
                <TabsContent value="4">
@@ -380,6 +464,26 @@ export function AddStudentForm() {
                <TabsContent value="5">
                  <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <FormField
+                            name="student.student_no"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Student No</FormLabel>
+                                <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            name="student.admission_no"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Admission No</FormLabel>
+                                <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
+                            </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField name="enrollment_date" render={({ field }) => (
                             <FormItem className="flex flex-col"><FormLabel>Enrollment Date *</FormLabel>
                             <Popover><PopoverTrigger asChild>
@@ -401,6 +505,15 @@ export function AddStudentForm() {
                             </Select><FormMessage /></FormItem>
                         )}/>
                     </div>
+                     <FormField name="admission_status" render={({ field }) => (
+                        <FormItem><FormLabel>Admission Status *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {ALL_ADMISSION_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                            </SelectContent>
+                        </Select><FormMessage /></FormItem>
+                    )}/>
                  </div>
               </TabsContent>
 
@@ -460,6 +573,7 @@ export function AddStudentForm() {
                      <div className="grid md:grid-cols-2 gap-4">
                         <PreviewItem label="Enrollment Date" value={watch('enrollment_date') ? format(watch('enrollment_date'), 'PPP') : ''} />
                         <PreviewItem label="Class Assigned" value={classes.find(c => c.id === watch('class_assigned'))?.name} />
+                        <PreviewItem label="Admission Status" value={watch('admission_status')} />
                     </div>
                 </div>
               </TabsContent>
