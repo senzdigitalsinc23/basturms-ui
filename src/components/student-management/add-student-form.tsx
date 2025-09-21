@@ -464,26 +464,16 @@ export function AddStudentForm() {
                <TabsContent value="5">
                  <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <FormField
-                            name="student.student_no"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Student No</FormLabel>
-                                <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            name="student.admission_no"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Admission No</FormLabel>
-                                <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
-                            </FormItem>
-                            )}
-                        />
+                         <FormItem>
+                            <FormLabel>Student No</FormLabel>
+                            <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
+                        </FormItem>
+                        <FormItem>
+                            <FormLabel>Admission No</FormLabel>
+                            <FormControl><Input readOnly disabled placeholder="Auto-generated" /></FormControl>
+                        </FormItem>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                         <FormField name="enrollment_date" render={({ field }) => (
                             <FormItem className="flex flex-col"><FormLabel>Enrollment Date *</FormLabel>
                             <Popover><PopoverTrigger asChild>
@@ -495,6 +485,9 @@ export function AddStudentForm() {
                                 <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 10} toYear={new Date().getFullYear()} initialFocus />
                             </PopoverContent></Popover><FormMessage /></FormItem>
                         )}/>
+                        <div></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <FormField name="class_assigned" render={({ field }) => (
                             <FormItem><FormLabel>Assign to Class *</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -504,16 +497,16 @@ export function AddStudentForm() {
                                 </SelectContent>
                             </Select><FormMessage /></FormItem>
                         )}/>
+                        <FormField name="admission_status" render={({ field }) => (
+                            <FormItem><FormLabel>Admission Status *</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {ALL_ADMISSION_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                                </SelectContent>
+                            </Select><FormMessage /></FormItem>
+                        )}/>
                     </div>
-                     <FormField name="admission_status" render={({ field }) => (
-                        <FormItem><FormLabel>Admission Status *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {ALL_ADMISSION_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                            </SelectContent>
-                        </Select><FormMessage /></FormItem>
-                    )}/>
                  </div>
               </TabsContent>
 
@@ -593,7 +586,7 @@ export function AddStudentForm() {
               )}
               {currentStep === MAX_STEPS - 1 && (
                 <Button type="button" onClick={handleNext} size="sm">
-                  Review Details
+                  Preview & Save
                 </Button>
               )}
               {currentStep === MAX_STEPS && (
@@ -609,3 +602,5 @@ export function AddStudentForm() {
     </Card>
   );
 }
+
+    
