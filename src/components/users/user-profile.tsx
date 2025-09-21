@@ -33,11 +33,11 @@ export function UserProfile({ user: initialUser }: { user: User }) {
       user: currentUser.email,
       name: currentUser.name,
       action: 'Update User Profile',
-      details: `User ${user.name} updated their own profile.`,
+      details: `User ${currentUser.name} updated profile for ${user.name}.`,
     });
     toast({
         title: 'Profile Updated',
-        description: 'Your profile has been successfully updated.',
+        description: 'The user profile has been successfully updated.',
     });
     setIsEditOpen(false);
   };
@@ -64,7 +64,7 @@ export function UserProfile({ user: initialUser }: { user: User }) {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Edit Profile</DialogTitle>
-                    <DialogDescription>Update your personal information.</DialogDescription>
+                    <DialogDescription>Update personal information.</DialogDescription>
                 </DialogHeader>
                 <UserForm isEditMode defaultValues={user} onSubmit={handleUpdate} />
             </DialogContent>

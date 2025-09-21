@@ -25,14 +25,14 @@ export default function UserProfilePage() {
   const isOwner = currentUser?.id === userId;
   const isAdmin = currentUser?.role === 'Admin';
   
-  const allowedRoles: User['role'][] = ['Admin'];
+  const allowedRoles: User['role'][] = ['Admin', 'Headmaster', 'Proprietor', 'Teacher', 'Librarian', 'Security', 'Procurement Manager', 'Stores Manager', 'I.T Manager', 'I.T Support'];
   // The user should be able to view their own profile regardless of role.
   // We handle this logic inside the ProtectedRoute's rendered output.
-  const canView = isOwner || isAdmin;
+  const canView = isOwner || allowedRoles.includes(currentUser?.role || 'Student');
 
 
   return (
-    <ProtectedRoute allowedRoles={allowedRoles}>
+    <ProtectedRoute allowedRoles={['Admin', 'Headmaster', 'Proprietor', 'Teacher', 'Librarian', 'Security', 'Procurement Manager', 'Stores Manager', 'I.T Manager', 'I.T Support']}>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">User Profile</h1>
