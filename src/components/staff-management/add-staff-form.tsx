@@ -118,7 +118,7 @@ function AcademicHistoryFields() {
                             control={control}
                             name={`academic_history.${index}.year_completed`}
                             render={({ field }) => (
-                                <FormItem><FormLabel>Year of Completion</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Year of Completion</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem>
                             )}
                         />
                     </div>
@@ -213,6 +213,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     defaultValues: isEditMode && defaultValues ? {
         ...defaultValues,
         appointment_date: new Date(defaultValues.date_of_joining),
+        roles: defaultValues.roles || [],
         appointment_status: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.appointment_status || 'Appointed',
         class_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.class_assigned,
         subjects_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.subjects_assigned,
@@ -637,7 +638,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                 </div>
               </TabsContent>
                <TabsContent value="6">
-                 <div className="space-y-6">
+                 <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
                     <h3 className="text-lg font-semibold">Review Details</h3>
                     <p className="text-sm text-muted-foreground">Please review all the information carefully before submitting.</p>
                     
