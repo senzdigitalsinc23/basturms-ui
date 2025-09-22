@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -698,17 +699,23 @@ export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFr
 export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staff => {
     const staffList = getStaff();
 
-    const username = staff.email ? staff.email : `${staff.staff_id.toLowerCase()}@teacher.com`;
+    const username = staff.email ? staff.email.split('@')[0] : staff.staff_id.toLowerCase();
+    const email = staff.email ? staff.email : `${username}@teacher.com`;
+    
+    // For multiple roles, we need to decide which one is primary for the user account
+    // For now, let's pick the first one.
+    const primaryRole = staff.roles[0];
+
     const user = addUser({
       name: `${staff.first_name} ${staff.last_name}`,
-      email: staff.email || username,
+      email: email,
       username: username,
       password: staff.staff_id.toLowerCase(),
-      role: staff.role,
+      role: primaryRole, // The User object has a single role
       status: 'active',
     });
 
-    const newStaff = { ...staff, user_id: user.id };
+    const newStaff = { ...staff, user_id: user.id, date_of_joining: staff.date_of_joining };
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({

@@ -1,4 +1,5 @@
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -215,7 +216,7 @@ export interface Staff {
     other_name?: string;
     email: string;
     phone: string;
-    role: Role;
+    roles: Role[];
     id_type: 'Ghana Card' | 'Passport' | 'Voter ID' | 'Drivers License';
     id_no: string;
     snnit_no?: string;
@@ -234,6 +235,7 @@ export interface StaffAcademicHistory {
     staff_id: string;
     school: string;
     qualification: string;
+    program_offered: string;
     year_completed: number;
 }
 
@@ -249,7 +251,7 @@ export const ALL_APPOINTMENT_STATUSES: AppointmentStatus[] = ['Appointed', 'Decl
 export interface StaffAppointmentHistory {
     staff_id: string;
     appointment_date: string;
-    role: Role;
+    roles: Role[];
     class_assigned?: string[]; // Class ID
     subjects_assigned?: string[];
     appointment_status: AppointmentStatus;

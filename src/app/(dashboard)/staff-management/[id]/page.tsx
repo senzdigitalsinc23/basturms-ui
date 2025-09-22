@@ -1,15 +1,16 @@
 
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog } from '@/lib/store';
-import { Staff, User, StaffDocument } from '@/lib/types';
+import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory } from '@/lib/store';
+import { Staff, User, StaffDocument, StaffAppointmentHistory, Role } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Download, Trash2, File as FileIcon, Upload } from 'lucide-react';
+import { ArrowLeft, Edit, Download, Trash2, File as FileIcon, Upload, Check, GraduationCap } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +37,7 @@ export default function StaffProfilePage() {
     const [staff, setStaff] = useState<Staff | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [documents, setDocuments] = useState<StaffDocument[]>([]);
+    const [appointmentHistory, setAppointmentHistory] = useState<StaffAppointmentHistory | null>(null);
 
     const fetchStaffData = () => {
         const staffData = getStaffByStaffId(staffId);
@@ -45,6 +47,11 @@ export default function StaffProfilePage() {
             setUser(userData || null);
             const staffDocuments = getStaffDocumentsByStaffId(staffId);
             setDocuments(staffDocuments);
+            const staffAppointments = getStaffAppointmentHistory();
+            const latestAppointment = staffAppointments
+                .filter(a => a.staff_id === staffId)
+                .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+            setAppointmentHistory(latestAppointment || null);
         } else {
             router.push('/staff-management');
         }
@@ -81,6 +88,7 @@ export default function StaffProfilePage() {
 
     const userInitials = `${staff.first_name[0]}${staff.last_name[0]}`;
     const experience = formatDistanceToNow(new Date(staff.date_of_joining), { addSuffix: false });
+    const isTeacher = staff.roles.includes('Teacher');
 
     return (
         <div className="space-y-6">
@@ -109,7 +117,7 @@ export default function StaffProfilePage() {
                         <h2 className="text-2xl font-bold">{user.name}</h2>
                         <p className="text-muted-foreground">{staff.staff_id}</p>
                         <div className="flex gap-2 mt-2">
-                            <Badge variant="outline">{staff.role}</Badge>
+                            {staff.roles.map(role => <Badge key={role} variant="outline">{role}</Badge>)}
                             <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status === 'active' ? 'Active' : 'Inactive'}</Badge>
                         </div>
                     </div>
@@ -177,7 +185,7 @@ export default function StaffProfilePage() {
                         <CardHeader><CardTitle>Professional Information</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <InfoItem label="Staff ID" value={staff.staff_id} />
-                            <InfoItem label="Role" value={<Badge variant="outline">{staff.role}</Badge>} />
+                            <InfoItem label="Roles" value={<div className="flex flex-wrap gap-1">{staff.roles.map(r => <Badge key={r} variant="outline">{r}</Badge>)}</div>} />
                             <InfoItem label="Status" value={<Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status}</Badge>} />
                             <InfoItem label="Joining Date" value={format(new Date(staff.date_of_joining), "MMMM do, yyyy")} />
                             <InfoItem label="Experience" value={experience} />
@@ -192,15 +200,52 @@ export default function StaffProfilePage() {
                     </Card>
                 </div>
             </div>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Recent Assignments & Activities</CardTitle>
-                    <CardDescription>A log of assignments, projects, and exercises given by the teacher.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">Activity log will be shown here.</p>
-                </CardContent>
-            </Card>
+             {isTeacher && (
+                <div className="grid md:grid-cols-2 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Academic Responsibilities</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                           <InfoItem label="Class Assigned" value={appointmentHistory?.class_assigned?.join(', ') || 'N/A'} />
+                           <InfoItem label="Subjects Taught" value={appointmentHistory?.subjects_assigned?.join(', ') || 'N/A'} />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                         <CardHeader>
+                            <CardTitle>Performance Evaluation</CardTitle>
+                            <CardDescription>Based on assigned class performance.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <Check className="h-5 w-5 text-green-500" />
+                                    <p>Avg. Class Attendance</p>
+                                </div>
+                                <p className="font-bold">0.0%</p>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <GraduationCap className="h-5 w-5 text-blue-500" />
+                                    <p>Avg. Student Score</p>
+                                </div>
+                                <p className="font-bold">0.0%</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+             )}
+             {isTeacher && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Recent Assignments & Activities</CardTitle>
+                        <CardDescription>A log of assignments, projects, and exercises given by the teacher.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">Activity log will be shown here.</p>
+                    </CardContent>
+                </Card>
+             )}
         </div>
     );
 }

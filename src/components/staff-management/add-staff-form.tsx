@@ -1,5 +1,6 @@
 
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Loader2, CalendarIcon, X, Check, ChevronsUpDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -23,14 +25,15 @@ import { cn } from '@/lib/utils';
 import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES } from '@/lib/types';
 import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument } from '@/lib/store';
 import type { Class } from '@/lib/types';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
 
-const MAX_STEPS = 5;
+const MAX_STEPS = 6;
 
 const academicHistorySchema = z.object({
   school: z.string().min(1, 'School name is required'),
   qualification: z.string().min(1, 'Qualification is required'),
+  program_offered: z.string().min(1, 'Program is required'),
   year_completed: z.number().min(1900).max(new Date().getFullYear()),
 });
 
@@ -68,7 +71,7 @@ const formSchema = z.object({
 
   // Appointment History
   appointment_date: z.date({ required_error: 'Appointment date is required.' }),
-  role: z.enum(ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent') as [string, ...string[]], { required_error: 'Role is required.' }),
+  roles: z.array(z.string()).min(1, 'At least one role is required.'),
   class_assigned: z.array(z.string()).optional(),
   subjects_assigned: z.array(z.string()).optional(),
   appointment_status: z.enum(ALL_APPOINTMENT_STATUSES, { required_error: 'Appointment status is required.' }),
@@ -88,7 +91,7 @@ function AcademicHistoryFields() {
         <div className="space-y-4">
             {fields.map((item, index) => (
                 <div key={item.id} className="p-4 border rounded-md space-y-4 relative">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={control}
                             name={`academic_history.${index}.school`}
@@ -96,6 +99,15 @@ function AcademicHistoryFields() {
                                 <FormItem><FormLabel>School Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )}
                         />
+                         <FormField
+                            control={control}
+                            name={`academic_history.${index}.program_offered`}
+                            render={({ field }) => (
+                                <FormItem><FormLabel>Program Offered</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )}
+                        />
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={control}
                             name={`academic_history.${index}.qualification`}
@@ -118,7 +130,7 @@ function AcademicHistoryFields() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ school: '', qualification: '', year_completed: new Date().getFullYear() })}
+                onClick={() => append({ school: '', qualification: '', program_offered: '', year_completed: new Date().getFullYear() })}
             >
                 Add Academic History
             </Button>
@@ -168,6 +180,15 @@ function DocumentsFields() {
     );
 }
 
+function PreviewItem({ label, value }: { label: string, value?: React.ReactNode }) {
+    return (
+        <div>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="font-medium">{value || 'N/A'}</p>
+        </div>
+    )
+}
+
 
 export function AddStaffForm() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -202,7 +223,7 @@ export function AddStaffForm() {
       academic_history: [],
       documents: [],
       appointment_date: undefined,
-      role: undefined,
+      roles: [],
       class_assigned: [],
       subjects_assigned: [],
       appointment_status: undefined,
@@ -238,7 +259,8 @@ export function AddStaffForm() {
     { id: 2, name: 'Address', fields: ['address.residence', 'address.country', 'address.hometown', 'address.house_no', 'address.gps_no'] },
     { id: 3, name: 'Academic History', fields: ['academic_history'] },
     { id: 4, name: 'Documents', fields: ['documents'] },
-    { id: 5, name: 'Appointment', fields: ['appointment_date', 'role', 'appointment_status'] },
+    { id: 5, name: 'Appointment', fields: ['appointment_date', 'roles', 'appointment_status'] },
+    { id: 6, name: 'Preview & Submit', fields: [] },
   ];
 
   const handleNext = async () => {
@@ -267,7 +289,7 @@ export function AddStaffForm() {
         other_name: data.other_name,
         email: data.email || '',
         phone: data.phone,
-        role: data.role,
+        roles: data.roles as Role[],
         id_type: data.id_type,
         id_no: data.id_no,
         snnit_no: data.snnit_no,
@@ -294,7 +316,7 @@ export function AddStaffForm() {
     addStaffAppointmentHistory({
         staff_id: newStaff.staff_id,
         appointment_date: data.appointment_date.toISOString(),
-        role: data.role,
+        roles: data.roles as Role[],
         class_assigned: data.class_assigned,
         subjects_assigned: data.subjects_assigned,
         appointment_status: data.appointment_status,
@@ -316,7 +338,7 @@ export function AddStaffForm() {
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(processSubmit)}>
             <Tabs value={String(currentStep)} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsList className="grid w-full grid-cols-6 mb-6">
                 {tabs.map(tab => (
                     <TabsTrigger key={tab.id} value={String(tab.id)} disabled={currentStep < tab.id} onClick={() => setCurrentStep(tab.id)}>
                         {tab.name}
@@ -421,17 +443,60 @@ export function AddStaffForm() {
                             <FormLabel>Staff ID</FormLabel>
                             <FormControl><Input value={generatedStaffId} readOnly disabled /></FormControl>
                         </FormItem>
-                         <FormField name="role" render={({ field }) => (
-                            <FormItem><FormLabel>Role *</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent').map(role => (
-                                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select><FormMessage /></FormItem>
-                        )}/>
+                        <FormField
+                            control={methods.control}
+                            name="roles"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Role(s) *</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
+                                        >
+                                        <div className="flex gap-1 flex-wrap">
+                                            {field.value?.map(role => <Badge variant="secondary" key={role}>{role}</Badge>)}
+                                            {field.value?.length === 0 && "Select roles"}
+                                        </div>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search roles..." />
+                                        <CommandList>
+                                            <CommandEmpty>No role found.</CommandEmpty>
+                                            <CommandGroup>
+                                            {ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent').map(role => (
+                                                <CommandItem
+                                                value={role}
+                                                key={role}
+                                                onSelect={() => {
+                                                    const selected = field.value || [];
+                                                    const isSelected = selected.includes(role);
+                                                    const newValue = isSelected
+                                                    ? selected.filter(id => id !== role)
+                                                    : [...selected, role];
+                                                    field.onChange(newValue);
+                                                }}
+                                                >
+                                                <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(role) ? "opacity-100" : "opacity-0")} />
+                                                {role}
+                                                </CommandItem>
+                                            ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
@@ -507,6 +572,45 @@ export function AddStaffForm() {
                     )}/>
                 </div>
               </TabsContent>
+               <TabsContent value="6">
+                 <div className="space-y-6">
+                    <h3 className="text-lg font-semibold">Review Details</h3>
+                    <p className="text-sm text-muted-foreground">Please review all the information carefully before submitting.</p>
+                    
+                    <h4 className="text-md font-semibold text-primary pt-4">Personal & Contact</h4>
+                    <Separator />
+                    <div className="grid md:grid-cols-3 gap-4">
+                       <PreviewItem label="First Name" value={watch('first_name')} />
+                       <PreviewItem label="Last Name" value={watch('last_name')} />
+                       <PreviewItem label="Other Name" value={watch('other_name')} />
+                       <PreviewItem label="Email" value={watch('email')} />
+                       <PreviewItem label="Phone" value={watch('phone')} />
+                       <PreviewItem label="ID Type" value={watch('id_type')} />
+                       <PreviewItem label="ID Number" value={watch('id_no')} />
+                       <PreviewItem label="SSNIT Number" value={watch('snnit_no')} />
+                    </div>
+                     <h4 className="text-md font-semibold text-primary pt-4">Address</h4>
+                    <Separator />
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <PreviewItem label="Country" value={watch('address.country')} />
+                        <PreviewItem label="City" value={watch('address.city')} />
+                        <PreviewItem label="Hometown" value={watch('address.hometown')} />
+                        <PreviewItem label="Residence" value={watch('address.residence')} />
+                        <PreviewItem label="House No" value={watch('address.house_no')} />
+                        <PreviewItem label="GPS No" value={watch('address.gps_no')} />
+                    </div>
+
+                     <h4 className="text-md font-semibold text-primary pt-4">Appointment Details</h4>
+                    <Separator />
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <PreviewItem label="Staff ID" value={generatedStaffId} />
+                        <PreviewItem label="Appointment Date" value={watch('appointment_date') ? format(watch('appointment_date'), 'PPP') : ''} />
+                        <PreviewItem label="Roles" value={<div className="flex flex-wrap gap-1">{watch('roles').map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div>} />
+                        <PreviewItem label="Appointment Status" value={watch('appointment_status')} />
+                    </div>
+
+                 </div>
+              </TabsContent>
 
             </Tabs>
 
@@ -519,7 +623,7 @@ export function AddStaffForm() {
               <div />
               {currentStep < MAX_STEPS && (
                 <Button type="button" onClick={handleNext} size="sm">
-                  Next
+                  {currentStep === MAX_STEPS - 1 ? 'Preview & Submit' : 'Next'}
                 </Button>
               )}
               {currentStep === MAX_STEPS && (
