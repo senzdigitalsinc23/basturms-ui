@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -784,6 +785,44 @@ export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editor
         return newStaffData;
     }
     return null;
+}
+
+export const deleteStaff = (staffId: string): boolean => {
+    const staffList = getStaff();
+    const staffToDelete = staffList.find(s => s.staff_id === staffId);
+    if (!staffToDelete) return false;
+
+    // Delete user
+    const users = getUsersInternal();
+    const newUsers = users.filter(u => u.id !== staffToDelete.user_id);
+    saveToStorage(USERS_KEY, newUsers);
+    
+    // Delete staff record
+    const newStaffList = staffList.filter(s => s.staff_id !== staffId);
+    saveToStorage(STAFF_KEY, newStaffList);
+    
+    // Delete associated records
+    const academicHistory = getStaffAcademicHistory().filter(h => h.staff_id !== staffId);
+    saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, academicHistory);
+    
+    const documents = getStaffDocuments().filter(d => d.staff_id !== staffId);
+    saveToStorage(STAFF_DOCUMENTS_KEY, documents);
+    
+    const appointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staffId);
+    saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, appointments);
+
+    return true;
+}
+
+export const bulkDeleteStaff = (staffIds: string[]): number => {
+    let deletedCount = 0;
+    staffIds.forEach(id => {
+        const success = deleteStaff(id);
+        if (success) {
+            deletedCount++;
+        }
+    });
+    return deletedCount;
 }
 
 export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {

@@ -1,13 +1,11 @@
 
 
-
-
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff } from '@/lib/store';
-import { Staff, User, StaffDocument, StaffAppointmentHistory, Role } from '@/lib/types';
+import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects } from '@/lib/store';
+import { Staff, User, StaffDocument, StaffAppointmentHistory, Role, Class, Subject } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -44,11 +42,16 @@ export default function StaffProfilePage() {
     const [appointmentHistory, setAppointmentHistory] = useState<StaffAppointmentHistory | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isUploadOpen, setIsUploadOpen] = useState(false);
+    const [classes, setClasses] = useState<Class[]>([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+
 
     const fetchStaffData = () => {
         const staffData = getStaffByStaffId(staffId);
         if (staffData) {
             setStaff(staffData);
+            setClasses(getClasses());
+            setSubjects(getSubjects());
             const userData = getUserById(staffData.user_id);
             setUser(userData || null);
             const staffDocuments = getStaffDocumentsByStaffId(staffId);
@@ -117,6 +120,10 @@ export default function StaffProfilePage() {
     const userInitials = `${staff.first_name[0]}${staff.last_name[0]}`;
     const experience = formatDistanceToNow(new Date(staff.date_of_joining), { addSuffix: false });
     const isTeacher = (staff.roles || []).includes('Teacher');
+    
+    const assignedClassNames = appointmentHistory?.class_assigned?.map(classId => classes.find(c => c.id === classId)?.name).filter(Boolean).join(', ') || 'N/A';
+    const assignedSubjectNames = appointmentHistory?.subjects_assigned?.map(subjectId => subjects.find(s => s.id === subjectId)?.name).filter(Boolean).join(', ') || 'N/A';
+
 
     return (
         <div className="space-y-6">
@@ -252,8 +259,8 @@ export default function StaffProfilePage() {
                             <CardTitle>Academic Responsibilities</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                           <InfoItem label="Class Assigned" value={appointmentHistory?.class_assigned?.join(', ') || 'N/A'} />
-                           <InfoItem label="Subjects Taught" value={appointmentHistory?.subjects_assigned?.join(', ') || 'N/A'} />
+                           <InfoItem label="Class Assigned" value={assignedClassNames} />
+                           <InfoItem label="Subjects Taught" value={assignedSubjectNames} />
                         </CardContent>
                     </Card>
                     <Card>

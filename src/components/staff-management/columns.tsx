@@ -3,7 +3,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Eye, Check } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Eye, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,18 +11,24 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Role, EmploymentStatus, ALL_EMPLOYMENT_STATUSES } from '@/lib/types';
+import { Role, EmploymentStatus } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { StaffDisplay } from './staff-management';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Checkbox } from '../ui/checkbox';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { AddStaffForm } from './add-staff-form';
+import { useState } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 
 type ColumnsProps = {
-    // onUpdateStatus: (userId: string, status: 'active' | 'frozen') => void;
+    onEdit: (staff: StaffDisplay) => void;
+    onDelete: (staffId: string) => void;
 };
 
 const statusColors: Record<EmploymentStatus, string> = {
@@ -31,7 +37,7 @@ const statusColors: Record<EmploymentStatus, string> = {
     Inactive: 'bg-red-100 text-red-800',
 };
 
-export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
+export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
     {
         id: 'select',
         header: ({ table }) => (
@@ -90,15 +96,18 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
         },
     },
     {
-        accessorKey: 'role',
-        header: 'Role',
-        accessorFn: row => row.user.role,
+        accessorKey: 'roles',
+        header: 'Roles',
+        accessorFn: row => row.roles.join(', '),
         cell: ({ row }) => {
-            const role = row.getValue('role') as Role;
-            return <Badge variant="outline">{role}</Badge>;
+            const roles = row.original.roles;
+            return <div className="flex flex-wrap gap-1">
+                {roles.map(role => <Badge key={role} variant="outline">{role}</Badge>)}
+            </div>;
         },
         filterFn: (row, id, value) => {
-            return value.includes(row.getValue(id))
+            const roles = row.original.roles;
+            return (value as string[]).some(val => roles.includes(val as Role));
         },
     },
     {
@@ -127,6 +136,7 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
         id: 'actions',
         cell: function Cell({ row }) {
             const staff = row.original;
+            
             return (
                 <div className="text-right">
                     <DropdownMenu>
@@ -144,6 +154,31 @@ export const columns = ({ }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
                                 View Profile
                             </Link>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(staff)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Staff
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Staff
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                             <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently delete the staff member and their associated user account. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => onDelete(staff.staff_id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
