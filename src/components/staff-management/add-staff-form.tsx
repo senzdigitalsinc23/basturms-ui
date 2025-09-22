@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
@@ -21,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES, Subject, Staff, ALL_ACCOUNTANT_ROLES } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffDocuments, getStaffAcademicHistory as storeGetStaffAcademicHistory } from '@/lib/store';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffDocuments, storeGetStaffAcademicHistory } from '@/lib/store';
 import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
@@ -301,36 +302,29 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     }
     setIsLoading(true);
 
-    if (isEditMode && defaultValues) {
-        const updatedStaffData: Partial<Staff> = {
-            ...data,
-            date_of_joining: data.appointment_date.toISOString(),
-        };
-        onSubmit(updatedStaffData);
-    } else {
-        const staffData: Omit<Staff, 'user_id'> = {
-            staff_id: generatedStaffId,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            other_name: data.other_name,
-            email: data.email || '',
-            phone: data.phone,
-            roles: data.roles as Role[],
-            id_type: data.id_type,
-            id_no: data.id_no,
-            snnit_no: data.snnit_no,
-            date_of_joining: data.appointment_date.toISOString(),
-            address: data.address,
-        };
-        onSubmit({staffData, academic_history: data.academic_history, documents: data.documents, appointment_history: {
-            staff_id: generatedStaffId,
-            appointment_date: data.appointment_date.toISOString(),
-            roles: data.roles as Role[],
-            class_assigned: data.class_assigned,
-            subjects_assigned: data.subjects_assigned,
-            appointment_status: data.appointment_status,
-        }});
-    }
+    const staffData: Omit<Staff, 'user_id'> = {
+        staff_id: isEditMode && defaultValues ? defaultValues.staff_id : generatedStaffId,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        other_name: data.other_name,
+        email: data.email || '',
+        phone: data.phone,
+        roles: data.roles as Role[],
+        id_type: data.id_type,
+        id_no: data.id_no,
+        snnit_no: data.snnit_no,
+        date_of_joining: data.appointment_date.toISOString(),
+        address: data.address,
+    };
+    
+    onSubmit({staffData, academic_history: data.academic_history, documents: data.documents, appointment_history: {
+        staff_id: isEditMode && defaultValues ? defaultValues.staff_id : generatedStaffId,
+        appointment_date: data.appointment_date.toISOString(),
+        roles: data.roles as Role[],
+        class_assigned: data.class_assigned,
+        subjects_assigned: data.subjects_assigned,
+        appointment_status: data.appointment_status,
+    }});
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -360,7 +354,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                 </TabsList>
 
                 <TabsContent value="1">
-                    <div className="space-y-6">
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <FormField name="first_name" render={({ field }) => (
                                 <FormItem><FormLabel>First Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -404,7 +398,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                 </TabsContent>
                 
                 <TabsContent value="2">
-                    <div className="space-y-6">
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <FormField name="address.country" render={({ field }) => (
                                 <FormItem><FormLabel>Country *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -431,15 +425,19 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                 </TabsContent>
 
                 <TabsContent value="3">
-                    <AcademicHistoryFields />
+                   <div className="max-h-[60vh] overflow-y-auto p-1">
+                        <AcademicHistoryFields />
+                   </div>
                 </TabsContent>
                 
                 <TabsContent value="4">
-                    <DocumentsFields />
+                    <div className="max-h-[60vh] overflow-y-auto p-1">
+                        <DocumentsFields />
+                    </div>
                 </TabsContent>
                 
                 <TabsContent value="5">
-                    <div className="space-y-6">
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <FormField name="appointment_date" render={({ field }) => (
                                     <FormItem className="flex flex-col"><FormLabel>Appointment Date *</FormLabel>

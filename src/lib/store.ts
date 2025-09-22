@@ -42,9 +42,9 @@ const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 
 // New keys for staff management
 const STAFF_KEY = 'campusconnect_staff';
-const STAFF_ACADEMIC_HISTORY_KEY = 'campusconnect_staff_academic_history';
-const STAFF_DOCUMENTS_KEY = 'campusconnect_staff_documents';
-const STAFF_APPOINTMENT_HISTORY_KEY = 'campusconnect_staff_appointment_history';
+export const STAFF_ACADEMIC_HISTORY_KEY = 'campusconnect_staff_academic_history';
+export const STAFF_DOCUMENTS_KEY = 'campusconnect_staff_documents';
+export const STAFF_APPOINTMENT_HISTORY_KEY = 'campusconnect_staff_appointment_history';
 
 // New keys for subjects
 const SUBJECTS_KEY = 'campusconnect_subjects';
@@ -227,7 +227,7 @@ const getFromStorage = <T>(key: string, defaultValue: T): T => {
   }
 };
 
-const saveToStorage = <T>(key: string, value: T) => {
+export const saveToStorage = <T>(key: string, value: T) => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -729,7 +729,7 @@ export const graduateStudents = (studentIds: string[], editorId: string): number
 // Staff Management Functions
 export const getStaffProfiles = (): StaffProfile[] => getFromStorage<StaffProfile[]>(STAFF_PROFILES_KEY, []);
 export const getStaff = (): Staff[] => getFromStorage<Staff[]>(STAFF_KEY, []);
-export const getStaffAcademicHistory = (): StaffAcademicHistory[] => getFromStorage<StaffAcademicHistory[]>(STAFF_ACADEMIC_HISTORY_KEY, []);
+export const storeGetStaffAcademicHistory = (): StaffAcademicHistory[] => getFromStorage<StaffAcademicHistory[]>(STAFF_ACADEMIC_HISTORY_KEY, []);
 export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
@@ -802,7 +802,7 @@ export const deleteStaff = (staffId: string): boolean => {
     saveToStorage(STAFF_KEY, newStaffList);
     
     // Delete associated records
-    const academicHistory = getStaffAcademicHistory().filter(h => h.staff_id !== staffId);
+    const academicHistory = storeGetStaffAcademicHistory().filter(h => h.staff_id !== staffId);
     saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, academicHistory);
     
     const documents = getStaffDocuments().filter(d => d.staff_id !== staffId);
@@ -826,7 +826,7 @@ export const bulkDeleteStaff = (staffIds: string[]): number => {
 }
 
 export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {
-    const histories = getStaffAcademicHistory();
+    const histories = storeGetStaffAcademicHistory();
     saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, [...histories, history]);
     return history;
 };
@@ -867,3 +867,5 @@ export const getStaffProfileByUserId = (userId: string): StaffProfile | undefine
     const profiles = getStaffProfiles();
     return profiles.find(p => p.user_id === userId);
 }
+
+    

@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects } from '@/lib/store';
+import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects, addStaffAcademicHistory, addStaffAppointmentHistory } from '@/lib/store';
 import { Staff, User, StaffDocument, StaffAppointmentHistory, Role, Class, Subject } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -70,10 +70,23 @@ export default function StaffProfilePage() {
         fetchStaffData();
     }, [staffId]);
 
-    const handleUpdate = (values: Partial<Staff>) => {
+    const handleUpdate = (data: {staffData: Omit<Staff, 'user_id'>, academic_history: any[], documents: any[], appointment_history: any}) => {
         if (!currentUser || !staff) return;
-        const updated = updateStaff(staff.staff_id, values, currentUser.id);
+
+        const updated = updateStaff(staff.staff_id, data.staffData, currentUser.id);
+
         if(updated) {
+            // This is not ideal, but for now we remove and re-add to update.
+            const existingAcademicHistory = storeGetStaffAcademicHistory().filter(h => h.staff_id !== staff.staff_id);
+            saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, existingAcademicHistory);
+            data.academic_history.forEach(history => {
+                addStaffAcademicHistory({ ...history, staff_id: staff.staff_id });
+            });
+
+            const existingAppointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staff.staff_id);
+            saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, existingAppointments);
+            addStaffAppointmentHistory({...data.appointment_history, staff_id: staff.staff_id});
+            
             fetchStaffData(); // Re-fetch all data
             toast({ title: 'Staff Updated', description: "The staff member's details have been updated." });
             setIsEditOpen(false);
