@@ -20,8 +20,8 @@ import { Loader2, CalendarIcon, X, Check, ChevronsUpDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES, Subject, Staff } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffDocuments, getStaffAcademicHistory } from '@/lib/store';
+import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES, Subject, Staff, ALL_ACCOUNTANT_ROLES } from '@/lib/types';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffDocuments, getStaffAcademicHistory as storeGetStaffAcademicHistory } from '@/lib/store';
 import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
@@ -217,7 +217,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
         appointment_status: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.appointment_status || 'Appointed',
         class_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.class_assigned,
         subjects_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.subjects_assigned,
-        academic_history: getStaffAcademicHistory().filter(h => h.staff_id === defaultValues.staff_id),
+        academic_history: storeGetStaffAcademicHistory().filter(h => h.staff_id === defaultValues.staff_id),
         documents: getStaffDocuments().filter(d => d.staff_id === defaultValues.staff_id).map(d => ({name: d.document_name, file: d.file})),
     } : {
       first_name: '',
@@ -540,26 +540,28 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                         <Command>
                                             <CommandInput placeholder="Search classes..." />
-                                            <CommandEmpty>No class found.</CommandEmpty>
-                                            <CommandGroup>
-                                            {classes.map(c => (
-                                                <CommandItem
-                                                value={c.id}
-                                                key={c.id}
-                                                onSelect={() => {
-                                                    const selected = field.value || [];
-                                                    const isSelected = selected.includes(c.id);
-                                                    const newValue = isSelected
-                                                    ? selected.filter(id => id !== c.id)
-                                                    : [...selected, c.id];
-                                                    field.onChange(newValue);
-                                                }}
-                                                >
-                                                <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(c.id) ? "opacity-100" : "opacity-0")} />
-                                                {c.name}
-                                                </CommandItem>
-                                            ))}
-                                            </CommandGroup>
+                                            <CommandList>
+                                                <CommandEmpty>No class found.</CommandEmpty>
+                                                <CommandGroup>
+                                                {classes.map(c => (
+                                                    <CommandItem
+                                                    value={c.id}
+                                                    key={c.id}
+                                                    onSelect={() => {
+                                                        const selected = field.value || [];
+                                                        const isSelected = selected.includes(c.id);
+                                                        const newValue = isSelected
+                                                        ? selected.filter(id => id !== c.id)
+                                                        : [...selected, c.id];
+                                                        field.onChange(newValue);
+                                                    }}
+                                                    >
+                                                    <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(c.id) ? "opacity-100" : "opacity-0")} />
+                                                    {c.name}
+                                                    </CommandItem>
+                                                ))}
+                                                </CommandGroup>
+                                            </CommandList>
                                         </Command>
                                         </PopoverContent>
                                     </Popover>
@@ -726,3 +728,5 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     </Card>
   );
 }
+
+    
