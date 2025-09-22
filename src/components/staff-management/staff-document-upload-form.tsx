@@ -24,7 +24,7 @@ export function StaffDocumentUploadForm({ onSubmit }: DocumentUploadFormProps) {
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: { name: '' },
+        defaultValues: { name: '', file: null },
     });
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,9 +77,11 @@ export function StaffDocumentUploadForm({ onSubmit }: DocumentUploadFormProps) {
                             <Input
                                 type="file"
                                 {...fieldProps}
+                                value={undefined} // Required for uncontrolled file inputs in react-hook-form
                                 accept=".pdf,.doc,.docx,.jpg,.png"
                                 onChange={(e) => {
-                                    onChange(e.target.files?.[0]);
+                                    const file = e.target.files?.[0];
+                                    onChange(file);
                                     handleFileChange(e);
                                 }}
                             />
