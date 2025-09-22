@@ -1,10 +1,11 @@
 
 
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory } from '@/lib/store';
+import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff } from '@/lib/store';
 import { Staff, User, StaffDocument, StaffAppointmentHistory, Role } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -15,13 +16,15 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { EditStaffForm } from '@/components/staff-management/edit-staff-form';
+import { StaffDocumentUploadForm } from '@/components/staff-management/staff-document-upload-form';
 
 
 function InfoItem({ label, value }: { label: string; value?: React.ReactNode }) {
     return (
         <div>
-            <p className="text-sm text-muted-foreground">{label}</p>
+            <div className="text-sm text-muted-foreground">{label}</div>
             <div className="font-medium">{value || 'N/A'}</div>
         </div>
     )
@@ -38,6 +41,8 @@ export default function StaffProfilePage() {
     const [user, setUser] = useState<User | null>(null);
     const [documents, setDocuments] = useState<StaffDocument[]>([]);
     const [appointmentHistory, setAppointmentHistory] = useState<StaffAppointmentHistory | null>(null);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isUploadOpen, setIsUploadOpen] = useState(false);
 
     const fetchStaffData = () => {
         const staffData = getStaffByStaffId(staffId);
@@ -60,6 +65,28 @@ export default function StaffProfilePage() {
     useEffect(() => {
         fetchStaffData();
     }, [staffId]);
+
+    const handleUpdate = (values: Partial<Staff>) => {
+        if (!currentUser || !staff) return;
+        const updated = updateStaff(staff.staff_id, values, currentUser.id);
+        if(updated) {
+            setStaff(updated);
+            toast({ title: 'Staff Updated', description: "The staff member's details have been updated." });
+            setIsEditOpen(false);
+        }
+    };
+    
+    const handleUploadDocument = (values: { name: string; file: string }) => {
+        if (!currentUser || !staff) return;
+        storeAddStaffDocument({
+            staff_id: staff.staff_id,
+            document_name: values.name,
+            file: values.file,
+        });
+        toast({ title: 'Document Uploaded', description: `${values.name} has been added.` });
+        fetchStaffData();
+        setIsUploadOpen(false);
+    }
 
     const handleDeleteDocument = (docName: string) => {
         if (!currentUser || !staff) return;
@@ -101,9 +128,20 @@ export default function StaffProfilePage() {
                     <Button variant="outline" size="sm" asChild>
                         <Link href="/staff-management"><ArrowLeft className="mr-2" /> Back to List</Link>
                     </Button>
-                     <Button size="sm">
-                        <Edit className="mr-2" /> Edit Staff
-                    </Button>
+                    <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="sm">
+                                <Edit className="mr-2" /> Edit Staff
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Edit Staff</DialogTitle>
+                                <DialogDescription>Update details for {staff.first_name} {staff.last_name}</DialogDescription>
+                            </DialogHeader>
+                            <EditStaffForm defaultValues={staff} onSubmit={handleUpdate} />
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
 
@@ -139,9 +177,16 @@ export default function StaffProfilePage() {
                         <CardDescription>CV, letters, and other personal files.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex justify-between items-center mb-4">
-                            <Input placeholder="Search documents..." className="max-w-xs" />
-                            <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                        <div className="flex justify-end items-center mb-4">
+                            <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+                                    <StaffDocumentUploadForm onSubmit={handleUploadDocument} />
+                                </DialogContent>
+                            </Dialog>
                         </div>
                         <ul className="space-y-3">
                            {documents.map((doc) => (
@@ -150,7 +195,6 @@ export default function StaffProfilePage() {
                                         <FileIcon className="h-6 w-6 text-muted-foreground" />
                                         <div>
                                             <p className="font-medium">{doc.document_name}</p>
-                                            <p className="text-sm text-muted-foreground">Uploaded on {format(new Date(JSON.parse(doc.file).split(',')[0].split(';')[0].split(':')[1]), 'yyyy-MM-dd')}</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-2">

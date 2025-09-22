@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -715,7 +716,7 @@ export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staf
       status: 'active',
     });
 
-    const newStaff = { ...staff, user_id: user.id, date_of_joining: staff.date_of_joining };
+    const newStaff = { ...staff, user_id: user.id };
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
@@ -727,6 +728,28 @@ export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staf
 
     return newStaff;
 };
+
+export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editorId: string): Staff | null => {
+    const staffList = getStaff();
+    const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
+
+    if (staffIndex !== -1) {
+        const existingStaff = staffList[staffIndex];
+        const newStaffData = { ...existingStaff, ...updatedData };
+        staffList[staffIndex] = newStaffData;
+        saveToStorage(STAFF_KEY, staffList);
+
+        addAuditLog({
+            user: getUserById(editorId)?.email || 'Unknown',
+            name: getUserById(editorId)?.name || 'Unknown',
+            action: 'Update Staff',
+            details: `Updated details for staff ID ${staffId}`
+        });
+        
+        return newStaffData;
+    }
+    return null;
+}
 
 export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {
     const histories = getStaffAcademicHistory();

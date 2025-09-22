@@ -12,7 +12,8 @@ export type Role =
   | 'Stores Manager'
   | 'Proprietor'
   | 'I.T Manager'
-  | 'I.T Support';
+  | 'I.T Support'
+  | 'Accountant';
 
 export const ALL_ROLES: Role[] = [
   'Admin',
@@ -27,6 +28,7 @@ export const ALL_ROLES: Role[] = [
   'Proprietor',
   'I.T Manager',
   'I.T Support',
+  'Accountant',
 ];
 
 export interface RoleStorage {

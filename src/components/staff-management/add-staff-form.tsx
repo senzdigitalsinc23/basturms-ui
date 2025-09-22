@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
@@ -611,7 +612,24 @@ export function AddStaffForm() {
                         <PreviewItem label="Roles" value={<div className="flex flex-wrap gap-1">{watch('roles').map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div>} />
                         <PreviewItem label="Appointment Status" value={watch('appointment_status')} />
                     </div>
-
+                    {watch('academic_history') && watch('academic_history')!.length > 0 && <>
+                        <h4 className="text-md font-semibold text-primary pt-4">Academic History</h4>
+                        <Separator />
+                        <ul className="space-y-2">
+                        {watch('academic_history')?.map((hist, i) => (
+                            <li key={i} className="text-sm border p-2 rounded-md">
+                                <span className="font-bold">{hist.qualification}</span> from <span className="font-bold">{hist.school}</span> ({hist.year_completed}) - {hist.program_offered}
+                            </li>
+                        ))}
+                        </ul>
+                    </>}
+                    {watch('documents') && watch('documents')!.length > 0 && <>
+                        <h4 className="text-md font-semibold text-primary pt-4">Documents to be Uploaded</h4>
+                        <Separator />
+                        <ul className="list-disc pl-5 space-y-1">
+                        {watch('documents')?.map((doc, i) => <li key={i} className="text-sm">{doc.name} ({(doc.file as File)?.name})</li>)}
+                        </ul>
+                    </>}
                  </div>
               </TabsContent>
 
