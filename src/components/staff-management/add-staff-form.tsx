@@ -639,7 +639,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                     </div>
                 </TabsContent>
                 <TabsContent value="6">
-                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
+                   <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
                         <h3 className="text-lg font-semibold">Review Details</h3>
                         <p className="text-sm text-muted-foreground">Please review all the information carefully before submitting.</p>
                         
