@@ -285,3 +285,19 @@ export interface StaffProfile {
     // Re-using emergency contact type from student, could be different if needed
     emergencyContact?: Omit<EmergencyContact, 'student_no'> & { user_id: string };
 }
+
+// Subject Management Types
+export interface Subject {
+    id: string;
+    name: string;
+}
+
+export interface ClassSubject {
+    class_id: string;
+    subject_id: string;
+}
+
+export interface TeacherSubject {
+    staff_id: string;
+    subject_id: string;
+}

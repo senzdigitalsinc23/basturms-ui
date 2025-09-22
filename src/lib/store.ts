@@ -1,7 +1,4 @@
 
-
-
-
 'use client';
 
 import {
@@ -26,6 +23,9 @@ import {
   StaffAcademicHistory,
   StaffDocument,
   StaffAppointmentHistory,
+  Subject,
+  ClassSubject,
+  TeacherSubject,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -44,6 +44,11 @@ const STAFF_KEY = 'campusconnect_staff';
 const STAFF_ACADEMIC_HISTORY_KEY = 'campusconnect_staff_academic_history';
 const STAFF_DOCUMENTS_KEY = 'campusconnect_staff_documents';
 const STAFF_APPOINTMENT_HISTORY_KEY = 'campusconnect_staff_appointment_history';
+
+// New keys for subjects
+const SUBJECTS_KEY = 'campusconnect_subjects';
+const CLASS_SUBJECTS_KEY = 'campusconnect_class_subjects';
+const TEACHER_SUBJECTS_KEY = 'campusconnect_teacher_subjects';
 
 
 const getInitialRoles = (): RoleStorage[] => {
@@ -193,6 +198,21 @@ const getInitialClasses = (): Class[] => {
     ];
 };
 
+const getInitialSubjects = (): Subject[] => {
+    const subjectNames = [
+        'English Language', 'Mathematics', 'Science', 'History', 'Our World Our People', 
+        'Religious & Moral Education', 'Physical Education', 'Computing', 'French', 
+        'Numeracy', 'Language & Literacy', 'Creative Art', 'Social Studies', 
+        'Basic Design and Technology', 'Ghanaian Language & Culture', 
+        'Information and Communications Technology', 'Fante', 'Asante Twi', 
+        'Akwapim Twi', 'Dagomba', 'Ewe'
+    ];
+    return subjectNames.map((name, index) => ({
+        id: `SUB${(index + 1).toString().padStart(3, '0')}`,
+        name: name,
+    }));
+};
+
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') {
     return defaultValue;
@@ -254,6 +274,16 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(STAFF_APPOINTMENT_HISTORY_KEY)) {
         saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, []);
     }
+    // Initialize new subject storages
+    if (!window.localStorage.getItem(SUBJECTS_KEY)) {
+        saveToStorage(SUBJECTS_KEY, getInitialSubjects());
+    }
+    if (!window.localStorage.getItem(CLASS_SUBJECTS_KEY)) {
+        saveToStorage(CLASS_SUBJECTS_KEY, []);
+    }
+    if (!window.localStorage.getItem(TEACHER_SUBJECTS_KEY)) {
+        saveToStorage(TEACHER_SUBJECTS_KEY, []);
+    }
   }
 };
 
@@ -262,6 +292,11 @@ export const getRoles = (): RoleStorage[] => getFromStorage<RoleStorage[]>(ROLES
 
 // Class Functions
 export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
+
+// Subject Functions
+export const getSubjects = (): Subject[] => getFromStorage<Subject[]>(SUBJECTS_KEY, []);
+export const getClassSubjects = (): ClassSubject[] => getFromStorage<ClassSubject[]>(CLASS_SUBJECTS_KEY, []);
+export const getTeacherSubjects = (): TeacherSubject[] => getFromStorage<TeacherSubject[]>(TEACHER_SUBJECTS_KEY, []);
 
 // User Functions
 const getUsersInternal = (): UserStorage[] => getFromStorage<UserStorage[]>(USERS_KEY, []);
