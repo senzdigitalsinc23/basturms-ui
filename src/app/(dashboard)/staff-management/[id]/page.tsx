@@ -88,7 +88,7 @@ export default function StaffProfilePage() {
 
     const userInitials = `${staff.first_name[0]}${staff.last_name[0]}`;
     const experience = formatDistanceToNow(new Date(staff.date_of_joining), { addSuffix: false });
-    const isTeacher = staff.roles.includes('Teacher');
+    const isTeacher = (staff.roles || []).includes('Teacher');
 
     return (
         <div className="space-y-6">
@@ -117,7 +117,7 @@ export default function StaffProfilePage() {
                         <h2 className="text-2xl font-bold">{user.name}</h2>
                         <p className="text-muted-foreground">{staff.staff_id}</p>
                         <div className="flex gap-2 mt-2">
-                            {staff.roles.map(role => <Badge key={role} variant="outline">{role}</Badge>)}
+                            {(staff.roles || []).map(role => <Badge key={role} variant="outline">{role}</Badge>)}
                             <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status === 'active' ? 'Active' : 'Inactive'}</Badge>
                         </div>
                     </div>
@@ -185,7 +185,7 @@ export default function StaffProfilePage() {
                         <CardHeader><CardTitle>Professional Information</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <InfoItem label="Staff ID" value={staff.staff_id} />
-                            <InfoItem label="Roles" value={<div className="flex flex-wrap gap-1">{staff.roles.map(r => <Badge key={r} variant="outline">{r}</Badge>)}</div>} />
+                            <InfoItem label="Roles" value={<div className="flex flex-wrap gap-1">{(staff.roles || []).map(r => <Badge key={r} variant="outline">{r}</Badge>)}</div>} />
                             <InfoItem label="Status" value={<Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status}</Badge>} />
                             <InfoItem label="Joining Date" value={format(new Date(staff.date_of_joining), "MMMM do, yyyy")} />
                             <InfoItem label="Experience" value={experience} />
