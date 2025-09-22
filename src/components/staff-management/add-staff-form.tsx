@@ -2,6 +2,7 @@
 
 
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
@@ -23,8 +24,8 @@ import { Loader2, CalendarIcon, X, Check, ChevronsUpDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument } from '@/lib/store';
+import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES, Subject, Staff } from '@/lib/types';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff } from '@/lib/store';
 import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
@@ -41,7 +42,7 @@ const academicHistorySchema = z.object({
 
 const documentSchema = z.object({
   name: z.string().min(1, 'Document name is required'),
-  file: z.any().refine(file => file instanceof File, 'File is required.'),
+  file: z.any().refine(file => file instanceof File || typeof file === 'string', 'File is required.'),
 });
 
 const formSchema = z.object({
@@ -163,7 +164,7 @@ function DocumentsFields() {
                             control={control}
                             name={`documents.${index}.file`}
                             render={({ field }) => (
-                                <FormItem><FormLabel>File</FormLabel><FormControl><Input type="file" accept=".pdf" onChange={(e) => field.onChange(e.target.files?.[0])} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>File</FormLabel><FormControl><Input type="file" accept=".pdf,.doc,.docx" onChange={(e) => field.onChange(e.target.files?.[0])} /></FormControl><FormMessage /></FormItem>
                             )}
                         />
                     </div>
@@ -186,17 +187,25 @@ function PreviewItem({ label, value }: { label: string, value?: React.ReactNode 
     return (
         <div>
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="font-medium">{value || 'N/A'}</p>
+            <div className="font-medium">{value || 'N/A'}</div>
         </div>
     )
 }
 
 
-export function AddStaffForm() {
+type AddStaffFormProps = {
+    isEditMode?: boolean;
+    defaultValues?: Staff;
+    onSubmit: (values: any) => void;
+};
+
+
+export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: AddStaffFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [generatedStaffId, setGeneratedStaffId] = useState('');
+  const [generatedStaffId, setGeneratedStaffId] = useState(defaultValues?.staff_id || '');
   const [classes, setClasses] = useState<Class[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -205,7 +214,15 @@ export function AddStaffForm() {
   const methods = useForm<FormData>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
-    defaultValues: {
+    defaultValues: isEditMode && defaultValues ? {
+        ...defaultValues,
+        appointment_date: new Date(defaultValues.date_of_joining),
+        appointment_status: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.appointment_status || 'Appointed',
+        class_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.class_assigned,
+        subjects_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.subjects_assigned,
+        academic_history: getStaffAcademicHistory().filter(h => h.staff_id === defaultValues.staff_id),
+        documents: getStaffDocuments().filter(d => d.staff_id === defaultValues.staff_id).map(d => ({name: d.document_name, file: d.file})),
+    } : {
       first_name: '',
       last_name: '',
       other_name: '',
@@ -235,14 +252,15 @@ export function AddStaffForm() {
   const { handleSubmit, trigger, watch } = methods;
   const appointmentDate = watch('appointment_date');
   const roles = watch('roles');
-  const isTeacher = roles.includes('Teacher');
+  const isTeacher = roles?.includes('Teacher');
 
   useEffect(() => {
     setClasses(getClasses());
+    setSubjects(getSubjects());
   }, []);
 
   useEffect(() => {
-    if (appointmentDate) {
+    if (!isEditMode && appointmentDate) {
         const history = getStaffAppointmentHistory();
         const appYear = new Date(appointmentDate).getFullYear();
         const yearYY = appYear.toString().slice(-2);
@@ -253,10 +271,10 @@ export function AddStaffForm() {
         const nextNumberPadded = nextInYear.toString().padStart(3, '0');
         
         setGeneratedStaffId(`LBAST${yearYY}${nextNumberPadded}`);
-    } else {
+    } else if (!isEditMode) {
         setGeneratedStaffId('');
     }
-  }, [appointmentDate]);
+  }, [appointmentDate, isEditMode]);
 
   const tabs = [
     { id: 1, name: 'Personal & Contact', fields: ['first_name', 'last_name', 'email', 'phone', 'id_no'] },
@@ -286,54 +304,47 @@ export function AddStaffForm() {
     }
     setIsLoading(true);
 
-    const newStaff = addStaff({
-        staff_id: generatedStaffId,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        other_name: data.other_name,
-        email: data.email || '',
-        phone: data.phone,
-        roles: data.roles as Role[],
-        id_type: data.id_type,
-        id_no: data.id_no,
-        snnit_no: data.snnit_no,
-        date_of_joining: data.appointment_date.toISOString(),
-        address: data.address,
-    }, user.id);
-
-    data.academic_history?.forEach(history => {
-        addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
-    });
-
-    for (const doc of data.documents || []) {
-        const fileReader = new FileReader();
-        fileReader.readAsDataURL(doc.file);
-        fileReader.onload = () => {
-            addStaffDocument({
-                staff_id: newStaff.staff_id,
-                document_name: doc.name,
-                file: fileReader.result as string
-            });
+    if (isEditMode && defaultValues) {
+        const updatedStaffData: Partial<Staff> = {
+            ...data,
+            date_of_joining: data.appointment_date.toISOString(),
         };
+        onSubmit(updatedStaffData);
+    } else {
+        const staffData: Omit<Staff, 'user_id'> = {
+            staff_id: generatedStaffId,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            other_name: data.other_name,
+            email: data.email || '',
+            phone: data.phone,
+            roles: data.roles as Role[],
+            id_type: data.id_type,
+            id_no: data.id_no,
+            snnit_no: data.snnit_no,
+            date_of_joining: data.appointment_date.toISOString(),
+            address: data.address,
+        };
+        onSubmit({staffData, academic_history: data.academic_history, documents: data.documents, appointment_history: {
+            staff_id: generatedStaffId,
+            appointment_date: data.appointment_date.toISOString(),
+            roles: data.roles as Role[],
+            class_assigned: data.class_assigned,
+            subjects_assigned: data.subjects_assigned,
+            appointment_status: data.appointment_status,
+        }});
     }
-
-    addStaffAppointmentHistory({
-        staff_id: newStaff.staff_id,
-        appointment_date: data.appointment_date.toISOString(),
-        roles: data.roles as Role[],
-        class_assigned: data.class_assigned,
-        subjects_assigned: data.subjects_assigned,
-        appointment_status: data.appointment_status,
-    });
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     setIsLoading(false);
     toast({
-        title: 'Staff Member Added',
-        description: `${data.first_name} ${data.last_name} has been added.`
+        title: isEditMode ? 'Staff Member Updated' : 'Staff Member Added',
+        description: `${data.first_name} ${data.last_name} has been ${isEditMode ? 'updated' : 'added'}.`
     });
-    router.push(`/staff-management`);
+    if (!isEditMode) {
+      router.push(`/staff-management`);
+    }
   };
 
   return (
@@ -558,10 +569,63 @@ export function AddStaffForm() {
                                 </FormItem>
                             )}
                         />
-                        <FormItem>
-                            <FormLabel>Assign Subjects</FormLabel>
-                            <p className="text-sm text-muted-foreground p-2 border rounded-md min-h-10">Multi-select for subjects will be implemented here.</p>
-                         </FormItem>
+                        <FormField
+                            control={methods.control}
+                            name="subjects_assigned"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Assign Subjects</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
+                                        >
+                                        <div className="flex gap-1 flex-wrap">
+                                            {field.value?.map(subjectId => {
+                                                const sub = subjects.find(s => s.id === subjectId);
+                                                return <Badge variant="secondary" key={subjectId}>{sub?.name}</Badge>
+                                            })}
+                                            {field.value?.length === 0 && "Select subjects"}
+                                        </div>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search subjects..." />
+                                        <CommandList>
+                                            <CommandEmpty>No subject found.</CommandEmpty>
+                                            <CommandGroup>
+                                            {subjects.map(s => (
+                                                <CommandItem
+                                                value={s.name}
+                                                key={s.id}
+                                                onSelect={() => {
+                                                    const selected = field.value || [];
+                                                    const isSelected = selected.includes(s.id);
+                                                    const newValue = isSelected
+                                                    ? selected.filter(id => id !== s.id)
+                                                    : [...selected, s.id];
+                                                    field.onChange(newValue);
+                                                }}
+                                                >
+                                                <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(s.id) ? "opacity-100" : "opacity-0")} />
+                                                {s.name}
+                                                </CommandItem>
+                                            ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                      </div>}
                       <FormField name="appointment_status" render={({ field }) => (
                         <FormItem><FormLabel>Appointment Status *</FormLabel>
@@ -609,8 +673,12 @@ export function AddStaffForm() {
                     <div className="grid md:grid-cols-3 gap-4">
                         <PreviewItem label="Staff ID" value={generatedStaffId} />
                         <PreviewItem label="Appointment Date" value={watch('appointment_date') ? format(watch('appointment_date'), 'PPP') : ''} />
-                        <PreviewItem label="Roles" value={<div className="flex flex-wrap gap-1">{watch('roles').map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div>} />
+                        <PreviewItem label="Roles" value={<div className="flex flex-wrap gap-1">{watch('roles')?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div>} />
                         <PreviewItem label="Appointment Status" value={watch('appointment_status')} />
+                        {isTeacher && <>
+                            <PreviewItem label="Classes Assigned" value={<div className="flex flex-wrap gap-1">{watch('class_assigned')?.map(cId => <Badge key={cId} variant="outline">{classes.find(c => c.id === cId)?.name}</Badge>)}</div>} />
+                            <PreviewItem label="Subjects Assigned" value={<div className="flex flex-wrap gap-1">{watch('subjects_assigned')?.map(sId => <Badge key={sId} variant="outline">{subjects.find(s => s.id === sId)?.name}</Badge>)}</div>} />
+                        </>}
                     </div>
                     {watch('academic_history') && watch('academic_history')!.length > 0 && <>
                         <h4 className="text-md font-semibold text-primary pt-4">Academic History</h4>
@@ -627,7 +695,7 @@ export function AddStaffForm() {
                         <h4 className="text-md font-semibold text-primary pt-4">Documents to be Uploaded</h4>
                         <Separator />
                         <ul className="list-disc pl-5 space-y-1">
-                        {watch('documents')?.map((doc, i) => <li key={i} className="text-sm">{doc.name} ({(doc.file as File)?.name})</li>)}
+                        {watch('documents')?.map((doc, i) => <li key={i} className="text-sm">{doc.name} ({(doc.file as File)?.name || 'Existing file'})</li>)}
                         </ul>
                     </>}
                  </div>
@@ -650,7 +718,7 @@ export function AddStaffForm() {
               {currentStep === MAX_STEPS && (
                 <Button type="submit" disabled={isLoading} size="sm">
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Add Staff Member
+                  {isEditMode ? 'Save Changes' : 'Add Staff Member'}
                 </Button>
               )}
             </div>

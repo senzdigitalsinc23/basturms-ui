@@ -2,8 +2,8 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { getStaff, getUsers } from '@/lib/store';
-import { Staff, User } from '@/lib/types';
+import { addStaff as storeAddStaff, getStaff, getUsers, updateStaff as storeUpdateStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument } from '@/lib/store';
+import { Staff, User, StaffAcademicHistory, StaffAppointmentHistory, StaffDocument } from '@/lib/types';
 import { StaffDataTable } from './data-table';
 import { columns } from './columns';
 
@@ -43,11 +43,42 @@ export function StaffManagement() {
     refreshStaff();
   }, []);
 
+  const handleAddStaff = (data: {staffData: Omit<Staff, 'user_id'>, academic_history: StaffAcademicHistory[], documents: any[], appointment_history: StaffAppointmentHistory}) => {
+    const newStaff = storeAddStaff(data.staffData, '1'); // Assuming admin user '1' is the creator
+
+    data.academic_history?.forEach(history => {
+        addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
+    });
+
+    for (const doc of data.documents || []) {
+        const fileReader = new FileReader();
+        fileReader.readAsDataURL(doc.file);
+        fileReader.onload = () => {
+            addStaffDocument({
+                staff_id: newStaff.staff_id,
+                document_name: doc.name,
+                file: fileReader.result as string
+            });
+        };
+    }
+    
+    addStaffAppointmentHistory(data.appointment_history);
+    
+    refreshStaff();
+  }
+  
+  const handleUpdateStaff = (data: Staff) => {
+    storeUpdateStaff(data.staff_id, data, '1'); // Assuming admin user '1' is the editor
+    refreshStaff();
+  }
+
 
   return (
     <StaffDataTable
       columns={columns({})}
       data={staff}
+      onAdd={handleAddStaff}
+      onUpdate={handleUpdateStaff}
     />
   );
 }

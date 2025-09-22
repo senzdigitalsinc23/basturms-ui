@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -17,7 +18,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { EditStaffForm } from '@/components/staff-management/edit-staff-form';
+import { AddStaffForm } from '@/components/staff-management/add-staff-form';
 import { StaffDocumentUploadForm } from '@/components/staff-management/staff-document-upload-form';
 
 
@@ -70,7 +71,7 @@ export default function StaffProfilePage() {
         if (!currentUser || !staff) return;
         const updated = updateStaff(staff.staff_id, values, currentUser.id);
         if(updated) {
-            setStaff(updated);
+            fetchStaffData(); // Re-fetch all data
             toast({ title: 'Staff Updated', description: "The staff member's details have been updated." });
             setIsEditOpen(false);
         }
@@ -134,12 +135,12 @@ export default function StaffProfilePage() {
                                 <Edit className="mr-2" /> Edit Staff
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="sm:max-w-4xl">
                             <DialogHeader>
                                 <DialogTitle>Edit Staff</DialogTitle>
                                 <DialogDescription>Update details for {staff.first_name} {staff.last_name}</DialogDescription>
                             </DialogHeader>
-                            <EditStaffForm defaultValues={staff} onSubmit={handleUpdate} />
+                            <AddStaffForm isEditMode defaultValues={staff} onSubmit={handleUpdate} />
                         </DialogContent>
                     </Dialog>
                 </div>
