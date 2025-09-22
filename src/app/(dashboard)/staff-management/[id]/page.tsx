@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Download, Trash2, File as FileIcon, Upload, Check, GraduationCap } from 'lucide-react';
+import { ArrowLeft, Edit, Download, Trash2, File as FileIcon, Upload, Check, GraduationCap, Input } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -142,12 +142,14 @@ export default function StaffProfilePage() {
                                 <Edit className="mr-2" /> Edit Staff
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-4xl">
+                        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
                             <DialogHeader>
                                 <DialogTitle>Edit Staff</DialogTitle>
                                 <DialogDescription>Update details for {staff.first_name} {staff.last_name}</DialogDescription>
                             </DialogHeader>
-                            <AddStaffForm isEditMode defaultValues={staff} onSubmit={handleUpdate} />
+                            <div className="flex-grow overflow-hidden">
+                                <AddStaffForm isEditMode defaultValues={staff} onSubmit={handleUpdate} />
+                            </div>
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -301,3 +303,5 @@ export default function StaffProfilePage() {
         </div>
     );
 }
+
+    

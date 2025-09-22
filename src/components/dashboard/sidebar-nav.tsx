@@ -198,6 +198,9 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/#', label: 'Open Tickets', icon: Laptop },
     { href: '/#', label: 'Knowledge Base', icon: Book },
   ],
+   Accountant: [
+    { href: '/dashboard/accountant', label: 'Dashboard', icon: LayoutDashboard },
+  ]
 };
 
 const getRoleNavItems = (role: Role) => {
@@ -234,7 +237,7 @@ export function SidebarNav() {
             </Link>
         </SidebarHeader>
       <SidebarContent className="p-2">
-        <Accordion type="multiple" className="w-full" defaultValue={['item-0', 'item-1']}>
+        <Accordion type="single" collapsible className="w-full">
           {navItems.map((item, index) =>
             item.items ? (
               <AccordionItem value={`item-${index}`} key={index} className="border-b-0">
@@ -297,3 +300,5 @@ export function SidebarNav() {
     </Sidebar>
   );
 }
+
+    

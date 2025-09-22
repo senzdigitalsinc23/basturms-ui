@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES, Subject, Staff } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffAcademicHistory, getStaffDocuments } from '@/lib/store';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffDocuments } from '@/lib/store';
 import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
@@ -346,361 +346,362 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
 
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-0">
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(processSubmit)}>
-            <Tabs value={String(currentStep)} className="w-full">
-              <TabsList className="grid w-full grid-cols-6 mb-6">
-                {tabs.map(tab => (
-                    <TabsTrigger key={tab.id} value={String(tab.id)} disabled={currentStep < tab.id} onClick={() => setCurrentStep(tab.id)}>
-                        {tab.name}
-                    </TabsTrigger>
-                ))}
-              </TabsList>
+          <form onSubmit={handleSubmit(processSubmit)} className="flex flex-col h-full">
+             <div className="flex-grow overflow-y-auto p-6">
+                <Tabs value={String(currentStep)} className="w-full">
+                <TabsList className="grid w-full grid-cols-6 mb-6">
+                    {tabs.map(tab => (
+                        <TabsTrigger key={tab.id} value={String(tab.id)} disabled={currentStep < tab.id} onClick={() => setCurrentStep(tab.id)}>
+                            {tab.name}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
 
-              <TabsContent value="1">
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <FormField name="first_name" render={({ field }) => (
-                            <FormItem><FormLabel>First Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="last_name" render={({ field }) => (
-                            <FormItem><FormLabel>Last Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="other_name" render={({ field }) => (
-                            <FormItem><FormLabel>Other Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
+                <TabsContent value="1">
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField name="first_name" render={({ field }) => (
+                                <FormItem><FormLabel>First Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField name="last_name" render={({ field }) => (
+                                <FormItem><FormLabel>Last Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField name="other_name" render={({ field }) => (
+                                <FormItem><FormLabel>Other Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField name="email" render={({ field }) => (
+                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} placeholder="staff@example.com" /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            <FormField name="phone" render={({ field }) => (
+                                <FormItem><FormLabel>Phone *</FormLabel><FormControl><Input {...field} placeholder="233-555-1234" /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField name="id_type" render={({ field }) => (
+                                <FormItem><FormLabel>ID Type *</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select an ID type" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Ghana Card">Ghana Card</SelectItem>
+                                        <SelectItem value="Passport">Passport</SelectItem>
+                                        <SelectItem value="Voter ID">Voter ID</SelectItem>
+                                        <SelectItem value="Drivers License">Drivers License</SelectItem>
+                                    </SelectContent>
+                                </Select><FormMessage /></FormItem>
+                            )}/>
+                            <FormField name="id_no" render={({ field }) => (
+                                <FormItem><FormLabel>ID Number</FormLabel><FormControl><Input {...field} placeholder="GHA-XXXXXXXXX-X"/></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField name="snnit_no" render={({ field }) => (
+                                <FormItem><FormLabel>SSNIT Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField name="email" render={({ field }) => (
-                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} placeholder="staff@example.com" /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <FormField name="phone" render={({ field }) => (
-                            <FormItem><FormLabel>Phone *</FormLabel><FormControl><Input {...field} placeholder="233-555-1234" /></FormControl><FormMessage /></FormItem>
-                        )}/>
+                </TabsContent>
+                
+                <TabsContent value="2">
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField name="address.country" render={({ field }) => (
+                                <FormItem><FormLabel>Country *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField name="address.city" render={({ field }) => (
+                                <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField name="address.hometown" render={({ field }) => (
+                                <FormItem><FormLabel>Hometown *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField name="address.residence" render={({ field }) => (
+                                <FormItem><FormLabel>Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField name="address.house_no" render={({ field }) => (
+                                <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField name="address.gps_no" render={({ field }) => (
+                                <FormItem><FormLabel>GPS No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormField name="id_type" render={({ field }) => (
-                            <FormItem><FormLabel>ID Type *</FormLabel>
+                </TabsContent>
+
+                <TabsContent value="3">
+                    <AcademicHistoryFields />
+                </TabsContent>
+                
+                <TabsContent value="4">
+                    <DocumentsFields />
+                </TabsContent>
+                
+                <TabsContent value="5">
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField name="appointment_date" render={({ field }) => (
+                                    <FormItem className="flex flex-col"><FormLabel>Appointment Date *</FormLabel>
+                                    <Popover><PopoverTrigger asChild>
+                                        <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button></FormControl>
+                                    </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 50} toYear={new Date().getFullYear()} initialFocus />
+                                    </PopoverContent></Popover><FormMessage /></FormItem>
+                                )}/>
+                            <FormItem>
+                                <FormLabel>Staff ID</FormLabel>
+                                <FormControl><Input value={generatedStaffId} readOnly disabled /></FormControl>
+                            </FormItem>
+                            <FormField
+                                control={methods.control}
+                                name="roles"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Role(s) *</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
+                                            >
+                                            <div className="flex gap-1 flex-wrap">
+                                                {field.value?.map(role => <Badge variant="secondary" key={role}>{role}</Badge>)}
+                                                {field.value?.length === 0 && "Select roles"}
+                                            </div>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search roles..." />
+                                            <CommandList>
+                                                <CommandEmpty>No role found.</CommandEmpty>
+                                                <CommandGroup>
+                                                {ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent').map(role => (
+                                                    <CommandItem
+                                                    value={role}
+                                                    key={role}
+                                                    onSelect={() => {
+                                                        const selected = field.value || [];
+                                                        const isSelected = selected.includes(role);
+                                                        const newValue = isSelected
+                                                        ? selected.filter(id => id !== role)
+                                                        : [...selected, role];
+                                                        field.onChange(newValue);
+                                                    }}
+                                                    >
+                                                    <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(role) ? "opacity-100" : "opacity-0")} />
+                                                    {role}
+                                                    </CommandItem>
+                                                ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        {isTeacher && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={methods.control}
+                                name="class_assigned"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Assign Classes</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
+                                            >
+                                            <div className="flex gap-1 flex-wrap">
+                                                {field.value?.map(classId => {
+                                                    const cls = classes.find(c => c.id === classId);
+                                                    return <Badge variant="secondary" key={classId}>{cls?.name}</Badge>
+                                                })}
+                                                {field.value?.length === 0 && "Select classes"}
+                                            </div>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search classes..." />
+                                            <CommandEmpty>No class found.</CommandEmpty>
+                                            <CommandGroup>
+                                            {classes.map(c => (
+                                                <CommandItem
+                                                value={c.id}
+                                                key={c.id}
+                                                onSelect={() => {
+                                                    const selected = field.value || [];
+                                                    const isSelected = selected.includes(c.id);
+                                                    const newValue = isSelected
+                                                    ? selected.filter(id => id !== c.id)
+                                                    : [...selected, c.id];
+                                                    field.onChange(newValue);
+                                                }}
+                                                >
+                                                <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(c.id) ? "opacity-100" : "opacity-0")} />
+                                                {c.name}
+                                                </CommandItem>
+                                            ))}
+                                            </CommandGroup>
+                                        </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={methods.control}
+                                name="subjects_assigned"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Assign Subjects</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
+                                            >
+                                            <div className="flex gap-1 flex-wrap">
+                                                {field.value?.map(subjectId => {
+                                                    const sub = subjects.find(s => s.id === subjectId);
+                                                    return <Badge variant="secondary" key={subjectId}>{sub?.name}</Badge>
+                                                })}
+                                                {field.value?.length === 0 && "Select subjects"}
+                                            </div>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search subjects..." />
+                                            <CommandList>
+                                                <CommandEmpty>No subject found.</CommandEmpty>
+                                                <CommandGroup>
+                                                {subjects.map(s => (
+                                                    <CommandItem
+                                                    value={s.name}
+                                                    key={s.id}
+                                                    onSelect={() => {
+                                                        const selected = field.value || [];
+                                                        const isSelected = selected.includes(s.id);
+                                                        const newValue = isSelected
+                                                        ? selected.filter(id => id !== s.id)
+                                                        : [...selected, s.id];
+                                                        field.onChange(newValue);
+                                                    }}
+                                                    >
+                                                    <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(s.id) ? "opacity-100" : "opacity-0")} />
+                                                    {s.name}
+                                                    </CommandItem>
+                                                ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>}
+                        <FormField name="appointment_status" render={({ field }) => (
+                            <FormItem><FormLabel>Appointment Status *</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select an ID type" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="Ghana Card">Ghana Card</SelectItem>
-                                    <SelectItem value="Passport">Passport</SelectItem>
-                                    <SelectItem value="Voter ID">Voter ID</SelectItem>
-                                    <SelectItem value="Drivers License">Drivers License</SelectItem>
+                                    {ALL_APPOINTMENT_STATUSES.map(status => (
+                                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select><FormMessage /></FormItem>
                         )}/>
-                         <FormField name="id_no" render={({ field }) => (
-                            <FormItem><FormLabel>ID Number</FormLabel><FormControl><Input {...field} placeholder="GHA-XXXXXXXXX-X"/></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="snnit_no" render={({ field }) => (
-                            <FormItem><FormLabel>SSNIT Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
                     </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="2">
-                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <FormField name="address.country" render={({ field }) => (
-                            <FormItem><FormLabel>Country *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="address.city" render={({ field }) => (
-                            <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="address.hometown" render={({ field }) => (
-                            <FormItem><FormLabel>Hometown *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <FormField name="address.residence" render={({ field }) => (
-                            <FormItem><FormLabel>Residence *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="address.house_no" render={({ field }) => (
-                            <FormItem><FormLabel>House No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                         <FormField name="address.gps_no" render={({ field }) => (
-                            <FormItem><FormLabel>GPS No *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
-                    </div>
-                 </div>
-              </TabsContent>
+                </TabsContent>
+                <TabsContent value="6">
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
+                        <h3 className="text-lg font-semibold">Review Details</h3>
+                        <p className="text-sm text-muted-foreground">Please review all the information carefully before submitting.</p>
+                        
+                        <h4 className="text-md font-semibold text-primary pt-4">Personal & Contact</h4>
+                        <Separator />
+                        <div className="grid md:grid-cols-3 gap-4">
+                        <PreviewItem label="First Name" value={watch('first_name')} />
+                        <PreviewItem label="Last Name" value={watch('last_name')} />
+                        <PreviewItem label="Other Name" value={watch('other_name')} />
+                        <PreviewItem label="Email" value={watch('email')} />
+                        <PreviewItem label="Phone" value={watch('phone')} />
+                        <PreviewItem label="ID Type" value={watch('id_type')} />
+                        <PreviewItem label="ID Number" value={watch('id_no')} />
+                        <PreviewItem label="SSNIT Number" value={watch('snnit_no')} />
+                        </div>
+                        <h4 className="text-md font-semibold text-primary pt-4">Address</h4>
+                        <Separator />
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <PreviewItem label="Country" value={watch('address.country')} />
+                            <PreviewItem label="City" value={watch('address.city')} />
+                            <PreviewItem label="Hometown" value={watch('address.hometown')} />
+                            <PreviewItem label="Residence" value={watch('address.residence')} />
+                            <PreviewItem label="House No" value={watch('address.house_no')} />
+                            <PreviewItem label="GPS No" value={watch('address.gps_no')} />
+                        </div>
 
-              <TabsContent value="3">
-                <AcademicHistoryFields />
-              </TabsContent>
-              
-               <TabsContent value="4">
-                 <DocumentsFields />
-              </TabsContent>
-              
-               <TabsContent value="5">
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormField name="appointment_date" render={({ field }) => (
-                                <FormItem className="flex flex-col"><FormLabel>Appointment Date *</FormLabel>
-                                <Popover><PopoverTrigger asChild>
-                                    <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button></FormControl>
-                                </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 50} toYear={new Date().getFullYear()} initialFocus />
-                                </PopoverContent></Popover><FormMessage /></FormItem>
-                            )}/>
-                        <FormItem>
-                            <FormLabel>Staff ID</FormLabel>
-                            <FormControl><Input value={generatedStaffId} readOnly disabled /></FormControl>
-                        </FormItem>
-                        <FormField
-                            control={methods.control}
-                            name="roles"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Role(s) *</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
-                                        >
-                                        <div className="flex gap-1 flex-wrap">
-                                            {field.value?.map(role => <Badge variant="secondary" key={role}>{role}</Badge>)}
-                                            {field.value?.length === 0 && "Select roles"}
-                                        </div>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Search roles..." />
-                                        <CommandList>
-                                            <CommandEmpty>No role found.</CommandEmpty>
-                                            <CommandGroup>
-                                            {ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent').map(role => (
-                                                <CommandItem
-                                                value={role}
-                                                key={role}
-                                                onSelect={() => {
-                                                    const selected = field.value || [];
-                                                    const isSelected = selected.includes(role);
-                                                    const newValue = isSelected
-                                                    ? selected.filter(id => id !== role)
-                                                    : [...selected, role];
-                                                    field.onChange(newValue);
-                                                }}
-                                                >
-                                                <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(role) ? "opacity-100" : "opacity-0")} />
-                                                {role}
-                                                </CommandItem>
-                                            ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     {isTeacher && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={methods.control}
-                            name="class_assigned"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Assign Classes</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
-                                        >
-                                        <div className="flex gap-1 flex-wrap">
-                                            {field.value?.map(classId => {
-                                                const cls = classes.find(c => c.id === classId);
-                                                return <Badge variant="secondary" key={classId}>{cls?.name}</Badge>
-                                            })}
-                                            {field.value?.length === 0 && "Select classes"}
-                                        </div>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Search classes..." />
-                                        <CommandEmpty>No class found.</CommandEmpty>
-                                        <CommandGroup>
-                                        {classes.map(c => (
-                                            <CommandItem
-                                            value={c.id}
-                                            key={c.id}
-                                            onSelect={() => {
-                                                const selected = field.value || [];
-                                                const isSelected = selected.includes(c.id);
-                                                const newValue = isSelected
-                                                ? selected.filter(id => id !== c.id)
-                                                : [...selected, c.id];
-                                                field.onChange(newValue);
-                                            }}
-                                            >
-                                            <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(c.id) ? "opacity-100" : "opacity-0")} />
-                                            {c.name}
-                                            </CommandItem>
-                                        ))}
-                                        </CommandGroup>
-                                    </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={methods.control}
-                            name="subjects_assigned"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Assign Subjects</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className={cn("w-full justify-between h-auto", !field.value?.length && "text-muted-foreground")}
-                                        >
-                                        <div className="flex gap-1 flex-wrap">
-                                            {field.value?.map(subjectId => {
-                                                const sub = subjects.find(s => s.id === subjectId);
-                                                return <Badge variant="secondary" key={subjectId}>{sub?.name}</Badge>
-                                            })}
-                                            {field.value?.length === 0 && "Select subjects"}
-                                        </div>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Search subjects..." />
-                                        <CommandList>
-                                            <CommandEmpty>No subject found.</CommandEmpty>
-                                            <CommandGroup>
-                                            {subjects.map(s => (
-                                                <CommandItem
-                                                value={s.name}
-                                                key={s.id}
-                                                onSelect={() => {
-                                                    const selected = field.value || [];
-                                                    const isSelected = selected.includes(s.id);
-                                                    const newValue = isSelected
-                                                    ? selected.filter(id => id !== s.id)
-                                                    : [...selected, s.id];
-                                                    field.onChange(newValue);
-                                                }}
-                                                >
-                                                <Check className={cn("mr-2 h-4 w-4", (field.value || []).includes(s.id) ? "opacity-100" : "opacity-0")} />
-                                                {s.name}
-                                                </CommandItem>
-                                            ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                     </div>}
-                      <FormField name="appointment_status" render={({ field }) => (
-                        <FormItem><FormLabel>Appointment Status *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {ALL_APPOINTMENT_STATUSES.map(status => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select><FormMessage /></FormItem>
-                    )}/>
-                </div>
-              </TabsContent>
-               <TabsContent value="6">
-                 <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
-                    <h3 className="text-lg font-semibold">Review Details</h3>
-                    <p className="text-sm text-muted-foreground">Please review all the information carefully before submitting.</p>
-                    
-                    <h4 className="text-md font-semibold text-primary pt-4">Personal & Contact</h4>
-                    <Separator />
-                    <div className="grid md:grid-cols-3 gap-4">
-                       <PreviewItem label="First Name" value={watch('first_name')} />
-                       <PreviewItem label="Last Name" value={watch('last_name')} />
-                       <PreviewItem label="Other Name" value={watch('other_name')} />
-                       <PreviewItem label="Email" value={watch('email')} />
-                       <PreviewItem label="Phone" value={watch('phone')} />
-                       <PreviewItem label="ID Type" value={watch('id_type')} />
-                       <PreviewItem label="ID Number" value={watch('id_no')} />
-                       <PreviewItem label="SSNIT Number" value={watch('snnit_no')} />
-                    </div>
-                     <h4 className="text-md font-semibold text-primary pt-4">Address</h4>
-                    <Separator />
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <PreviewItem label="Country" value={watch('address.country')} />
-                        <PreviewItem label="City" value={watch('address.city')} />
-                        <PreviewItem label="Hometown" value={watch('address.hometown')} />
-                        <PreviewItem label="Residence" value={watch('address.residence')} />
-                        <PreviewItem label="House No" value={watch('address.house_no')} />
-                        <PreviewItem label="GPS No" value={watch('address.gps_no')} />
-                    </div>
-
-                     <h4 className="text-md font-semibold text-primary pt-4">Appointment Details</h4>
-                    <Separator />
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <PreviewItem label="Staff ID" value={generatedStaffId} />
-                        <PreviewItem label="Appointment Date" value={watch('appointment_date') ? format(watch('appointment_date'), 'PPP') : ''} />
-                        <PreviewItem label="Roles" value={<div className="flex flex-wrap gap-1">{watch('roles')?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div>} />
-                        <PreviewItem label="Appointment Status" value={watch('appointment_status')} />
-                        {isTeacher && <>
-                            <PreviewItem label="Classes Assigned" value={<div className="flex flex-wrap gap-1">{watch('class_assigned')?.map(cId => <Badge key={cId} variant="outline">{classes.find(c => c.id === cId)?.name}</Badge>)}</div>} />
-                            <PreviewItem label="Subjects Assigned" value={<div className="flex flex-wrap gap-1">{watch('subjects_assigned')?.map(sId => <Badge key={sId} variant="outline">{subjects.find(s => s.id === sId)?.name}</Badge>)}</div>} />
+                        <h4 className="text-md font-semibold text-primary pt-4">Appointment Details</h4>
+                        <Separator />
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <PreviewItem label="Staff ID" value={generatedStaffId} />
+                            <PreviewItem label="Appointment Date" value={watch('appointment_date') ? format(watch('appointment_date'), 'PPP') : ''} />
+                            <PreviewItem label="Roles" value={<div className="flex flex-wrap gap-1">{watch('roles')?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div>} />
+                            <PreviewItem label="Appointment Status" value={watch('appointment_status')} />
+                            {isTeacher && <>
+                                <PreviewItem label="Classes Assigned" value={<div className="flex flex-wrap gap-1">{watch('class_assigned')?.map(cId => <Badge key={cId} variant="outline">{classes.find(c => c.id === cId)?.name}</Badge>)}</div>} />
+                                <PreviewItem label="Subjects Assigned" value={<div className="flex flex-wrap gap-1">{watch('subjects_assigned')?.map(sId => <Badge key={sId} variant="outline">{subjects.find(s => s.id === sId)?.name}</Badge>)}</div>} />
+                            </>}
+                        </div>
+                        {watch('academic_history') && watch('academic_history')!.length > 0 && <>
+                            <h4 className="text-md font-semibold text-primary pt-4">Academic History</h4>
+                            <Separator />
+                            <ul className="space-y-2">
+                            {watch('academic_history')?.map((hist, i) => (
+                                <li key={i} className="text-sm border p-2 rounded-md">
+                                    <span className="font-bold">{hist.qualification}</span> from <span className="font-bold">{hist.school}</span> ({hist.year_completed}) - {hist.program_offered}
+                                </li>
+                            ))}
+                            </ul>
+                        </>}
+                        {watch('documents') && watch('documents')!.length > 0 && <>
+                            <h4 className="text-md font-semibold text-primary pt-4">Documents to be Uploaded</h4>
+                            <Separator />
+                            <ul className="list-disc pl-5 space-y-1">
+                            {watch('documents')?.map((doc, i) => <li key={i} className="text-sm">{doc.name} ({(doc.file as File)?.name || 'Existing file'})</li>)}
+                            </ul>
                         </>}
                     </div>
-                    {watch('academic_history') && watch('academic_history')!.length > 0 && <>
-                        <h4 className="text-md font-semibold text-primary pt-4">Academic History</h4>
-                        <Separator />
-                        <ul className="space-y-2">
-                        {watch('academic_history')?.map((hist, i) => (
-                            <li key={i} className="text-sm border p-2 rounded-md">
-                                <span className="font-bold">{hist.qualification}</span> from <span className="font-bold">{hist.school}</span> ({hist.year_completed}) - {hist.program_offered}
-                            </li>
-                        ))}
-                        </ul>
-                    </>}
-                    {watch('documents') && watch('documents')!.length > 0 && <>
-                        <h4 className="text-md font-semibold text-primary pt-4">Documents to be Uploaded</h4>
-                        <Separator />
-                        <ul className="list-disc pl-5 space-y-1">
-                        {watch('documents')?.map((doc, i) => <li key={i} className="text-sm">{doc.name} ({(doc.file as File)?.name || 'Existing file'})</li>)}
-                        </ul>
-                    </>}
-                 </div>
-              </TabsContent>
+                </TabsContent>
 
-            </Tabs>
-
-            <div className="flex justify-between mt-8">
+                </Tabs>
+            </div>
+            <div className="flex justify-between mt-auto p-6 border-t bg-background sticky bottom-0">
               {currentStep > 1 && (
                 <Button type="button" variant="outline" onClick={handlePrevious} size="sm">
                   Previous
@@ -725,3 +726,5 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     </Card>
   );
 }
+
+    
