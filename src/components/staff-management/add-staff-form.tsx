@@ -23,10 +23,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument } from '@/lib/store';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument } from '@/lib/store';
 import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
+import { addStaffAppointmentHistory } from '@/lib/store';
 
 const MAX_STEPS = 6;
 
@@ -232,6 +233,8 @@ export function AddStaffForm() {
 
   const { handleSubmit, trigger, watch } = methods;
   const appointmentDate = watch('appointment_date');
+  const roles = watch('roles');
+  const isTeacher = roles.includes('Teacher');
 
   useEffect(() => {
     setClasses(getClasses());
@@ -498,7 +501,7 @@ export function AddStaffForm() {
                             )}
                         />
                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     {isTeacher && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={methods.control}
                             name="class_assigned"
@@ -558,7 +561,7 @@ export function AddStaffForm() {
                             <FormLabel>Assign Subjects</FormLabel>
                             <p className="text-sm text-muted-foreground p-2 border rounded-md min-h-10">Multi-select for subjects will be implemented here.</p>
                          </FormItem>
-                     </div>
+                     </div>}
                       <FormField name="appointment_status" render={({ field }) => (
                         <FormItem><FormLabel>Appointment Status *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
