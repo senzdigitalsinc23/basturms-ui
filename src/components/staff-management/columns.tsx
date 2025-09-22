@@ -98,15 +98,15 @@ export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<StaffDisp
     {
         accessorKey: 'roles',
         header: 'Roles',
-        accessorFn: row => row.roles.join(', '),
+        accessorFn: row => (row.roles || []).join(', '),
         cell: ({ row }) => {
             const roles = row.original.roles;
             return <div className="flex flex-wrap gap-1">
-                {roles.map(role => <Badge key={role} variant="outline">{role}</Badge>)}
+                {(roles || []).map(role => <Badge key={role} variant="outline">{role}</Badge>)}
             </div>;
         },
         filterFn: (row, id, value) => {
-            const roles = row.original.roles;
+            const roles = row.original.roles || [];
             return (value as string[]).some(val => roles.includes(val as Role));
         },
     },
