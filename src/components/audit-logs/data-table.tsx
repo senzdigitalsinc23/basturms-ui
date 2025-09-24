@@ -123,7 +123,7 @@ export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
         </div>
         <div className="flex items-center space-x-4">
             <span className="text-sm font-medium">
-                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </span>
             <div className="flex items-center space-x-2">
                 <Button

@@ -415,6 +415,16 @@ export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp' | 'clientInfo
   saveToStorage(LOGS_KEY, [newLog, ...logs]);
 };
 
+export const deleteAuditLog = (logId: string): boolean => {
+    const logs = getAuditLogs();
+    const newLogs = logs.filter(l => l.id !== logId);
+    if (newLogs.length < logs.length) {
+        saveToStorage(LOGS_KEY, newLogs);
+        return true;
+    }
+    return false;
+}
+
 // Auth Log Functions
 export const getAuthLogs = (): AuthLog[] => getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
 export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
@@ -427,6 +437,16 @@ export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>
         clientInfo: typeof window !== 'undefined' ? navigator.userAgent : 'N/A',
     };
     saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
+}
+
+export const deleteAuthLog = (logId: string): boolean => {
+    const logs = getAuthLogs();
+    const newLogs = logs.filter(l => l.id !== logId);
+    if (newLogs.length < logs.length) {
+        saveToStorage(AUTH_LOGS_KEY, newLogs);
+        return true;
+    }
+    return false;
 }
 
 // Student Management Functions
@@ -765,7 +785,7 @@ export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staf
     return newStaff;
 };
 
-export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editorId: string): Staff | null => {
+export const updateStaff = (staffId: string, updatedData: Partial<Staff>, academicHistory: StaffAcademicHistory[], appointmentHistory: Omit<StaffAppointmentHistory, 'staff_id'>, editorId: string): Staff | null => {
     const staffList = getStaff();
     const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
 
@@ -774,6 +794,16 @@ export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editor
         const newStaffData = { ...existingStaff, ...updatedData };
         staffList[staffIndex] = newStaffData;
         saveToStorage(STAFF_KEY, staffList);
+
+        // Update academic history
+        const existingAcademicHistory = storeGetStaffAcademicHistory().filter(h => h.staff_id !== staffId);
+        const newAcademicHistory = [...existingAcademicHistory, ...academicHistory.map(h => ({...h, staff_id: staffId}))];
+        saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, newAcademicHistory);
+
+        // Update appointment history (replace with latest)
+        const existingAppointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staffId);
+        const newAppointment = { ...appointmentHistory, staff_id: staffId };
+        saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, [...existingAppointments, newAppointment]);
 
         addAuditLog({
             user: getUserById(editorId)?.email || 'Unknown',
