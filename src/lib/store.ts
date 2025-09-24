@@ -385,6 +385,16 @@ export const deleteAuditLog = (logId: string): boolean => {
     return false;
 }
 
+export const bulkDeleteAuditLogs = (logIds: string[]): number => {
+    const logs = getAuditLogs();
+    const newLogs = logs.filter(l => !logIds.includes(l.id));
+    const deletedCount = logs.length - newLogs.length;
+    if (deletedCount > 0) {
+        saveToStorage(LOGS_KEY, newLogs);
+    }
+    return deletedCount;
+}
+
 // Auth Log Functions
 export const getAuthLogs = (): AuthLog[] => getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
 export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
@@ -407,6 +417,16 @@ export const deleteAuthLog = (logId: string): boolean => {
         return true;
     }
     return false;
+}
+
+export const bulkDeleteAuthLogs = (logIds: string[]): number => {
+    const logs = getAuthLogs();
+    const newLogs = logs.filter(l => !logIds.includes(l.id));
+    const deletedCount = logs.length - newLogs.length;
+    if (deletedCount > 0) {
+        saveToStorage(AUTH_LOGS_KEY, newLogs);
+    }
+    return deletedCount;
 }
 
 // Student Management Functions
@@ -868,3 +888,4 @@ export const getStaffProfileByUserId = (userId: string): StaffProfile | undefine
     
 
     
+

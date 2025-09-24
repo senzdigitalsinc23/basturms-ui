@@ -5,6 +5,7 @@ import { ArrowUpDown, MoreHorizontal, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuditLog } from '@/lib/types';
 import { format } from 'date-fns';
+import { Checkbox } from '../ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,28 @@ type ColumnsProps = {
 
 export const columns = ({ isSuperAdmin, onDelete }: ColumnsProps): ColumnDef<AuditLog>[] => {
   const columnDefs: ColumnDef<AuditLog>[] = [
+    {
+        id: 'select',
+        header: ({ table }) => (
+            <Checkbox
+                checked={
+                table.getIsAllPageRowsSelected() ||
+                (table.getIsSomePageRowsSelected() && 'indeterminate')
+                }
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label="Select all"
+            />
+        ),
+        cell: ({ row }) => (
+            <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label="Select row"
+            />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+  },
   {
     accessorKey: 'timestamp',
     header: ({ column }) => {

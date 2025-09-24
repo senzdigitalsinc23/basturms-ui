@@ -3,7 +3,7 @@ import { ProtectedRoute } from '@/components/protected-route';
 import { AuthLogDataTable } from '@/components/auth-logs/data-table';
 import { columns } from '@/components/auth-logs/columns';
 import { useEffect, useState } from 'react';
-import { getAuthLogs, deleteAuthLog } from '@/lib/store';
+import { getAuthLogs, deleteAuthLog, bulkDeleteAuthLogs, addAuditLog } from '@/lib/store';
 import { AuthLog } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,23 @@ export default function AuthLogsPage() {
     }
   };
 
+  const handleBulkDelete = (logIds: string[]) => {
+    if (!user) return;
+    const deletedCount = bulkDeleteAuthLogs(logIds);
+    if(deletedCount > 0) {
+        toast({ title: 'Bulk Delete Successful', description: `${deletedCount} log(s) have been removed.` });
+         addAuditLog({
+            user: user.email,
+            name: user.name,
+            action: 'Bulk Delete Auth Logs',
+            details: `Deleted ${deletedCount} authentication log entries.`
+        });
+        fetchLogs();
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete selected logs.' });
+    }
+  }
+
   return (
     <ProtectedRoute allowedRoles={['Admin']}>
       <div className="space-y-6">
@@ -42,6 +59,8 @@ export default function AuthLogsPage() {
         <AuthLogDataTable 
             columns={columns({ isSuperAdmin: user?.is_super_admin || false, onDelete: handleDelete })} 
             data={logs} 
+            isSuperAdmin={user?.is_super_admin || false}
+            onBulkDelete={handleBulkDelete}
         />
       </div>
     </ProtectedRoute>

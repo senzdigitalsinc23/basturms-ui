@@ -9,6 +9,7 @@ import {
   ColumnFiltersState,
   getSortedRowModel,
   SortingState,
+  RowSelectionState,
 } from '@tanstack/react-table';
 
 import {
@@ -23,20 +24,25 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useState } from 'react';
 import { AuditLog } from '@/lib/types';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, ChevronsUpDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+
 
 interface AuditLogDataTableProps {
   columns: ColumnDef<AuditLog>[];
   data: AuditLog[];
+  isSuperAdmin: boolean;
+  onBulkDelete: (logIds: string[]) => void;
 }
 
-export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
+export function AuditLogDataTable({ columns, data, isSuperAdmin, onBulkDelete }: AuditLogDataTableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'timestamp', desc: true },
   ]);
   const [globalFilter, setGlobalFilter] = useState('');
-
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const table = useReactTable({
     data,
@@ -48,12 +54,23 @@ export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
       globalFilter,
+      rowSelection,
     },
   });
+
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedLogIds = selectedRows.map(row => row.original.id);
+  
+  const handleConfirmBulkDelete = () => {
+    onBulkDelete(selectedLogIds);
+    table.resetRowSelection();
+  };
+
 
   return (
     <div className="space-y-4">
@@ -66,6 +83,37 @@ export function AuditLogDataTable({ columns, data }: AuditLogDataTableProps) {
           }
           className="max-w-sm"
         />
+        {isSuperAdmin && selectedRows.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{selectedRows.length} selected</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the selected log entries. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmBulkDelete}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
       <div className="rounded-md border">
         <Table>
