@@ -93,6 +93,12 @@ export function StaffManagement() {
     const success = storeDeleteStaff(staffId, currentUser.id);
     if(success) {
       toast({ title: 'Staff Deleted', description: "The staff member has been removed." });
+      addAuditLog({
+        user: currentUser.email,
+        name: currentUser.name,
+        action: 'Delete Staff',
+        details: `Deleted staff with ID ${staffId}.`
+      });
       refreshStaff();
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete staff member.' });
