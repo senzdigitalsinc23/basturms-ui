@@ -33,8 +33,6 @@ import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { ALL_ROLES, User, ALL_EMPLOYMENT_STATUSES, Staff, Role } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { AddStaffForm } from './add-staff-form';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
@@ -42,8 +40,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface StaffDataTableProps {
   columns: ColumnDef<StaffDisplay>[];
   data: StaffDisplay[];
-  onAdd: (data: any) => void;
-  onUpdate: (data: any) => void;
   onBulkDelete: (staffIds: string[]) => void;
 }
 
@@ -58,13 +54,10 @@ const statusOptions = ALL_EMPLOYMENT_STATUSES.map(status => ({
 }));
 
 
-export function StaffDataTable({ columns, data, onAdd, onUpdate, onBulkDelete }: StaffDataTableProps) {
+export function StaffDataTable({ columns, data, onBulkDelete }: StaffDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffDisplay | null>(null);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const table = useReactTable({
@@ -95,22 +88,6 @@ export function StaffDataTable({ columns, data, onAdd, onUpdate, onBulkDelete }:
 
   const isFiltered = table.getState().columnFilters.length > 0 || !!globalFilter;
   
-  const handleAddSubmit = (values: any) => {
-    onAdd(values);
-    setIsAddFormOpen(false);
-  }
-
-  const handleEdit = (staff: StaffDisplay) => {
-    setEditingStaff(staff);
-    setIsEditFormOpen(true);
-  };
-  
-  const handleUpdateSubmit = (values: any) => {
-    onUpdate(values);
-    setIsEditFormOpen(false);
-    setEditingStaff(null);
-  };
-
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedStaffIds = selectedRows.map(row => row.original.staff_id);
 
@@ -303,15 +280,6 @@ export function StaffDataTable({ columns, data, onAdd, onUpdate, onBulkDelete }:
                 </div>
             </div>
         </div>
-         <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-            <DialogContent className="sm:max-w-4xl">
-                <DialogHeader>
-                    <DialogTitle>Edit Staff Member</DialogTitle>
-                    <DialogDescription>Update details for {editingStaff?.user.name}</DialogDescription>
-                </DialogHeader>
-                {editingStaff && <AddStaffForm isEditMode defaultValues={editingStaff.staff} onSubmit={handleUpdateSubmit} />}
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }

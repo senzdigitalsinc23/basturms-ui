@@ -8,6 +8,8 @@ import { StaffDataTable } from './data-table';
 import { columns } from './columns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { AddStaffForm } from './add-staff-form';
 
 export type StaffDisplay = {
   user: User;
@@ -22,6 +24,8 @@ export function StaffManagement() {
   const [staff, setStaff] = useState<StaffDisplay[]>([]);
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffDisplay | null>(null);
 
   const refreshStaff = () => {
     const allUsers = getUsers();
@@ -76,10 +80,12 @@ export function StaffManagement() {
     refreshStaff();
   }
   
-  const handleUpdateStaff = (data: Staff) => {
+  const handleUpdateStaff = (data: {staffData: Staff, academic_history: any[], appointment_history: any}) => {
     if (!currentUser) return;
-    storeUpdateStaff(data.staff_id, data, currentUser.id); 
+    storeUpdateStaff(data.staffData.staff_id, data.staffData, data.academic_history, data.appointment_history, currentUser.id);
     refreshStaff();
+    setIsEditFormOpen(false);
+    setEditingStaff(null);
   }
 
   const handleDelete = (staffId: string) => {
@@ -104,14 +110,28 @@ export function StaffManagement() {
     }
   }
 
+  const handleEdit = (staff: StaffDisplay) => {
+    setEditingStaff(staff);
+    setIsEditFormOpen(true);
+  };
+
 
   return (
+    <>
     <StaffDataTable
-      columns={columns({ onEdit: (staff) => {}, onDelete: handleDelete })}
+      columns={columns({ onEdit: handleEdit, onDelete: handleDelete })}
       data={staff}
-      onAdd={handleAddStaff}
-      onUpdate={handleUpdateStaff}
       onBulkDelete={handleBulkDelete}
     />
+     <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-screen flex flex-col">
+            <DialogHeader>
+                <DialogTitle>Edit Staff Member</DialogTitle>
+                <DialogDescription>Update details for {editingStaff?.user.name}</DialogDescription>
+            </DialogHeader>
+            {editingStaff && <AddStaffForm isEditMode defaultValues={editingStaff.staff} onSubmit={handleUpdateStaff} />}
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
