@@ -361,6 +361,26 @@ export const resetPassword = (userId: string, newPassword: string): boolean => {
     return false;
 }
 
+export const deleteUser = (userId: string): boolean => {
+    const users = getUsersInternal();
+    const newUsers = users.filter(u => u.id !== userId);
+    if (newUsers.length < users.length) {
+        saveToStorage(USERS_KEY, newUsers);
+        return true;
+    }
+    return false;
+};
+
+export const bulkDeleteUsers = (userIds: string[]): number => {
+    const users = getUsersInternal();
+    const newUsers = users.filter(u => !userIds.includes(u.id));
+    const deletedCount = users.length - newUsers.length;
+    if (deletedCount > 0) {
+        saveToStorage(USERS_KEY, newUsers);
+    }
+    return deletedCount;
+};
+
 // Audit Log Functions
 export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KEY, []);
 export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
@@ -884,8 +904,3 @@ export const getStaffProfileByUserId = (userId: string): StaffProfile | undefine
     const profiles = getStaffProfiles();
     return profiles.find(p => p.user_id === userId);
 }
-
-    
-
-    
-

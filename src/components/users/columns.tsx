@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, UserX, UserCheck, KeyRound, Pencil } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, UserX, UserCheck, KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -35,19 +35,45 @@ import {
 } from '../ui/alert-dialog';
 import { ResetPasswordForm } from './reset-password-form';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { Checkbox } from '../ui/checkbox';
 
 
 type ColumnsProps = {
   onUpdate: (user: User) => void;
   onToggleStatus: (userId: string) => void;
   onResetPassword: (userId: string, newPassword: string) => boolean;
+  onDelete: (userId: string) => void;
 };
 
 export const columns = ({
   onUpdate,
   onToggleStatus,
   onResetPassword,
+  onDelete,
 }: ColumnsProps): ColumnDef<User>[] => [
+   {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && 'indeterminate')
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
   {
     accessorKey: 'name',
     header: ({ column }) => {
@@ -125,9 +151,11 @@ export const columns = ({
     cell: function Cell({ row }) {
       const user = row.original;
       const { toast } = useToast();
+      const { user: currentUser } = useAuth();
       const [isEditFormOpen, setIsEditFormOpen] = useState(false);
       const [isResetPasswordFormOpen, setIsResetPasswordFormOpen] = useState(false);
       const [isFreezeAlertOpen, setIsFreezeAlertOpen] = useState(false);
+      const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
 
       return (
@@ -161,6 +189,15 @@ export const columns = ({
                     )}
                     <span>{user.status === 'active' ? 'Freeze' : 'Unfreeze'} Account</span>
                   </DropdownMenuItem>
+                   {currentUser?.is_super_admin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setIsDeleteAlertOpen(true)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete User
+                      </DropdownMenuItem>
+                    </>
+                   )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -225,6 +262,22 @@ export const columns = ({
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={() => onToggleStatus(user.id)}>
                       Continue
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this user?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the user account for {user.name}.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDelete(user.id)}>
+                      Delete User
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

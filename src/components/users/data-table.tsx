@@ -12,6 +12,7 @@ import {
   SortingState,
   getFacetedRowModel,
   getFacetedUniqueValues,
+  RowSelectionState,
 } from '@tanstack/react-table';
 
 import {
@@ -35,13 +36,17 @@ import {
 } from '@/components/ui/dialog';
 import { UserForm } from './user-form';
 import { User, ALL_ROLES } from '@/lib/types';
-import { ChevronLeft, ChevronRight, PlusCircle, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PlusCircle, X, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { DataTableFacetedFilter } from './data-table-faceted-filter';
+import { useAuth } from '@/hooks/use-auth';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../ui/alert-dialog';
 
 interface UserDataTableProps {
   columns: ColumnDef<User>[];
   data: User[];
   onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string }) => void;
+  onBulkDelete: (userIds: string[]) => void;
 }
 
 const statusOptions = [
@@ -55,11 +60,13 @@ const roleOptions = ALL_ROLES.map(role => ({
 }));
 
 
-export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
+export function UserDataTable({ columns, data, onAdd, onBulkDelete }: UserDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const { user: currentUser } = useAuth();
 
   const table = useReactTable({
     data,
@@ -73,14 +80,24 @@ export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
-      globalFilter
+      globalFilter,
+      rowSelection,
     },
   });
 
   const isFiltered = table.getState().columnFilters.length > 0;
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedUserIds = selectedRows.map(row => row.original.id);
+  
+  const handleConfirmBulkDelete = () => {
+    onBulkDelete(selectedUserIds);
+    table.resetRowSelection();
+  };
+
 
   return (
     <div className="space-y-4">
@@ -117,28 +134,61 @@ export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
             </Button>
           )}
         </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
-              <DialogDescription>
-                Fill in the details to create a new user account.
-              </DialogDescription>
-            </DialogHeader>
-            <UserForm
-              onSubmit={(values) => {
-                onAdd(values);
-                setIsFormOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+            {currentUser?.is_super_admin && selectedRows.length > 0 && (
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{selectedRows.length} selected</span>
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
+                        </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                            This will permanently delete the selected user accounts. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleConfirmBulkDelete}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+            )}
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create User
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription>
+                    Fill in the details to create a new user account.
+                </DialogDescription>
+                </DialogHeader>
+                <UserForm
+                onSubmit={(values) => {
+                    onAdd(values);
+                    setIsFormOpen(false);
+                }}
+                />
+            </DialogContent>
+            </Dialog>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -196,7 +246,7 @@ export function UserDataTable({ columns, data, onAdd }: UserDataTableProps) {
         </div>
         <div className="flex items-center space-x-4">
             <span className="text-sm font-medium">
-                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </span>
             <div className="flex items-center space-x-2">
                 <Button

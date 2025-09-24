@@ -1,14 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getUsers, addUser, updateUser, addAuditLog, toggleUserStatus, resetPassword as resetUserPassword } from '@/lib/store';
+import { getUsers, addUser, updateUser, addAuditLog, toggleUserStatus, resetPassword as resetUserPassword, deleteUser, bulkDeleteUsers } from '@/lib/store';
 import { User, Role } from '@/lib/types';
 import { UserDataTable } from './data-table';
 import { columns } from './columns';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     setUsers(getUsers());
@@ -68,6 +70,43 @@ export function UserManagement() {
     }
     return success;
   }
+  
+  const handleDeleteUser = (userId: string) => {
+    if (!currentUser?.is_super_admin) {
+        toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only super admins can delete users.' });
+        return;
+    }
+    const success = deleteUser(userId);
+    if (success) {
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        addAuditLog({
+            user: currentUser.email,
+            name: currentUser.name,
+            action: 'Delete User',
+            details: `Deleted user with ID ${userId}`,
+        });
+        toast({ title: 'User Deleted', description: 'The user has been permanently deleted.' });
+    }
+  }
+  
+  const handleBulkDelete = (userIds: string[]) => {
+    if (!currentUser?.is_super_admin) {
+        toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only super admins can delete users.' });
+        return;
+    }
+    const deletedCount = bulkDeleteUsers(userIds);
+    if (deletedCount > 0) {
+        setUsers(prev => prev.filter(u => !userIds.includes(u.id)));
+         addAuditLog({
+            user: currentUser.email,
+            name: currentUser.name,
+            action: 'Bulk Delete Users',
+            details: `Deleted ${deletedCount} user(s).`,
+        });
+        toast({ title: 'Users Deleted', description: `${deletedCount} user(s) have been deleted.` });
+    }
+  }
+
 
   return (
     <UserDataTable
@@ -75,9 +114,11 @@ export function UserManagement() {
         onUpdate: handleUpdateUser,
         onToggleStatus: handleToggleStatus,
         onResetPassword: handleResetPassword,
+        onDelete: handleDeleteUser,
       })}
       data={users}
       onAdd={handleAddUser}
+      onBulkDelete={handleBulkDelete}
     />
   );
 }
