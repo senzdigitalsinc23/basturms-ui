@@ -345,7 +345,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
           <form onSubmit={handleSubmit(processSubmit)} className="flex flex-col h-full">
              <div className="flex-grow overflow-y-auto p-6">
                 <Tabs value={String(currentStep)} className="w-full">
-                <TabsList className="grid w-full grid-cols-6 mb-6">
+                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6">
                     {tabs.map(tab => (
                         <TabsTrigger key={tab.id} value={String(tab.id)} disabled={currentStep < tab.id} onClick={() => setCurrentStep(tab.id)}>
                             {tab.name}
@@ -701,7 +701,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
 
                 </Tabs>
             </div>
-            <div className="flex justify-between mt-auto p-6 border-t bg-background sticky bottom-0">
+            <div className="flex justify-between mt-auto p-6 border-t bg-background sticky bottom-0 z-10">
               {currentStep > 1 && (
                 <Button type="button" variant="outline" onClick={handlePrevious} size="sm">
                   Previous

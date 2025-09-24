@@ -2,11 +2,12 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { addStaff as storeAddStaff, getStaff, getUsers, updateStaff as storeUpdateStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, deleteStaff, bulkDeleteStaff } from '@/lib/store';
+import { addStaff as storeAddStaff, getStaff, getUsers, updateStaff as storeUpdateStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, deleteStaff as storeDeleteStaff, bulkDeleteStaff as storeBulkDeleteStaff } from '@/lib/store';
 import { Staff, User, StaffAcademicHistory, StaffAppointmentHistory, StaffDocument, Role } from '@/lib/types';
 import { StaffDataTable } from './data-table';
 import { columns } from './columns';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 export type StaffDisplay = {
   user: User;
@@ -20,6 +21,7 @@ export type StaffDisplay = {
 export function StaffManagement() {
   const [staff, setStaff] = useState<StaffDisplay[]>([]);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const refreshStaff = () => {
     const allUsers = getUsers();
@@ -50,7 +52,8 @@ export function StaffManagement() {
   }, []);
 
   const handleAddStaff = (data: {staffData: Omit<Staff, 'user_id'>, academic_history: StaffAcademicHistory[], documents: any[], appointment_history: StaffAppointmentHistory}) => {
-    const newStaff = storeAddStaff(data.staffData, '1'); // Assuming admin user '1' is the creator
+    if (!currentUser) return;
+    const newStaff = storeAddStaff(data.staffData, currentUser.id); 
 
     data.academic_history?.forEach(history => {
         addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
@@ -74,12 +77,14 @@ export function StaffManagement() {
   }
   
   const handleUpdateStaff = (data: Staff) => {
-    storeUpdateStaff(data.staff_id, data, '1'); // Assuming admin user '1' is the editor
+    if (!currentUser) return;
+    storeUpdateStaff(data.staff_id, data, currentUser.id); 
     refreshStaff();
   }
 
   const handleDelete = (staffId: string) => {
-    const success = deleteStaff(staffId);
+    if (!currentUser) return;
+    const success = storeDeleteStaff(staffId, currentUser.id);
     if(success) {
       toast({ title: 'Staff Deleted', description: "The staff member has been removed." });
       refreshStaff();
@@ -89,7 +94,8 @@ export function StaffManagement() {
   }
 
   const handleBulkDelete = (staffIds: string[]) => {
-    const deletedCount = bulkDeleteStaff(staffIds);
+    if (!currentUser) return;
+    const deletedCount = storeBulkDeleteStaff(staffIds, currentUser.id);
     if(deletedCount > 0) {
         toast({ title: 'Bulk Delete Successful', description: `${deletedCount} staff member(s) have been removed.` });
         refreshStaff();

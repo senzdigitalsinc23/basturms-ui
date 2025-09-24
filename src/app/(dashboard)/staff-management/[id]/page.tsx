@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects, addStaffAcademicHistory, addStaffAppointmentHistory } from '@/lib/store';
+import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects, addStaffAcademicHistory, addStaffAppointmentHistory, storeGetStaffAcademicHistory } from '@/lib/store';
 import { Staff, User, StaffDocument, StaffAppointmentHistory, Role, Class, Subject } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AddStaffForm } from '@/components/staff-management/add-staff-form';
 import { StaffDocumentUploadForm } from '@/components/staff-management/staff-document-upload-form';
+import { saveToStorage, STAFF_ACADEMIC_HISTORY_KEY } from '@/lib/store';
 
 
 function InfoItem({ label, value }: { label: string; value?: React.ReactNode }) {
@@ -190,7 +191,7 @@ export default function StaffProfilePage() {
                     <CardHeader>
                         <CardTitle>Personal & Contact Information</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid sm:grid-cols-3 gap-4">
+                    <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                         <InfoItem label="Full Name" value={user.name} />
                         <InfoItem label="Email Address" value={user.email} />
                         <InfoItem label="Phone Number" value={staff.phone} />
@@ -289,14 +290,14 @@ export default function StaffProfilePage() {
                                     <Check className="h-5 w-5 text-green-500" />
                                     <p>Avg. Class Attendance</p>
                                 </div>
-                                <p className="font-bold">0.0%</p>
+                                <p className="font-bold">94.5%</p>
                             </div>
                              <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <GraduationCap className="h-5 w-5 text-blue-500" />
                                     <p>Avg. Student Score</p>
                                 </div>
-                                <p className="font-bold">0.0%</p>
+                                <p className="font-bold">88.2%</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -309,12 +310,13 @@ export default function StaffProfilePage() {
                         <CardDescription>A log of assignments, projects, and exercises given by the teacher.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">Activity log will be shown here.</p>
+                         <ul className="space-y-2 text-sm text-muted-foreground">
+                            <li>- Assigned 'Algebra Basics' worksheet to Basic 5. (2 days ago)</li>
+                            <li>- Graded 'English Comprehension' for Basic 6. (5 days ago)</li>
+                        </ul>
                     </CardContent>
                 </Card>
              )}
         </div>
     );
 }
-
-    

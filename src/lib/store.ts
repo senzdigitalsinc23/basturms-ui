@@ -787,7 +787,7 @@ export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editor
     return null;
 }
 
-export const deleteStaff = (staffId: string): boolean => {
+export const deleteStaff = (staffId: string, editorId: string): boolean => {
     const staffList = getStaff();
     const staffToDelete = staffList.find(s => s.staff_id === staffId);
     if (!staffToDelete) return false;
@@ -811,13 +811,20 @@ export const deleteStaff = (staffId: string): boolean => {
     const appointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staffId);
     saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, appointments);
 
+     addAuditLog({
+        user: getUserById(editorId)?.email || 'Unknown',
+        name: getUserById(editorId)?.name || 'Unknown',
+        action: 'Delete Staff',
+        details: `Deleted staff member ${staffToDelete.first_name} ${staffToDelete.last_name} (Staff ID: ${staffId})`
+    });
+
     return true;
 }
 
-export const bulkDeleteStaff = (staffIds: string[]): number => {
+export const bulkDeleteStaff = (staffIds: string[], editorId: string): number => {
     let deletedCount = 0;
     staffIds.forEach(id => {
-        const success = deleteStaff(id);
+        const success = deleteStaff(id, editorId);
         if (success) {
             deletedCount++;
         }
