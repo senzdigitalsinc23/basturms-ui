@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -285,7 +284,7 @@ export const getUserByEmail = (email: string): User | undefined => {
   return user ? mapUser(user) : undefined;
 }
 
-export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'is_super_admin' | 'role_id'>): User => {
+export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'is_super_admin' | 'role_id'> & { entityId?: string }): User => {
   const users = getUsersInternal();
   const roles = getRoles();
   const role = roles.find(r => r.name === user.role);
@@ -293,13 +292,12 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   
   const existingUser = users.find(u => u.email === user.email);
   if (existingUser) {
-    // To prevent duplicates, especially with automated creation.
-    // In a real app, you might throw an error or return the existing user.
     console.warn(`User with email ${user.email} already exists.`);
     return mapUser(existingUser);
   }
 
-  const nextId = users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1).toString() : '1';
+  // Use entityId if provided (for linking staff), otherwise generate new ID.
+  const nextId = user.entityId || (users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1).toString() : '1');
 
   const newUser: UserStorage = {
     ...user,
@@ -314,8 +312,19 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     updated_at: now,
   };
   saveToStorage(USERS_KEY, [...users, newUser]);
+
+  if (user.role !== 'Student' && user.role !== 'Parent' && user.role !== 'Admin') {
+      const staffList = getStaff();
+      const staffIndex = staffList.findIndex(s => s.staff_id === user.entityId);
+      if (staffIndex > -1) {
+          staffList[staffIndex].user_id = newUser.id;
+          saveToStorage(STAFF_KEY, staffList);
+      }
+  }
+
   return mapUser(newUser);
 };
+
 
 export const updateUser = (updatedUser: User): User => {
   const users = getUsersInternal();
@@ -755,31 +764,17 @@ export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFr
 
 export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staff => {
     const staffList = getStaff();
+    const users = getUsersInternal();
+    const nextUserId = users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1).toString() : '1';
 
-    const username = staff.email ? staff.email.split('@')[0] : staff.staff_id.toLowerCase();
-    const email = staff.email ? staff.email : `${username}@teacher.com`;
-    
-    // For multiple roles, we need to decide which one is primary for the user account
-    // For now, let's pick the first one.
-    const primaryRole = staff.roles[0];
-
-    const user = addUser({
-      name: `${staff.first_name} ${staff.last_name}`,
-      email: email,
-      username: username,
-      password: staff.staff_id.toLowerCase(),
-      role: primaryRole, // The User object has a single role
-      status: 'active',
-    });
-
-    const newStaff = { ...staff, user_id: user.id };
+    const newStaff = { ...staff, user_id: nextUserId }; // Temporarily assign a user_id
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
-        action: 'Create Staff',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} with Staff ID ${newStaff.staff_id} and User ID ${newStaff.user_id}`
+        action: 'Create Staff Record',
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} with Staff ID ${newStaff.staff_id}. User account can now be created.`
     });
 
     return newStaff;

@@ -20,18 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ALL_ROLES, Role, StudentProfile, User } from '@/lib/types';
+import { ALL_ROLES, Role, Staff, StudentProfile, User } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUsers, getStudentProfiles } from '@/lib/store';
+import { getUsers, getStudentProfiles, getStaff } from '@/lib/store';
 
 const createSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   email: z.string().email('Invalid email address.'),
   role: z.enum(ALL_ROLES, { required_error: 'Please select a role.' }),
   password: z.string().min(8, 'Password must be at least 8 characters.'),
-  entityId: z.string().optional(), // For linking to student, etc.
+  entityId: z.string().optional(), // For linking to student or staff
 });
 
 const editSchema = z.object({
@@ -55,6 +55,7 @@ export function UserForm({
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const [unlinkedStudents, setUnlinkedStudents] = useState<StudentProfile[]>([]);
+  const [unlinkedStaff, setUnlinkedStaff] = useState<Staff[]>([]);
   
   const form = useForm({
     resolver: zodResolver(isEditMode ? editSchema : createSchema),
@@ -76,32 +77,38 @@ export function UserForm({
   const selectedRole = form.watch('role');
 
   useEffect(() => {
-    if (selectedRole === 'Student' && !isEditMode) {
+    if (isEditMode) return;
+
+    const allUsers = getUsers();
+    const linkedUserEmails = new Set(allUsers.map(u => u.email));
+    const linkedStaffIds = new Set(allUsers.map(u => u.id));
+
+    if (selectedRole === 'Student') {
       const allStudents = getStudentProfiles();
-      const allUsers = getUsers();
-      const linkedStudentEmails = new Set(
-        allUsers.filter(u => u.role === 'Student' && u.email).map(u => u.email)
-      );
-      
       const availableStudents = allStudents.filter(s => {
         const studentEmail = s.contactDetails.email;
-        // Check if a user already exists for the student's primary email
-        if (studentEmail && linkedStudentEmails.has(studentEmail)) {
+        if (studentEmail && linkedUserEmails.has(studentEmail)) {
           return false;
-        }
-        // Check if a user already exists for the auto-generated email
-        const studentUsername = s.student.student_no.split('-').pop()?.toLowerCase();
-        if (studentUsername) {
-            const studentUserEmail = `${studentUsername}@student.com`;
-             if (linkedStudentEmails.has(studentUserEmail)) {
-                return false;
-            }
         }
         return true;
       });
       setUnlinkedStudents(availableStudents);
+      setUnlinkedStaff([]);
+    } else if (selectedRole && selectedRole !== 'Parent' && selectedRole !== 'Admin') {
+        const allStaff = getStaff();
+        const existingUserStaffLinks = new Set(getUsers().map(u => u.id)); // Assuming user.id links to staff.user_id
+        
+        const availableStaff = allStaff.filter(staffMember => {
+             // A staff member is unlinked if there's no user with an ID matching the staff's user_id
+             return !existingUserStaffLinks.has(staffMember.user_id);
+        });
+
+        setUnlinkedStaff(availableStaff);
+        setUnlinkedStudents([]);
+
     } else {
       setUnlinkedStudents([]);
+      setUnlinkedStaff([]);
     }
   }, [selectedRole, isEditMode]);
 
@@ -117,7 +124,7 @@ export function UserForm({
     });
   };
   
-  const handleEntitySelection = (studentId: string) => {
+  const handleStudentSelection = (studentId: string) => {
     const student = unlinkedStudents.find(s => s.student.student_no === studentId);
     if (student) {
         form.setValue('entityId', student.student.student_no);
@@ -132,7 +139,17 @@ export function UserForm({
     }
   }
 
-  const allowManualEntry = selectedRole !== 'Student' || isEditMode;
+  const handleStaffSelection = (staffId: string) => {
+    const staff = unlinkedStaff.find(s => s.staff_id === staffId);
+    if (staff) {
+        form.setValue('entityId', staff.user_id); // The entity ID should be the user_id from the staff record
+        form.setValue('name', `${staff.first_name} ${staff.last_name}`);
+        form.setValue('email', staff.email);
+    }
+  }
+
+  const isEntitySelectionRole = (selectedRole === 'Student' || (selectedRole && selectedRole !== 'Admin' && selectedRole !== 'Parent')) && !isEditMode;
+  const allowManualEntry = !isEntitySelectionRole || selectedRole === 'Admin' || selectedRole === 'Parent';
 
 
   return (
@@ -163,25 +180,33 @@ export function UserForm({
           )}
         />
 
-        {selectedRole === 'Student' && !isEditMode && (
+        {isEntitySelectionRole && (
            <FormField
             control={form.control}
             name="entityId"
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Select Student</FormLabel>
-                    <Select onValueChange={handleEntitySelection} defaultValue={field.value}>
+                    <FormLabel>Select {selectedRole === 'Student' ? 'Student' : 'Staff Member'}</FormLabel>
+                    <Select onValueChange={selectedRole === 'Student' ? handleStudentSelection : handleStaffSelection} defaultValue={field.value}>
                          <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select an unlinked student" />
+                                <SelectValue placeholder={`Select an unlinked ${selectedRole === 'Student' ? 'student' : 'staff member'}`} />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            {unlinkedStudents.length > 0 ? unlinkedStudents.map(student => (
-                                <SelectItem key={student.student.student_no} value={student.student.student_no}>
-                                    {`${student.student.first_name} ${student.student.last_name} (${student.student.student_no})`}
-                                </SelectItem>
-                            )) : <p className="p-2 text-sm text-muted-foreground">No unlinked students found.</p>}
+                            {selectedRole === 'Student' ? (
+                                unlinkedStudents.length > 0 ? unlinkedStudents.map(student => (
+                                    <SelectItem key={student.student.student_no} value={student.student.student_no}>
+                                        {`${student.student.first_name} ${student.student.last_name} (${student.student.student_no})`}
+                                    </SelectItem>
+                                )) : <p className="p-2 text-sm text-muted-foreground">No unlinked students found.</p>
+                            ) : (
+                                unlinkedStaff.length > 0 ? unlinkedStaff.map(staff => (
+                                    <SelectItem key={staff.staff_id} value={staff.staff_id}>
+                                        {`${staff.first_name} ${staff.last_name} (${staff.staff_id})`}
+                                    </SelectItem>
+                                )) : <p className="p-2 text-sm text-muted-foreground">No unlinked staff found.</p>
+                            )}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -199,7 +224,7 @@ export function UserForm({
                     <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                        <Input placeholder="John Doe" {...field} disabled={!allowManualEntry} />
+                        <Input placeholder="John Doe" {...field} disabled={!allowManualEntry && isEntitySelectionRole} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -212,7 +237,7 @@ export function UserForm({
                     <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                        <Input placeholder="name@example.com" {...field} disabled={!allowManualEntry} />
+                        <Input placeholder="name@example.com" {...field} disabled={!allowManualEntry && isEntitySelectionRole} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
