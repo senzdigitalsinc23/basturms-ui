@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -75,7 +76,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       status: 'active',
       created_at: now,
       updated_at: now,
-    }
+    },
   ];
 };
 
