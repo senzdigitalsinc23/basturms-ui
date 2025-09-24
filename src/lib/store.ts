@@ -117,6 +117,19 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       updated_at: now,
     },
     // Don't create a default user for the student, let the logic handle it
+    {
+        id: '5',
+        name: 'Accountant Ade',
+        username: 'accountantade',
+        email: 'accountant@campus.com',
+        password: 'password',
+        role_id: getRoleId('Accountant')!,
+        is_super_admin: false,
+        avatarUrl: 'https://picsum.photos/seed/avatar5/40/40',
+        status: 'active',
+        created_at: now,
+        updated_at: now,
+    }
   ];
 };
 
