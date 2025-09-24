@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -67,7 +66,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
     {
       id: '1',
       name: 'Admin User',
-      username: 'adminuser',
+      username: 'douglassenzu',
       email: 'admin@campus.com',
       password: 'password',
       role_id: getRoleId('Admin')!,
@@ -76,59 +75,6 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       status: 'active',
       created_at: now,
       updated_at: now,
-    },
-    {
-      id: '2',
-      name: 'Teacher Smith',
-      username: 'teachersmith',
-      email: 'teacher@campus.com',
-      password: 'password',
-      role_id: getRoleId('Teacher')!,
-      is_super_admin: false,
-      avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: '3',
-      name: 'Headmaster Brown',
-      username: 'headmasterbrown',
-      email: 'headmaster@campus.com',
-      password: 'password',
-      role_id: getRoleId('Headmaster')!,
-      is_super_admin: false,
-      avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: '4',
-      name: 'Parent Doe',
-      username: 'parentdoe',
-      email: 'parent@campus.com',
-      password: 'password',
-      role_id: getRoleId('Parent')!,
-      is_super_admin: false,
-      avatarUrl: 'https://picsum.photos/seed/avatar4/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
-    // Don't create a default user for the student, let the logic handle it
-    {
-        id: '5',
-        name: 'Accountant Ade',
-        username: 'accountantade',
-        email: 'accountant@campus.com',
-        password: 'password',
-        role_id: getRoleId('Accountant')!,
-        is_super_admin: false,
-        avatarUrl: 'https://picsum.photos/seed/avatar5/40/40',
-        status: 'active',
-        created_at: now,
-        updated_at: now,
     }
   ];
 };
@@ -917,5 +863,7 @@ export const getStaffProfileByUserId = (userId: string): StaffProfile | undefine
     const profiles = getStaffProfiles();
     return profiles.find(p => p.user_id === userId);
 }
+
+    
 
     
