@@ -81,8 +81,7 @@ export function UserForm({
 
     const allUsers = getUsers();
     const linkedUserEmails = new Set(allUsers.map(u => u.email));
-    const linkedStaffIds = new Set(allUsers.map(u => u.id));
-
+    
     if (selectedRole === 'Student') {
       const allStudents = getStudentProfiles();
       const availableStudents = allStudents.filter(s => {
@@ -96,11 +95,10 @@ export function UserForm({
       setUnlinkedStaff([]);
     } else if (selectedRole && selectedRole !== 'Parent' && selectedRole !== 'Admin') {
         const allStaff = getStaff();
-        const existingUserStaffLinks = new Set(getUsers().map(u => u.id)); // Assuming user.id links to staff.user_id
+        const existingUserStaffLinks = new Set(getUsers().map(u => u.id));
         
         const availableStaff = allStaff.filter(staffMember => {
-             // A staff member is unlinked if there's no user with an ID matching the staff's user_id
-             return !existingUserStaffLinks.has(staffMember.user_id);
+             return !staffMember.user_id || !existingUserStaffLinks.has(staffMember.user_id);
         });
 
         setUnlinkedStaff(availableStaff);
@@ -142,7 +140,7 @@ export function UserForm({
   const handleStaffSelection = (staffId: string) => {
     const staff = unlinkedStaff.find(s => s.staff_id === staffId);
     if (staff) {
-        form.setValue('entityId', staff.user_id); // The entity ID should be the user_id from the staff record
+        form.setValue('entityId', staff.staff_id); 
         form.setValue('name', `${staff.first_name} ${staff.last_name}`);
         form.setValue('email', staff.email);
     }

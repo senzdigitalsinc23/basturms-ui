@@ -79,6 +79,17 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
   ];
 };
 
+const getInitialStaff = (): Staff[] => {
+    return [
+        {
+            "staff_id": "STF001", "user_id": "2", "first_name": "John", "last_name": "Doe", "email": "john.doe@staff.com", "phone": "123-456-7890", "roles": ["Teacher"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
+        },
+        {
+            "staff_id": "STF002", "user_id": "3", "first_name": "Jane", "last_name": "Smith", "email": "jane.smith@staff.com", "phone": "098-765-4321", "roles": ["Headmaster"], "id_type": "Passport", "id_no": "P0123456", "date_of_joining": "2022-09-01T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Kumasi", "hometown": "Kumasi", "house_no": "H2", "gps_no": "AK-456-789" }
+        }
+    ];
+};
+
 const getInitialStudentProfiles = (): StudentProfile[] => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -223,7 +234,7 @@ export const initializeStore = () => {
     }
     // Initialize new staff storages
     if (!window.localStorage.getItem(STAFF_KEY)) {
-        saveToStorage(STAFF_KEY, []);
+        saveToStorage(STAFF_KEY, getInitialStaff());
     }
     if (!window.localStorage.getItem(STAFF_ACADEMIC_HISTORY_KEY)) {
         saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, []);
@@ -296,8 +307,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     return mapUser(existingUser);
   }
 
-  // Use entityId if provided (for linking staff), otherwise generate new ID.
-  const nextId = user.entityId || (users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1).toString() : '1');
+  const nextId = (users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1) : 1).toString();
 
   const newUser: UserStorage = {
     ...user,
@@ -311,9 +321,10 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     created_at: now,
     updated_at: now,
   };
+  
   saveToStorage(USERS_KEY, [...users, newUser]);
 
-  if (user.role !== 'Student' && user.role !== 'Parent' && user.role !== 'Admin') {
+  if (user.entityId && user.role !== 'Student' && user.role !== 'Parent' && user.role !== 'Admin') {
       const staffList = getStaff();
       const staffIndex = staffList.findIndex(s => s.staff_id === user.entityId);
       if (staffIndex > -1) {
@@ -764,10 +775,7 @@ export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFr
 
 export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staff => {
     const staffList = getStaff();
-    const users = getUsersInternal();
-    const nextUserId = users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1).toString() : '1';
-
-    const newStaff = { ...staff, user_id: nextUserId }; // Temporarily assign a user_id
+    const newStaff = { ...staff, user_id: '' }; // user_id will be set when user is created
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
