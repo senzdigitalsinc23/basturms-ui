@@ -24,7 +24,9 @@ const academicYearSchema = z.object({
 
 export function AcademicSettings() {
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+    const [selectedYear, setSelectedYear] = useState<AcademicYear | null>(null);
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -56,14 +58,19 @@ export function AcademicSettings() {
         }
         
         toast({ title: 'Academic Year Added', description: `The year ${values.year} has been created.` });
-        setIsDialogOpen(false);
+        setIsAddDialogOpen(false);
         form.reset();
+    };
+    
+    const handleManageTerms = (year: AcademicYear) => {
+        setSelectedYear(year);
+        setIsManageDialogOpen(true);
     };
 
     return (
         <div className="space-y-4">
              <div className="flex justify-end">
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                     <DialogTrigger asChild>
                         <Button size="sm"><PlusCircle className="mr-2"/> Add Academic Year</Button>
                     </DialogTrigger>
@@ -136,12 +143,23 @@ export function AcademicSettings() {
                                 <TableCell>{year.year}</TableCell>
                                 <TableCell>{year.terms}</TableCell>
                                 <TableCell>{year.status}</TableCell>
-                                <TableCell><Button variant="outline" size="sm">Manage Terms</Button></TableCell>
+                                <TableCell><Button variant="outline" size="sm" onClick={() => handleManageTerms(year)}>Manage Terms</Button></TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
             </div>
+             <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Manage Terms for {selectedYear?.year}</DialogTitle>
+                        <DialogDescription>
+                            This academic year has {selectedYear?.terms} term(s). Future functionality will allow editing term dates here.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {/* Future term management UI will go here */}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
