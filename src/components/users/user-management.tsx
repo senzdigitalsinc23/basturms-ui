@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logout } = useAuth();
   const { toast } = useToast();
 
   const refreshUsers = () => {
@@ -79,7 +79,7 @@ export function UserManagement() {
   }
   
   const handleDeleteUser = (userId: string) => {
-    if (!currentUser?.is_super_admin) {
+    if (!currentUser || !currentUser.is_super_admin) {
         toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only super admins can delete users.' });
         return;
     }
@@ -93,11 +93,15 @@ export function UserManagement() {
             details: `Deleted user with ID ${userId}`,
         });
         toast({ title: 'User Deleted', description: 'The user has been permanently deleted.' });
+
+        if (userId === currentUser.id) {
+            logout();
+        }
     }
   }
   
   const handleBulkDelete = (userIds: string[]) => {
-    if (!currentUser?.is_super_admin) {
+    if (!currentUser || !currentUser.is_super_admin) {
         toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only super admins can delete users.' });
         return;
     }
@@ -111,6 +115,10 @@ export function UserManagement() {
             details: `Deleted ${deletedCount} user(s).`,
         });
         toast({ title: 'Users Deleted', description: `${deletedCount} user(s) have been deleted.` });
+
+        if (userIds.includes(currentUser.id)) {
+            logout();
+        }
     }
   }
 
