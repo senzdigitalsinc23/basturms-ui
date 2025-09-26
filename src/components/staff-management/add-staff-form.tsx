@@ -329,10 +329,16 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     setIsLoading(false);
+    
+    const message = data.appointment_status === 'Declined'
+      ? `${data.first_name} ${data.last_name}'s appointment has been declined and their record stored.`
+      : `${data.first_name} ${data.last_name} has been ${isEditMode ? 'updated' : 'added'}.`;
+      
     toast({
-        title: isEditMode ? 'Staff Member Updated' : 'Staff Member Added',
-        description: `${data.first_name} ${data.last_name} has been ${isEditMode ? 'updated' : 'added'}.`
+        title: isEditMode ? 'Staff Member Updated' : 'Staff Member Processed',
+        description: message,
     });
+
     if (!isEditMode) {
       router.push(`/staff-management`);
     }

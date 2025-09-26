@@ -43,6 +43,7 @@ const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 
 // New keys for staff management
 const STAFF_KEY = 'campusconnect_staff';
+export const DECLINED_STAFF_KEY = 'campusconnect_declined_staff';
 export const STAFF_ACADEMIC_HISTORY_KEY = 'campusconnect_staff_academic_history';
 export const STAFF_DOCUMENTS_KEY = 'campusconnect_staff_documents';
 export const STAFF_APPOINTMENT_HISTORY_KEY = 'campusconnect_staff_appointment_history';
@@ -241,6 +242,9 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(STAFF_KEY)) {
         saveToStorage(STAFF_KEY, getInitialStaff());
     }
+     if (!window.localStorage.getItem(DECLINED_STAFF_KEY)) {
+        saveToStorage(DECLINED_STAFF_KEY, []);
+    }
     if (!window.localStorage.getItem(STAFF_ACADEMIC_HISTORY_KEY)) {
         saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, []);
     }
@@ -383,15 +387,15 @@ export const toggleUserStatus = (userId: string): User | undefined => {
     const users = getUsersInternal();
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
-        const user = users[userIndex];
+        const user = { ...users[userIndex] };
+        user.status = user.status === 'active' ? 'frozen' : 'active';
+        user.updated_at = new Date().toISOString();
+        
         const newUsers = [...users];
-        newUsers[userIndex] = {
-            ...user,
-            status: user.status === 'active' ? 'frozen' : 'active',
-            updated_at: new Date().toISOString(),
-        };
+        newUsers[userIndex] = user;
+
         saveToStorage(USERS_KEY, newUsers);
-        return mapUser(newUsers[userIndex]);
+        return mapUser(user);
     }
     return undefined;
 };
@@ -811,12 +815,31 @@ export const storeGetStaffAcademicHistory = (): StaffAcademicHistory[] => getFro
 export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
-export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): Staff | null => {
+export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: Omit<StaffAppointmentHistory, 'staff_id'>, creatorId: string): Staff | null => {
     const staffList = getStaff();
+    const declinedStaffList = getFromStorage<Staff[]>(DECLINED_STAFF_KEY, []);
+
     const existingStaff = staffList.find(s => s.email === staffData.email || s.staff_id === staffData.staff_id);
-    if(existingStaff) {
-        console.error("Staff with this email or ID already exists");
+    if (existingStaff) {
+        console.error("Staff with this email or ID already exists in the active list.");
         return null;
+    }
+    const existingDeclinedStaff = declinedStaffList.find(s => s.email === staffData.email || s.staff_id === staffData.staff_id);
+    if (existingDeclinedStaff) {
+        console.error("Staff with this email or ID already exists in the declined list.");
+        return null;
+    }
+
+    if (appointmentHistory.appointment_status === 'Declined') {
+        const declinedStaff = { ...staffData, user_id: '' };
+        saveToStorage(DECLINED_STAFF_KEY, [...declinedStaffList, declinedStaff]);
+        addAuditLog({
+            user: getUserById(creatorId)?.email || 'Unknown',
+            name: getUserById(creatorId)?.name || 'Unknown',
+            action: 'Decline Staff Appointment',
+            details: `Appointment for ${declinedStaff.first_name} ${declinedStaff.last_name} was declined.`
+        });
+        return null; // Return null as they are not an active staff member
     }
 
     const userToCreate = {

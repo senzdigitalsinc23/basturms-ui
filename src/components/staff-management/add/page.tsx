@@ -13,32 +13,32 @@ export default function AddStaffPage() {
 
   const handleAddStaff = (data: {staffData: Omit<Staff, 'user_id'>, academic_history: StaffAcademicHistory[], documents: any[], appointment_history: StaffAppointmentHistory}) => {
     if (!user) return;
-    const newStaff = storeAddStaff(data.staffData, user.id); 
+    const newStaff = storeAddStaff(data.staffData, data.appointment_history, user.id); 
 
-    if (newStaff && data.academic_history) {
-        data.academic_history.forEach(history => {
-            addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
-        });
-    }
-
-    if (newStaff && data.documents) {
-        for (const doc of data.documents) {
-            const fileReader = new FileReader();
-            fileReader.readAsDataURL(doc.file);
-            fileReader.onload = () => {
-                if (newStaff) {
-                    addStaffDocument({
-                        staff_id: newStaff.staff_id,
-                        document_name: doc.name,
-                        file: fileReader.result as string
-                    });
-                }
-            };
-        }
-    }
-    
     if (newStaff) {
-        addStaffAppointmentHistory({...data.appointment_history, staff_id: newStaff.staff_id});
+      if (data.academic_history) {
+          data.academic_history.forEach(history => {
+              addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
+          });
+      }
+
+      if (data.documents) {
+          for (const doc of data.documents) {
+              const fileReader = new FileReader();
+              fileReader.readAsDataURL(doc.file);
+              fileReader.onload = () => {
+                  if (newStaff) {
+                      addStaffDocument({
+                          staff_id: newStaff.staff_id,
+                          document_name: doc.name,
+                          file: fileReader.result as string
+                      });
+                  }
+              };
+          }
+      }
+      
+      addStaffAppointmentHistory({...data.appointment_history, staff_id: newStaff.staff_id});
     }
     
     router.push('/staff-management');
