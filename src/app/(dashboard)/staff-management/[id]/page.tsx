@@ -85,7 +85,7 @@ export default function StaffProfilePage() {
             });
 
             const existingAppointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staff.staff_id);
-            saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, existingAppointments);
+            // saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, existingAppointments);
             addStaffAppointmentHistory({...data.appointment_history, staff_id: staff.staff_id});
             
             fetchStaffData(); // Re-fetch all data
@@ -127,7 +127,7 @@ export default function StaffProfilePage() {
         document.body.removeChild(link);
     };
 
-    if (!staff || !user) {
+    if (!staff) {
         return <div className="flex items-center justify-center h-full">Loading...</div>;
     }
 
@@ -172,15 +172,19 @@ export default function StaffProfilePage() {
             <Card>
                 <CardHeader className="flex flex-row items-center gap-6">
                     <Avatar className="h-24 w-24">
-                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                        {user && <AvatarImage src={user.avatarUrl} alt={user.name} />}
                         <AvatarFallback className="text-3xl">{userInitials}</AvatarFallback>
                     </Avatar>
                     <div>
-                        <h2 className="text-2xl font-bold">{user.name}</h2>
+                        <h2 className="text-2xl font-bold">{staff.first_name} {staff.last_name}</h2>
                         <p className="text-muted-foreground">{staff.staff_id}</p>
                         <div className="flex gap-2 mt-2">
                             {(staff.roles || []).map(role => <Badge key={role} variant="outline">{role}</Badge>)}
-                            <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status === 'active' ? 'Active' : 'Inactive'}</Badge>
+                            {user ? (
+                                <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status === 'active' ? 'Active' : 'Inactive'}</Badge>
+                            ) : (
+                                <Badge variant="destructive">No User Account</Badge>
+                            )}
                         </div>
                     </div>
                 </CardHeader>
@@ -192,8 +196,8 @@ export default function StaffProfilePage() {
                         <CardTitle>Personal & Contact Information</CardTitle>
                     </CardHeader>
                     <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <InfoItem label="Full Name" value={user.name} />
-                        <InfoItem label="Email Address" value={user.email} />
+                        <InfoItem label="Full Name" value={`${staff.first_name} ${staff.last_name}`} />
+                        <InfoItem label="Email Address" value={staff.email} />
                         <InfoItem label="Phone Number" value={staff.phone} />
                     </CardContent>
                      <CardHeader>
@@ -254,7 +258,7 @@ export default function StaffProfilePage() {
                         <CardContent className="space-y-4">
                             <InfoItem label="Staff ID" value={staff.staff_id} />
                             <InfoItem label="Roles" value={<div className="flex flex-wrap gap-1">{(staff.roles || []).map(r => <Badge key={r} variant="outline">{r}</Badge>)}</div>} />
-                            <InfoItem label="Status" value={<Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status}</Badge>} />
+                            {user && <InfoItem label="User Status" value={<Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status}</Badge>} />}
                             <InfoItem label="Joining Date" value={format(new Date(staff.date_of_joining), "MMMM do, yyyy")} />
                             <InfoItem label="Experience" value={experience} />
                         </CardContent>
