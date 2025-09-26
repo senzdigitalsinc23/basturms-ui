@@ -132,6 +132,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/auth-logs', label: 'Authentication Logs' },
       ],
     },
+     { href: '/settings', label: 'Settings', icon: Settings },
   ],
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
@@ -157,7 +158,6 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management', label: 'Staff List' },
         { href: '/staff-management/add', label: 'Add Staff' },
         { href: '/staff-management/attendance', label: 'Staff Attendance' },
-        { href: '/staff-management/attendance-history', label: 'Attendance History' },
       ]
     },
     { href: '/#', label: 'Curriculum', icon: BookUser },
@@ -285,17 +285,6 @@ export function SidebarNav() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              as={Link}
-              href="#"
-              tooltip={{ children: 'Settings', side: 'right' }}
-              variant="ghost"
-            >
-              <Settings />
-              <span className="hidden group-data-[state=expanded]:inline">Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={logout} tooltip={{ children: 'Logout', side: 'right' }} variant="ghost">
               <LogOut />
