@@ -328,10 +328,8 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
 
   // Link the new user ID back to the staff or student record
   if (user.entityId) {
-      if (user.role === 'Student') {
-          // This case is handled during student creation where user is frozen.
-      } else {
-          // This is a staff member
+      const isStaffRole = user.role !== 'Student' && user.role !== 'Parent';
+      if (isStaffRole) {
           const staffList = getStaff();
           const staffIndex = staffList.findIndex(s => s.staff_id === user.entityId);
           if (staffIndex !== -1) {
@@ -414,11 +412,24 @@ export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KE
 export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
   const logs = getAuditLogs();
   const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
+  
+  const actingUser = getUserByEmail(log.user);
+  let phone = 'N/A';
+  if (actingUser) {
+      const staff = getStaff().find(s => s.user_id === actingUser.id);
+      if (staff) {
+          phone = staff.phone;
+      }
+  }
+  
+  const userDetails = `User: ${log.name}\nEmail: ${log.user}\nPhone: ${phone}`;
+  
   const newLog: AuditLog = {
     ...log,
     id: nextId,
     timestamp: new Date().toISOString(),
     clientInfo: typeof window !== 'undefined' ? navigator.userAgent : 'N/A',
+    details: `${userDetails}\n\nAction Details:\n${log.details}`
   };
   saveToStorage(LOGS_KEY, [newLog, ...logs]);
 };
@@ -789,14 +800,26 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): 
         return null;
     }
 
-    const newStaff = { ...staffData, user_id: '' }; // user_id is initially empty
+    const staffIdSuffix = staffData.staff_id.slice(-3);
+    const password = `${staffData.last_name.toLowerCase()}${staffIdSuffix}`;
+    const newUser = addUser({
+        name: `${staffData.first_name} ${staffData.last_name}`,
+        email: staffData.email,
+        username: staffData.email,
+        role: staffData.roles[0], // Use the first role for user creation
+        password: password,
+        status: 'active',
+        entityId: staffData.staff_id,
+    });
+
+    const newStaff = { ...staffData, user_id: newUser.id };
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
         action: 'Create Staff',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name}.`
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} and associated user account.`
     });
 
     return newStaff;
@@ -884,14 +907,16 @@ export const toggleStaffStatus = (staffId: string, editorId: string): Staff | nu
     const staffList = getStaff();
     const staff = staffList.find(s => s.staff_id === staffId);
     if (staff && staff.user_id) {
-        toggleUserStatus(staff.user_id);
-        addAuditLog({
-            user: getUserById(editorId)?.email || 'Unknown',
-            name: getUserById(editorId)?.name || 'Unknown',
-            action: 'Toggle Staff Status',
-            details: `Toggled account status for staff member ${staff.first_name} ${staff.last_name} (Staff ID: ${staffId})`
-        });
-        return staff;
+        const updatedUser = toggleUserStatus(staff.user_id);
+        if(updatedUser){
+            addAuditLog({
+                user: getUserById(editorId)?.email || 'Unknown',
+                name: getUserById(editorId)?.name || 'Unknown',
+                action: 'Toggle Staff Status',
+                details: `Toggled account status for staff member ${staff.first_name} ${staff.last_name} to ${updatedUser.status}`
+            });
+            return staff;
+        }
     }
     return null;
 }
