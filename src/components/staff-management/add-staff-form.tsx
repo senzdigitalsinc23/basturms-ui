@@ -732,5 +732,3 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     </Card>
   );
 }
-
-    

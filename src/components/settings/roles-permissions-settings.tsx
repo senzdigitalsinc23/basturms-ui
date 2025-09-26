@@ -18,28 +18,28 @@ export function RolesPermissionsSettings() {
     return (
         <div className="space-y-4">
             <Accordion type="multiple" className="w-full">
-                {ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent').map(role => (
-                    <AccordionItem value={role} key={role}>
-                        <AccordionTrigger>{role}</AccordionTrigger>
+                {Object.entries(permissions).map(([module, actions]) => (
+                     <AccordionItem value={module} key={module}>
+                        <AccordionTrigger>{module}</AccordionTrigger>
                         <AccordionContent>
                              <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Module</TableHead>
-                                        <TableHead>Create</TableHead>
-                                        <TableHead>View</TableHead>
-                                        <TableHead>Update</TableHead>
-                                        <TableHead>Delete</TableHead>
+                                        <TableHead>Permission</TableHead>
+                                         {ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent' && r !== 'Admin').map(role => (
+                                            <TableHead key={role} className="text-center">{role}</TableHead>
+                                         ))}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {Object.entries(permissions).map(([module, actions]) => (
-                                        <TableRow key={module}>
-                                            <TableCell className="font-medium">{module}</TableCell>
-                                            <TableCell><Checkbox disabled={!actions.includes('Create '+module.split(' ')[0])} /></TableCell>
-                                            <TableCell><Checkbox disabled={!actions.includes('View '+module.split(' ')[0])} /></TableCell>
-                                            <TableCell><Checkbox disabled={!actions.includes('Update '+module.split(' ')[0])} /></TableCell>
-                                            <TableCell><Checkbox disabled={!actions.includes('Delete '+module.split(' ')[0])} /></TableCell>
+                                    {actions.map((action) => (
+                                        <TableRow key={action}>
+                                            <TableCell className="font-medium">{action}</TableCell>
+                                            {ALL_ROLES.filter(r => r !== 'Student' && r !== 'Parent' && r !== 'Admin').map(role => (
+                                                <TableCell key={role} className="text-center">
+                                                    <Checkbox />
+                                                </TableCell>
+                                            ))}
                                         </TableRow>
                                     ))}
                                 </TableBody>

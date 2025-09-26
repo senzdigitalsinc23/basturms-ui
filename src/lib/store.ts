@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -914,7 +915,7 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: 
 };
 
 
-export const updateStaff = (staffId: string, updatedData: Partial<Staff>, academicHistory: StaffAcademicHistory[], appointmentHistory: Omit<StaffAppointmentHistory, 'staff_id'>, editorId: string): Staff | null => {
+export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editorId: string): Staff | null => {
     const staffList = getStaff();
     const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
 
@@ -923,16 +924,6 @@ export const updateStaff = (staffId: string, updatedData: Partial<Staff>, academ
         const newStaffData = { ...existingStaff, ...updatedData };
         staffList[staffIndex] = newStaffData;
         saveToStorage(STAFF_KEY, staffList);
-
-        // Update academic history
-        const existingAcademicHistory = storeGetStaffAcademicHistory().filter(h => h.staff_id !== staffId);
-        const newAcademicHistory = [...existingAcademicHistory, ...academicHistory.map(h => ({...h, staff_id: staffId}))];
-        saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, newAcademicHistory);
-
-        // Update appointment history (replace with latest)
-        const existingAppointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staffId);
-        const newAppointment = { ...appointmentHistory, staff_id: staffId };
-        saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, [...existingAppointments, newAppointment]);
 
         addAuditLog({
             user: getUserById(editorId)?.email || 'Unknown',
