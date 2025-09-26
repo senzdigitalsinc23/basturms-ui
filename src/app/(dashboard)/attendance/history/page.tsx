@@ -2,7 +2,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords } from '@/lib/store';
+import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords, getRoles } from '@/lib/store';
 import { Class, StudentProfile, Staff, StaffAttendanceRecord, StudentAttendanceRecord, Role } from '@/lib/types';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,14 +41,16 @@ export default function AttendanceHistoryPage() {
     });
     const [studentSearch, setStudentSearch] = useState('');
     const [staffSearch, setStaffSearch] = useState('');
+    const [selectedRole, setSelectedRole] = useState<string | undefined>('All');
     
     const [studentRecords, setStudentRecords] = useState<StudentAttendanceHistory[]>([]);
     const [staffRecords, setStaffRecords] = useState<StaffAttendanceHistory[]>([]);
+    const [allStaffRoles, setAllStaffRoles] = useState<string[]>([]);
     
-    const [groupedStaffRecords, setGroupedStaffRecords] = useState<Record<string, StaffAttendanceHistory[]>>({});
-
     useEffect(() => {
         setClasses(getClasses());
+        const roles = getRoles().map(r => r.name).filter(r => r !== 'Student' && r !== 'Parent');
+        setAllStaffRoles(roles);
     }, []);
 
     useEffect(() => {
@@ -76,7 +78,7 @@ export default function AttendanceHistoryPage() {
             const allStaff = getStaff();
             const allStaffAttendance = getStaffAttendanceRecords();
 
-            const filteredStaffRecords = allStaff.map(staff => {
+            let filteredStaffRecords = allStaff.map(staff => {
                 const record = allStaffAttendance.find(rec => rec.staff_id === staff.staff_id && format(new Date(rec.date), 'yyyy-MM-dd') === format(dateRange.from!, 'yyyy-MM-dd'));
                 return {
                     id: staff.staff_id,
@@ -84,21 +86,15 @@ export default function AttendanceHistoryPage() {
                     status: record?.status || 'N/A',
                     roles: staff.roles || []
                 };
-            }).filter(s => s.name.toLowerCase().includes(staffSearch.toLowerCase()));;
+            }).filter(s => s.name.toLowerCase().includes(staffSearch.toLowerCase()));
+
+            if (selectedRole && selectedRole !== 'All') {
+                filteredStaffRecords = filteredStaffRecords.filter(s => s.roles.includes(selectedRole as Role));
+            }
+
             setStaffRecords(filteredStaffRecords);
-
-            const grouped = filteredStaffRecords.reduce((acc, record) => {
-                const role = record.roles[0] || 'Uncategorized';
-                if (!acc[role]) {
-                    acc[role] = [];
-                }
-                acc[role].push(record);
-                return acc;
-            }, {} as Record<string, StaffAttendanceHistory[]>);
-            setGroupedStaffRecords(grouped);
-
         }
-    }, [dateRange, staffSearch]);
+    }, [dateRange, staffSearch, selectedRole]);
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -242,7 +238,7 @@ export default function AttendanceHistoryPage() {
                         <Card>
                              <CardHeader>
                                 <CardTitle>Staff Attendance</CardTitle>
-                                <CardDescription>Select a date to view records.</CardDescription>
+                                <CardDescription>Select a date and role to view records.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center gap-4">
@@ -256,36 +252,42 @@ export default function AttendanceHistoryPage() {
                                             onChange={(e) => setStaffSearch(e.target.value)}
                                         />
                                     </div>
+                                    <Select value={selectedRole} onValueChange={setSelectedRole}>
+                                        <SelectTrigger className="w-full md:w-[200px]">
+                                            <SelectValue placeholder="Filter by Role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="All">All Roles</SelectItem>
+                                            {allStaffRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                                {Object.keys(groupedStaffRecords).length > 0 ? Object.entries(groupedStaffRecords).map(([role, records]) => (
-                                    <div key={role}>
-                                        <h3 className="text-md font-semibold my-4 pl-2">{role}</h3>
-                                        <div className="rounded-md border">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Staff Name</TableHead>
-                                                        <TableHead className="text-right">Status</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {records.map(record => (
-                                                        <TableRow key={record.id}>
-                                                            <TableCell className="font-medium">{record.name}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </div>
-                                )) : (
-                                    <div className="h-24 text-center flex items-center justify-center text-muted-foreground border rounded-md">
-                                        No records found for this date.
-                                    </div>
-                                )}
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Staff Name</TableHead>
+                                                <TableHead className="text-right">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {staffRecords.length > 0 ? staffRecords.map(record => (
+                                                <TableRow key={record.id}>
+                                                    <TableCell className="font-medium">{record.name}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )) : (
+                                                 <TableRow>
+                                                    <TableCell colSpan={2} className="h-24 text-center">
+                                                        No records found for this date.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -294,4 +296,3 @@ export default function AttendanceHistoryPage() {
         </ProtectedRoute>
     );
 }
-
