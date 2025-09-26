@@ -85,25 +85,22 @@ export function UserForm({
     if (selectedRole === 'Student') {
       const allStudents = getStudentProfiles();
       const availableStudents = allStudents.filter(s => {
-        const studentEmail = s.contactDetails.email;
-        if (studentEmail && linkedUserEmails.has(studentEmail)) {
-          return false;
-        }
-        return true;
+        // A student is available if they don't have a linked user account yet.
+        // We check this by seeing if any user is linked to their student_no.
+        const studentUser = allUsers.find(u => u.email === s.contactDetails.email);
+        return !studentUser;
       });
       setUnlinkedStudents(availableStudents);
       setUnlinkedStaff([]);
-    } else if (selectedRole && selectedRole !== 'Parent' && selectedRole !== 'Admin') {
+    } else if (selectedRole === 'Teacher') {
         const allStaff = getStaff();
-        const existingUserStaffLinks = new Set(getUsers().map(u => u.id));
-        
         const availableStaff = allStaff.filter(staffMember => {
-             return !staffMember.user_id || !existingUserStaffLinks.has(staffMember.user_id);
+            // A staff is available if they have the 'Teacher' role and no user_id
+            return staffMember.roles.includes('Teacher') && !staffMember.user_id;
         });
 
         setUnlinkedStaff(availableStaff);
         setUnlinkedStudents([]);
-
     } else {
       setUnlinkedStudents([]);
       setUnlinkedStaff([]);
@@ -131,6 +128,7 @@ export function UserForm({
         if (student.contactDetails.email) {
             form.setValue('email', student.contactDetails.email);
         } else {
+            // Create a default email if none exists
             const username = student.student.student_no.split('-').pop()!.toLowerCase();
             form.setValue('email', `${username}@student.com`);
         }
@@ -146,8 +144,8 @@ export function UserForm({
     }
   }
 
-  const isEntitySelectionRole = (selectedRole === 'Student' || (selectedRole && selectedRole !== 'Admin' && selectedRole !== 'Parent')) && !isEditMode;
-  const allowManualEntry = !isEntitySelectionRole || selectedRole === 'Admin' || selectedRole === 'Parent';
+  const isEntitySelectionRole = (selectedRole === 'Student' || selectedRole === 'Teacher') && !isEditMode;
+  const allowManualEntry = !isEntitySelectionRole;
 
 
   return (
@@ -203,7 +201,7 @@ export function UserForm({
                                     <SelectItem key={staff.staff_id} value={staff.staff_id}>
                                         {`${staff.first_name} ${staff.last_name} (${staff.staff_id})`}
                                     </SelectItem>
-                                )) : <p className="p-2 text-sm text-muted-foreground">No unlinked staff found.</p>
+                                )) : <p className="p-2 text-sm text-muted-foreground">No unlinked teachers found.</p>
                             )}
                         </SelectContent>
                     </Select>
@@ -242,9 +240,7 @@ export function UserForm({
                 )}
                 />
             </>
-        ) : (
-             <Input type="hidden" {...form.register('name')} />
-        )}
+        ) : null}
 
 
         {!isEditMode && (
