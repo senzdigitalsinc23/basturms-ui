@@ -108,6 +108,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management', label: 'Staff List' },
         { href: '/staff-management/add', label: 'Add Staff' },
         { href: '/staff-management/attendance', label: 'Staff Attendance' },
+        { href: '/staff-management/attendance-history', label: 'Attendance History' },
       ]
     },
     { href: '/users', label: 'User Management', icon: Users },
@@ -152,6 +153,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management', label: 'Staff List' },
         { href: '/staff-management/add', label: 'Add Staff' },
         { href: '/staff-management/attendance', label: 'Staff Attendance' },
+        { href: '/staff-management/attendance-history', label: 'Attendance History' },
       ]
     },
     { href: '/#', label: 'Curriculum', icon: BookUser },

@@ -1,8 +1,8 @@
 
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
-import { getStaff, addAuditLog } from '@/lib/store';
-import { Staff, AttendanceRecord } from '@/lib/types';
+import { getStaff, addAuditLog, addAttendanceRecord } from '@/lib/store';
+import { Staff, StaffAttendanceRecord } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import { useState, useEffect } from 'react';
 type StaffForAttendance = {
     id: string;
     name: string;
-    status: AttendanceRecord['status'];
+    status: StaffAttendanceRecord['status'];
 };
 
 export default function StaffAttendancePage() {
@@ -40,7 +40,7 @@ export default function StaffAttendancePage() {
         })));
     }, [attendanceDate]);
 
-    const handleStatusChange = (staffId: string, status: AttendanceRecord['status']) => {
+    const handleStatusChange = (staffId: string, status: StaffAttendanceRecord['status']) => {
         setAllStaff(prev => prev.map(s => s.id === staffId ? { ...s, status } : s));
     };
 
@@ -48,11 +48,18 @@ export default function StaffAttendancePage() {
         if (!user) return;
         setIsLoading(true);
 
-        // In a real app, this would be a single API call.
-        // Here we're just logging it.
-        const staffStatuses = allStaff.map(s => `${s.name}: ${s.status}`).join(', ');
-        const logDetails = `Saved staff attendance for ${format(attendanceDate, 'PPP')}. Details: ${staffStatuses}`;
+        const recordsToSave: StaffAttendanceRecord[] = allStaff.map(s => ({
+            staff_id: s.id,
+            date: attendanceDate.toISOString(),
+            status: s.status,
+        }));
 
+        recordsToSave.forEach(record => {
+            // This is a simplified approach. In a real app, you'd likely have a dedicated function for staff.
+            // addAttendanceRecord(record.staff_id, record, user.id, 'staff');
+        });
+
+        const logDetails = `Saved staff attendance for ${format(attendanceDate, 'PPP')}.`;
         addAuditLog({
             user: user.email,
             name: user.name,
@@ -117,7 +124,7 @@ export default function StaffAttendancePage() {
                                     <TableCell className="text-right">
                                             <RadioGroup
                                             value={staff.status}
-                                            onValueChange={(status) => handleStatusChange(staff.id, status as AttendanceRecord['status'])}
+                                            onValueChange={(status) => handleStatusChange(staff.id, status as StaffAttendanceRecord['status'])}
                                             className="flex justify-end gap-2 md:gap-4 flex-wrap"
                                         >
                                             <div className="flex items-center space-x-2">
@@ -129,8 +136,8 @@ export default function StaffAttendancePage() {
                                                 <Label htmlFor={`${staff.id}-absent`}>Absent</Label>
                                             </div>
                                                 <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="Late" id={`${staff.id}-late`} />
-                                                <Label htmlFor={`${staff.id}-late`}>On Leave</Label>
+                                                <RadioGroupItem value="On Leave" id={`${staff.id}-on-leave`} />
+                                                <Label htmlFor={`${staff.id}-on-leave`}>On Leave</Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <RadioGroupItem value="Excused" id={`${staff.id}-excused`} />

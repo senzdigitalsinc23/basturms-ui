@@ -176,10 +176,21 @@ export interface AcademicRecord {
     teacher_remarks: string;
 }
 
+export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused' | 'On Leave';
+
 export interface AttendanceRecord {
     date: string;
-    status: 'Present' | 'Absent' | 'Late' | 'Excused';
+    status: AttendanceStatus;
 }
+
+export interface StudentAttendanceRecord extends AttendanceRecord {
+    student_id: string;
+}
+
+export interface StaffAttendanceRecord extends AttendanceRecord {
+    staff_id: string;
+}
+
 
 export interface CommunicationLog {
     date: string;
@@ -205,7 +216,7 @@ export interface StudentProfile {
     healthRecords?: HealthRecords;
     disciplinaryRecords?: DisciplinaryRecord[];
     academicRecords?: AcademicRecord[];
-    attendanceRecords?: AttendanceRecord[];
+    attendanceRecords?: StudentAttendanceRecord[];
     communicationLogs?: CommunicationLog[];
     uploadedDocuments?: UploadedDocument[];
 }

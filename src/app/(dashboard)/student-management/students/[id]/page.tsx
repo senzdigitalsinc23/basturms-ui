@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, AttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords } from '@/lib/types';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -459,7 +459,7 @@ export default function StudentProfilePage() {
                 </TabsContent>
                 <TabsContent value="attendance" asChild>
                      <div className="grid gap-6">
-                        <RecordCard<AttendanceRecord>
+                        <RecordCard<StudentAttendanceRecord>
                             title="Attendance Summary"
                             description="Overview of student's attendance."
                             icon={Activity}
@@ -475,7 +475,7 @@ export default function StudentProfilePage() {
                                 <Dialog open={isAttendanceFormOpen} onOpenChange={setIsAttendanceFormOpen}>
                                     <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                     <DialogContent><DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
-                                        <AttendanceRecordForm onSubmit={values => handleAddRecord(addAttendanceRecord, values, "Add Attendance Record", `Logged attendance for ${format(new Date(values.date), 'yyyy-MM-dd')}`, "Record Added", "Attendance record added successfully.", () => setIsAttendanceFormOpen(false))} />
+                                        <AttendanceRecordForm onSubmit={values => handleAddRecord(addAttendanceRecord, {...values, student_id: studentId}, "Add Attendance Record", `Logged attendance for ${format(new Date(values.date), 'yyyy-MM-dd')}`, "Record Added", "Attendance record added successfully.", () => setIsAttendanceFormOpen(false))} />
                                     </DialogContent>
                                 </Dialog>
                             }
