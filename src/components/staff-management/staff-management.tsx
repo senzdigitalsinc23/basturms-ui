@@ -2,8 +2,8 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { addStaff as storeAddStaff, getStaff, getUsers, updateStaff as storeUpdateStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, deleteStaff as storeDeleteStaff, bulkDeleteStaff as storeBulkDeleteStaff } from '@/lib/store';
-import { Staff, User, StaffAcademicHistory, StaffAppointmentHistory, StaffDocument, Role } from '@/lib/types';
+import { addStaff as storeAddStaff, getStaff, getUsers, updateStaff as storeUpdateStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, deleteStaff as storeDeleteStaff, bulkDeleteStaff as storeBulkDeleteStaff, toggleStaffStatus as storeToggleStaffStatus } from '@/lib/store';
+import { Staff, User, StaffAcademicHistory, StaffAppointmentHistory, StaffDocument, Role, EmploymentStatus } from '@/lib/types';
 import { StaffDataTable } from './data-table';
 import { columns } from './columns';
 import { useToast } from '@/hooks/use-toast';
@@ -16,7 +16,7 @@ export type StaffDisplay = {
   staff: Staff;
   staff_id: string;
   roles: Role[];
-  status: string;
+  status: EmploymentStatus;
   joining_date: string;
 };
 
@@ -33,7 +33,7 @@ export function StaffManagement() {
 
     const displayData = allStaff.map(staffMember => {
         const user = allUsers.find(u => u.id === staffMember.user_id);
-        const status = user?.status === 'active' ? 'Active' : 'Inactive';
+        const status: EmploymentStatus = user?.status === 'active' ? 'Active' : 'Inactive';
         
         return { 
             user,
@@ -43,7 +43,7 @@ export function StaffManagement() {
             status: status,
             joining_date: staffMember.date_of_joining,
         };
-    }).filter(Boolean) as StaffDisplay[];
+    });
     
     setStaff(displayData);
   }
@@ -56,23 +56,25 @@ export function StaffManagement() {
     if (!currentUser) return;
     const newStaff = storeAddStaff(data.staffData, currentUser.id); 
 
-    data.academic_history?.forEach(history => {
-        addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
-    });
+    if (newStaff) {
+      data.academic_history?.forEach(history => {
+          addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
+      });
 
-    for (const doc of data.documents || []) {
-        const fileReader = new FileReader();
-        fileReader.readAsDataURL(doc.file);
-        fileReader.onload = () => {
-            addStaffDocument({
-                staff_id: newStaff.staff_id,
-                document_name: doc.name,
-                file: fileReader.result as string
-            });
-        };
+      for (const doc of data.documents || []) {
+          const fileReader = new FileReader();
+          fileReader.readAsDataURL(doc.file);
+          fileReader.onload = () => {
+              addStaffDocument({
+                  staff_id: newStaff.staff_id,
+                  document_name: doc.name,
+                  file: fileReader.result as string
+              });
+          };
+      }
+      
+      addStaffAppointmentHistory({...data.appointment_history, staff_id: newStaff.staff_id});
     }
-    
-    addStaffAppointmentHistory({...data.appointment_history, staff_id: newStaff.staff_id});
     
     refreshStaff();
   }
@@ -107,24 +109,45 @@ export function StaffManagement() {
     }
   }
 
-  const handleEdit = (staff: StaffDisplay) => {
-    setEditingStaff(staff);
+  const handleEdit = (staffToEdit: StaffDisplay) => {
+    setEditingStaff(staffToEdit);
     setIsEditFormOpen(true);
   };
+  
+  const handleToggleStatus = (staffId: string) => {
+    if (!currentUser) return;
+    const updatedStaff = storeToggleStaffStatus(staffId, currentUser.id);
+    if (updatedStaff) {
+        refreshStaff();
+        toast({
+            title: "Staff Status Updated",
+            description: `The status for ${updatedStaff.first_name} has been updated.`
+        })
+    } else {
+         toast({
+            variant: 'destructive',
+            title: "Error",
+            description: "Could not update staff status. The staff may not have a user account."
+        })
+    }
+  }
 
 
   return (
     <>
     <StaffDataTable
-      columns={columns({ onEdit: handleEdit, onDelete: handleDelete })}
+      columns={columns({ onEdit: handleEdit, onDelete: handleDelete, onToggleStatus: handleToggleStatus })}
       data={staff}
       onBulkDelete={handleBulkDelete}
     />
-     <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+     <Dialog open={isEditFormOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) setEditingStaff(null);
+        setIsEditFormOpen(isOpen);
+     }}>
         <DialogContent className="sm:max-w-4xl max-h-screen flex flex-col">
             <DialogHeader>
                 <DialogTitle>Edit Staff Member</DialogTitle>
-                <DialogDescription>Update details for {editingStaff?.user?.name}</DialogDescription>
+                <DialogDescription>Update details for {editingStaff?.staff.first_name} {editingStaff?.staff.last_name}</DialogDescription>
             </DialogHeader>
             {editingStaff && <AddStaffForm isEditMode defaultValues={editingStaff.staff} onSubmit={handleUpdateStaff} />}
         </DialogContent>

@@ -31,6 +31,8 @@ export const ALL_ROLES: Role[] = [
   'Accountant',
 ];
 
+export const ALL_ACCOUNTANT_ROLES: Role[] = ['Accountant'];
+
 export interface RoleStorage {
   id: string;
   name: Role;

@@ -27,6 +27,7 @@ import {
   Subject,
   ClassSubject,
   TeacherSubject,
+  EmploymentStatus,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -325,13 +326,11 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   
   saveToStorage(USERS_KEY, [...users, newUser]);
 
-  if (user.entityId && user.role !== 'Student' && user.role !== 'Parent' && user.role !== 'Admin') {
-      const staffList = getStaff();
-      const staffIndex = staffList.findIndex(s => s.staff_id === user.entityId);
-      if (staffIndex > -1) {
-          staffList[staffIndex].user_id = newUser.id;
-          saveToStorage(STAFF_KEY, staffList);
-      }
+  // This part is for linking user to an existing student record, not used for staff
+  if (user.entityId && user.role === 'Student') {
+      const studentProfiles = getStudentProfiles();
+      const studentProfile = studentProfiles.find(p => p.student.student_no === user.entityId);
+      // We don't need to link back, the form handles it.
   }
 
   return mapUser(newUser);
@@ -774,20 +773,38 @@ export const storeGetStaffAcademicHistory = (): StaffAcademicHistory[] => getFro
 export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
-export const addStaff = (staff: Omit<Staff, 'user_id'>, creatorId: string): Staff => {
+export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): Staff | null => {
     const staffList = getStaff();
-    const newStaff = { ...staff, user_id: '' }; // user_id will be set when user is created
+    const existingStaff = staffList.find(s => s.email === staffData.email || s.staff_id === staffData.staff_id);
+    if(existingStaff) {
+        console.error("Staff with this email or ID already exists");
+        return null;
+    }
+
+    const username = staffData.email.split('@')[0];
+    const defaultPassword = `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`;
+
+    const user = addUser({
+        name: `${staffData.first_name} ${staffData.last_name}`,
+        email: staffData.email,
+        username,
+        role: staffData.roles[0], // Use first role as primary
+        password: defaultPassword,
+    });
+
+    const newStaff = { ...staffData, user_id: user.id };
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
-        action: 'Create Staff Record',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} with Staff ID ${newStaff.staff_id}. User account can now be created.`
+        action: 'Create Staff & User',
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} and linked user account ${user.email}.`
     });
 
     return newStaff;
 };
+
 
 export const updateStaff = (staffId: string, updatedData: Partial<Staff>, academicHistory: StaffAcademicHistory[], appointmentHistory: Omit<StaffAppointmentHistory, 'staff_id'>, editorId: string): Staff | null => {
     const staffList = getStaff();
@@ -827,9 +844,9 @@ export const deleteStaff = (staffId: string, editorId: string): boolean => {
     if (!staffToDelete) return false;
 
     // Delete user
-    const users = getUsersInternal();
-    const newUsers = users.filter(u => u.id !== staffToDelete.user_id);
-    saveToStorage(USERS_KEY, newUsers);
+    if (staffToDelete.user_id) {
+        deleteUser(staffToDelete.user_id);
+    }
     
     // Delete staff record
     const newStaffList = staffList.filter(s => s.staff_id !== staffId);
@@ -864,6 +881,22 @@ export const bulkDeleteStaff = (staffIds: string[], editorId: string): number =>
         }
     });
     return deletedCount;
+}
+
+export const toggleStaffStatus = (staffId: string, editorId: string): Staff | null => {
+    const staffList = getStaff();
+    const staff = staffList.find(s => s.staff_id === staffId);
+    if (staff && staff.user_id) {
+        toggleUserStatus(staff.user_id);
+        addAuditLog({
+            user: getUserById(editorId)?.email || 'Unknown',
+            name: getUserById(editorId)?.name || 'Unknown',
+            action: 'Toggle Staff Status',
+            details: `Toggled account status for staff member ${staff.first_name} ${staff.last_name} (Staff ID: ${staffId})`
+        });
+        return staff;
+    }
+    return null;
 }
 
 export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {

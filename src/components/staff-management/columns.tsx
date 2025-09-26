@@ -3,7 +3,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Eye, Trash2, Pencil } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Eye, Trash2, Pencil, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,15 +20,13 @@ import { StaffDisplay } from './staff-management';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Checkbox } from '../ui/checkbox';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { AddStaffForm } from './add-staff-form';
-import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 
 type ColumnsProps = {
     onEdit: (staff: StaffDisplay) => void;
     onDelete: (staffId: string) => void;
+    onToggleStatus: (staffId: string) => void;
 };
 
 const statusColors: Record<EmploymentStatus, string> = {
@@ -37,7 +35,7 @@ const statusColors: Record<EmploymentStatus, string> = {
     Inactive: 'bg-red-100 text-red-800',
 };
 
-export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
+export const columns = ({ onEdit, onDelete, onToggleStatus }: ColumnsProps): ColumnDef<StaffDisplay>[] => [
     {
         id: 'select',
         header: ({ table }) => (
@@ -159,6 +157,10 @@ export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<StaffDisp
                         <DropdownMenuItem onClick={() => onEdit(staff)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit Staff
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onToggleStatus(staff.staff_id)}>
+                            {staff.status === 'Active' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
+                            {staff.status === 'Active' ? 'Freeze Account' : 'Activate Account'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialog>
