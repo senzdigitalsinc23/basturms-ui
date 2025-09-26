@@ -47,7 +47,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { getSchoolProfile } from '@/lib/store';
 
 const SidebarAccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionTrigger>,
@@ -230,8 +231,24 @@ const getRoleNavItems = (role: Role) => {
 export function SidebarNav() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const [schoolName, setSchoolName] = useState('Metoxi');
 
   const navItems = user ? getRoleNavItems(user.role) : [];
+
+  const updateSchoolName = () => {
+    const profile = getSchoolProfile();
+    if (profile?.schoolName) {
+      setSchoolName(profile.schoolName);
+    }
+  };
+
+  useEffect(() => {
+    updateSchoolName();
+    window.addEventListener('schoolProfileUpdated', updateSchoolName);
+    return () => {
+      window.removeEventListener('schoolProfileUpdated', updateSchoolName);
+    };
+  }, []);
 
   return (
     <Sidebar
@@ -242,7 +259,7 @@ export function SidebarNav() {
         <SidebarHeader>
             <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
                 <Building2 className="h-6 w-6 text-primary"/>
-                <span className="hidden group-data-[state=expanded]:inline">Metoxi</span>
+                <span className="hidden group-data-[state=expanded]:inline">{schoolName}</span>
             </Link>
         </SidebarHeader>
       <SidebarContent className="p-2">

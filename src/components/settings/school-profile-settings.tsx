@@ -11,7 +11,7 @@ import { Textarea } from '../ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Upload } from 'lucide-react';
 import { getSchoolProfile, saveSchoolProfile } from '@/lib/store';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const profileSchema = z.object({
@@ -26,6 +26,7 @@ export type SchoolProfileData = z.infer<typeof profileSchema>;
 
 export function SchoolProfileSettings() {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<SchoolProfileData>({
     resolver: zodResolver(profileSchema),
@@ -47,11 +48,28 @@ export function SchoolProfileSettings() {
 
   function onSubmit(values: SchoolProfileData) {
     saveSchoolProfile(values);
+    window.dispatchEvent(new Event('schoolProfileUpdated'));
     toast({
         title: 'School Profile Updated',
         description: 'Your school\'s information has been saved.',
     });
   }
+
+  const handleLogoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('logo', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   return (
     <Form {...form}>
@@ -62,7 +80,14 @@ export function SchoolProfileSettings() {
                     <AvatarImage src={form.watch('logo')} alt="School Logo" />
                     <AvatarFallback>MS</AvatarFallback>
                 </Avatar>
-                <Button size="icon" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                />
+                <Button type="button" size="icon" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full" onClick={handleLogoClick}>
                     <Upload className="h-4 w-4"/>
                 </Button>
             </div>
