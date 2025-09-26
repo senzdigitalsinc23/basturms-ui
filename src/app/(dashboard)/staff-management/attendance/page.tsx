@@ -14,7 +14,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar as CalendarIcon, Loader2, Save } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { useState, useEffect } from 'react';
 
 type StaffForAttendance = {
@@ -94,6 +94,9 @@ export default function StaffAttendancePage() {
                                 mode="single"
                                 selected={attendanceDate}
                                 onSelect={(date) => setAttendanceDate(date || new Date())}
+                                disabled={(date) =>
+                                    date > new Date() || date < subDays(new Date(), 2)
+                                }
                                 initialFocus
                             />
                         </PopoverContent>
