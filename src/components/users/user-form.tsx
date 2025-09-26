@@ -140,9 +140,7 @@ export function UserForm({
     }
   }
 
-  const isEntitySelectionRole = (selectedRole === 'Student' || isStaffRole) && !isEditMode;
-  const allowManualEntry = !isEntitySelectionRole;
-
+  const isEntitySelectionRole = (selectedRole && selectedRole !== 'Parent') && !isEditMode;
 
   return (
     <Form {...form}>
@@ -207,37 +205,32 @@ export function UserForm({
            />
         )}
         
-        {allowManualEntry ? (
-            <>
-                <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                        <Input placeholder="John Doe" {...field} disabled={!allowManualEntry && isEntitySelectionRole} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                        <Input placeholder="name@example.com" {...field} disabled={!allowManualEntry && isEntitySelectionRole} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </>
-        ) : null}
-
+        <FormField
+        control={form.control}
+        name="name"
+        render={({ field }) => (
+            <FormItem>
+            <FormLabel>Full Name</FormLabel>
+            <FormControl>
+                <Input placeholder="Select an entity to auto-fill" {...field} readOnly={!isEditMode} disabled={!isEditMode && isEntitySelectionRole} />
+            </FormControl>
+            <FormMessage />
+            </FormItem>
+        )}
+        />
+        <FormField
+        control={form.control}
+        name="email"
+        render={({ field }) => (
+            <FormItem>
+            <FormLabel>Email</FormLabel>
+            <FormControl>
+                <Input placeholder="Select an entity to auto-fill" {...field} readOnly={!isEditMode} disabled={!isEditMode && isEntitySelectionRole} />
+            </FormControl>
+            <FormMessage />
+            </FormItem>
+        )}
+        />
 
         {!isEditMode && (
           <FormField
