@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Role, EmploymentStatus } from '@/lib/types';
+import { Role, EmploymentStatus, Staff } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { StaffDisplay } from './staff-management';
@@ -24,7 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 
 type ColumnsProps = {
-    onEdit: (staff: StaffDisplay) => void;
+    onEdit: (staff: Staff) => void;
     onDelete: (staffId: string) => void;
     onToggleStatus: (staffId: string) => void;
 };
@@ -135,7 +135,7 @@ export const columns = ({ onEdit, onDelete, onToggleStatus }: ColumnsProps): Col
     {
         id: 'actions',
         cell: function Cell({ row }) {
-            const staff = row.original;
+            const staffDisplay = row.original;
             
             return (
                 <div className="text-right">
@@ -149,18 +149,18 @@ export const columns = ({ onEdit, onDelete, onToggleStatus }: ColumnsProps): Col
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                            <Link href={`/staff-management/${staff.staff_id}`}>
+                            <Link href={`/staff-management/${staffDisplay.staff_id}`}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Profile
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit(staff)}>
+                        <DropdownMenuItem onClick={() => onEdit(staffDisplay.staff)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit Staff
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onToggleStatus(staff.staff_id)}>
-                            {staff.status === 'Active' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
-                            {staff.status === 'Active' ? 'Freeze Account' : 'Activate Account'}
+                        <DropdownMenuItem onClick={() => onToggleStatus(staffDisplay.staff_id)} disabled={!staffDisplay.user}>
+                            {staffDisplay.status === 'Active' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
+                            {staffDisplay.status === 'Active' ? 'Freeze Account' : 'Activate Account'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialog>
@@ -179,7 +179,7 @@ export const columns = ({ onEdit, onDelete, onToggleStatus }: ColumnsProps): Col
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => onDelete(staff.staff_id)}>Delete</AlertDialogAction>
+                                    <AlertDialogAction onClick={() => onDelete(staffDisplay.staff_id)}>Delete</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>

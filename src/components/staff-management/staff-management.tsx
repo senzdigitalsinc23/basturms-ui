@@ -25,7 +25,7 @@ export function StaffManagement() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffDisplay | null>(null);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
 
   const refreshStaff = () => {
     const allUsers = getUsers();
@@ -51,33 +51,6 @@ export function StaffManagement() {
   useEffect(() => {
     refreshStaff();
   }, []);
-
-  const handleAddStaff = (data: {staffData: Omit<Staff, 'user_id'>, academic_history: StaffAcademicHistory[], documents: any[], appointment_history: StaffAppointmentHistory}) => {
-    if (!currentUser) return;
-    const newStaff = storeAddStaff(data.staffData, currentUser.id); 
-
-    if (newStaff) {
-      data.academic_history?.forEach(history => {
-          addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
-      });
-
-      for (const doc of data.documents || []) {
-          const fileReader = new FileReader();
-          fileReader.readAsDataURL(doc.file);
-          fileReader.onload = () => {
-              addStaffDocument({
-                  staff_id: newStaff.staff_id,
-                  document_name: doc.name,
-                  file: fileReader.result as string
-              });
-          };
-      }
-      
-      addStaffAppointmentHistory({...data.appointment_history, staff_id: newStaff.staff_id});
-    }
-    
-    refreshStaff();
-  }
   
   const handleUpdateStaff = (data: {staffData: Staff, academic_history: any[], appointment_history: any}) => {
     if (!currentUser) return;
@@ -109,7 +82,7 @@ export function StaffManagement() {
     }
   }
 
-  const handleEdit = (staffToEdit: StaffDisplay) => {
+  const handleEdit = (staffToEdit: Staff) => {
     setEditingStaff(staffToEdit);
     setIsEditFormOpen(true);
   };
@@ -147,9 +120,9 @@ export function StaffManagement() {
         <DialogContent className="sm:max-w-4xl max-h-screen flex flex-col">
             <DialogHeader>
                 <DialogTitle>Edit Staff Member</DialogTitle>
-                <DialogDescription>Update details for {editingStaff?.staff.first_name} {editingStaff?.staff.last_name}</DialogDescription>
+                <DialogDescription>Update details for {editingStaff?.first_name} {editingStaff?.last_name}</DialogDescription>
             </DialogHeader>
-            {editingStaff && <AddStaffForm isEditMode defaultValues={editingStaff.staff} onSubmit={handleUpdateStaff} />}
+            {editingStaff && <AddStaffForm isEditMode defaultValues={editingStaff} onSubmit={handleUpdateStaff} />}
         </DialogContent>
     </Dialog>
     </>

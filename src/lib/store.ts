@@ -326,11 +326,19 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   
   saveToStorage(USERS_KEY, [...users, newUser]);
 
-  // This part is for linking user to an existing student record, not used for staff
-  if (user.entityId && user.role === 'Student') {
-      const studentProfiles = getStudentProfiles();
-      const studentProfile = studentProfiles.find(p => p.student.student_no === user.entityId);
-      // We don't need to link back, the form handles it.
+  // Link the new user ID back to the staff or student record
+  if (user.entityId) {
+      if (user.role === 'Student') {
+          // This case is handled during student creation where user is frozen.
+      } else {
+          // This is a staff member
+          const staffList = getStaff();
+          const staffIndex = staffList.findIndex(s => s.staff_id === user.entityId);
+          if (staffIndex !== -1) {
+              staffList[staffIndex].user_id = newUser.id;
+              saveToStorage(STAFF_KEY, staffList);
+          }
+      }
   }
 
   return mapUser(newUser);
@@ -781,25 +789,14 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): 
         return null;
     }
 
-    const username = staffData.email.split('@')[0];
-    const defaultPassword = `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`;
-
-    const user = addUser({
-        name: `${staffData.first_name} ${staffData.last_name}`,
-        email: staffData.email,
-        username,
-        role: staffData.roles[0], // Use first role as primary
-        password: defaultPassword,
-    });
-
-    const newStaff = { ...staffData, user_id: user.id };
+    const newStaff = { ...staffData, user_id: '' }; // user_id is initially empty
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
-        action: 'Create Staff & User',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} and linked user account ${user.email}.`
+        action: 'Create Staff',
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name}.`
     });
 
     return newStaff;
