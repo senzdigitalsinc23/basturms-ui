@@ -384,15 +384,14 @@ export const toggleUserStatus = (userId: string): User | undefined => {
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
         const user = users[userIndex];
-        const updatedUser = {
+        const newUsers = [...users];
+        newUsers[userIndex] = {
             ...user,
             status: user.status === 'active' ? 'frozen' : 'active',
             updated_at: new Date().toISOString(),
         };
-        const newUsers = [...users];
-        newUsers[userIndex] = updatedUser;
         saveToStorage(USERS_KEY, newUsers);
-        return mapUser(updatedUser);
+        return mapUser(newUsers[userIndex]);
     }
     return undefined;
 };
@@ -465,6 +464,10 @@ export const bulkDeleteAuditLogs = (logIds: string[]): number => {
     return deletedCount;
 }
 
+export const deleteAllAuditLogs = (): void => {
+    saveToStorage(LOGS_KEY, []);
+}
+
 // Auth Log Functions
 export const getAuthLogs = (): AuthLog[] => getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
 export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
@@ -497,6 +500,10 @@ export const bulkDeleteAuthLogs = (logIds: string[]): number => {
         saveToStorage(AUTH_LOGS_KEY, newLogs);
     }
     return deletedCount;
+}
+
+export const deleteAllAuthLogs = (): void => {
+    saveToStorage(AUTH_LOGS_KEY, []);
 }
 
 // Student Management Functions

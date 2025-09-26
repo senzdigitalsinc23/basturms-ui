@@ -34,9 +34,10 @@ interface AuditLogDataTableProps {
   data: AuditLog[];
   isSuperAdmin: boolean;
   onBulkDelete: (logIds: string[]) => void;
+  onDeleteAll: () => void;
 }
 
-export function AuditLogDataTable({ columns, data, isSuperAdmin, onBulkDelete }: AuditLogDataTableProps) {
+export function AuditLogDataTable({ columns, data, isSuperAdmin, onBulkDelete, onDeleteAll }: AuditLogDataTableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'timestamp', desc: true },
@@ -71,6 +72,11 @@ export function AuditLogDataTable({ columns, data, isSuperAdmin, onBulkDelete }:
     table.resetRowSelection();
   };
 
+  const handleConfirmDeleteAll = () => {
+    onDeleteAll();
+    table.resetRowSelection();
+  }
+
 
   return (
     <div className="space-y-4">
@@ -83,15 +89,15 @@ export function AuditLogDataTable({ columns, data, isSuperAdmin, onBulkDelete }:
           }
           className="max-w-sm"
         />
-        {isSuperAdmin && selectedRows.length > 0 && (
+        {isSuperAdmin && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{selectedRows.length} selected</span>
+            {selectedRows.length > 0 && <span className="text-sm text-muted-foreground">{selectedRows.length} selected</span>}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                  <AlertDialog>
+                  {selectedRows.length > 0 && <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
@@ -107,6 +113,25 @@ export function AuditLogDataTable({ columns, data, isSuperAdmin, onBulkDelete }:
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleConfirmBulkDelete}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete All
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete ALL log entries. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmDeleteAll}>Delete All Logs</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>

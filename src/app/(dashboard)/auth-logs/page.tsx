@@ -3,7 +3,7 @@ import { ProtectedRoute } from '@/components/protected-route';
 import { AuthLogDataTable } from '@/components/auth-logs/data-table';
 import { columns } from '@/components/auth-logs/columns';
 import { useEffect, useState } from 'react';
-import { getAuthLogs, deleteAuthLog, bulkDeleteAuthLogs, addAuditLog } from '@/lib/store';
+import { getAuthLogs, deleteAuthLog, bulkDeleteAuthLogs, addAuditLog, deleteAllAuthLogs } from '@/lib/store';
 import { AuthLog } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +47,19 @@ export default function AuthLogsPage() {
     }
   }
 
+  const handleDeleteAll = () => {
+    if (!user) return;
+    deleteAllAuthLogs();
+    toast({ title: 'All Logs Deleted', description: 'All authentication log entries have been removed.' });
+    addAuditLog({
+        user: user.email,
+        name: user.name,
+        action: 'Delete All Auth Logs',
+        details: 'Deleted all authentication log entries.'
+    });
+    fetchLogs();
+  }
+
   return (
     <ProtectedRoute allowedRoles={['Admin']}>
       <div className="space-y-6">
@@ -61,6 +74,7 @@ export default function AuthLogsPage() {
             data={logs} 
             isSuperAdmin={user?.is_super_admin || false}
             onBulkDelete={handleBulkDelete}
+            onDeleteAll={handleDeleteAll}
         />
       </div>
     </ProtectedRoute>
