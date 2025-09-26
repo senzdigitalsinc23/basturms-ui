@@ -97,8 +97,6 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/student-management/students', label: 'Students' },
         { href: '/student-management/promotions', label: 'Promotion/Graduation' },
         { href: '/student-management/add', label: 'Add Student' },
-        { href: '/student-management/attendance', label: 'Student Register' },
-        { href: '/#', label: 'Classes' },
       ],
     },
      {
@@ -107,13 +105,19 @@ const menuItems: Record<Role, NavItem[]> = {
       items: [
         { href: '/staff-management', label: 'Staff List' },
         { href: '/staff-management/add', label: 'Add Staff' },
-        { href: '/staff-management/attendance', label: 'Staff Attendance' },
-        { href: '/staff-management/attendance-history', label: 'Attendance History' },
       ]
     },
     { href: '/users', label: 'User Management', icon: Users },
     { href: '/notifications', label: 'Notifications', icon: Bell },
-    { href: '/#', label: 'Attendance', icon: Calendar },
+     {
+      label: 'Attendance',
+      icon: CalendarCheck,
+      items: [
+          { href: '/student-management/attendance', label: 'Student Register' },
+          { href: '/staff-management/attendance', label: 'Staff Register' },
+          { href: '/attendance/history', label: 'Attendance History' },
+      ]
+    },
     { href: '/#', label: 'Timetable', icon: Calendar },
     {
       label: 'Announcements',

@@ -55,8 +55,7 @@ export default function StaffAttendancePage() {
         }));
 
         recordsToSave.forEach(record => {
-            // This is a simplified approach. In a real app, you'd likely have a dedicated function for staff.
-            // addAttendanceRecord(record.staff_id, record, user.id, 'staff');
+            addAttendanceRecord(record.staff_id, record, user.id, 'staff');
         });
 
         const logDetails = `Saved staff attendance for ${format(attendanceDate, 'PPP')}.`;
