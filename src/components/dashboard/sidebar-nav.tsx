@@ -49,6 +49,7 @@ import {
 import { cn } from '@/lib/utils';
 import React, { useEffect, useState } from 'react';
 import { getSchoolProfile } from '@/lib/store';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 const SidebarAccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionTrigger>,
@@ -232,21 +233,23 @@ export function SidebarNav() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const [schoolName, setSchoolName] = useState('Metoxi');
+  const [schoolLogo, setSchoolLogo] = useState<string | undefined>('/placeholder-logo.png');
 
   const navItems = user ? getRoleNavItems(user.role) : [];
 
-  const updateSchoolName = () => {
+  const updateSchoolProfile = () => {
     const profile = getSchoolProfile();
-    if (profile?.schoolName) {
-      setSchoolName(profile.schoolName);
+    if (profile) {
+      setSchoolName(profile.schoolName || 'Metoxi');
+      setSchoolLogo(profile.logo);
     }
   };
 
   useEffect(() => {
-    updateSchoolName();
-    window.addEventListener('schoolProfileUpdated', updateSchoolName);
+    updateSchoolProfile();
+    window.addEventListener('schoolProfileUpdated', updateSchoolProfile);
     return () => {
-      window.removeEventListener('schoolProfileUpdated', updateSchoolName);
+      window.removeEventListener('schoolProfileUpdated', updateSchoolProfile);
     };
   }, []);
 
@@ -257,8 +260,11 @@ export function SidebarNav() {
       className="border-r"
     >
         <SidebarHeader>
-            <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
-                <Building2 className="h-6 w-6 text-primary"/>
+            <Link href="/dashboard" className="flex items-center gap-3 font-bold text-lg">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={schoolLogo} alt={schoolName} />
+                  <AvatarFallback>{schoolName.charAt(0)}</AvatarFallback>
+                </Avatar>
                 <span className="hidden group-data-[state=expanded]:inline">{schoolName}</span>
             </Link>
         </SidebarHeader>
