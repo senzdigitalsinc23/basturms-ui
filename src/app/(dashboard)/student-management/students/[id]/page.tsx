@@ -1,18 +1,19 @@
 
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords } from '@/lib/types';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2 } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -223,11 +224,14 @@ export default function StudentProfilePage() {
         );
     }
 
-    const { student, contactDetails, guardianInfo, admissionDetails, academicRecords, healthRecords, disciplinaryRecords, attendanceRecords, communicationLogs, uploadedDocuments } = profile;
+    const { student, contactDetails, guardianInfo, admissionDetails, academicRecords, healthRecords, disciplinaryRecords, attendanceRecords, communicationLogs, uploadedDocuments, financialDetails } = profile;
     const fullName = `${student.first_name} ${student.last_name} ${student.other_name || ''}`.trim();
     const initials = `${student.first_name[0]}${student.last_name[0]}`;
     const users = getUsers();
     const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown User';
+    
+    const currentTermPayment = financialDetails?.payment_history.slice(-1)[0];
+    const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
     return (
         <div className="space-y-6">
@@ -320,9 +324,10 @@ export default function StudentProfilePage() {
             </div>
 
             <Tabs defaultValue="contact">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                     <TabsTrigger value="contact">Contact & Guardian</TabsTrigger>
                     <TabsTrigger value="academic">Academic</TabsTrigger>
+                    <TabsTrigger value="financials">Financials</TabsTrigger>
                     <TabsTrigger value="health">Health</TabsTrigger>
                     <TabsTrigger value="conduct">Conduct</TabsTrigger>
                     <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -376,6 +381,87 @@ export default function StudentProfilePage() {
                             </Dialog>
                         }
                     />
+                </TabsContent>
+                <TabsContent value="financials">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-4">
+                                <Landmark className="h-6 w-6 text-primary" />
+                                <div>
+                                    <CardTitle>Financials</CardTitle>
+                                    <CardDescription>Overview of the student's financial account.</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {financialDetails ? (
+                                <>
+                                    <div className="grid md:grid-cols-3 gap-4 text-center">
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-sm font-medium text-muted-foreground">Current Term Fees</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <p className="text-2xl font-bold">{formatCurrency(currentTermPayment?.total_fees || 0)}</p>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-sm font-medium text-muted-foreground">Amount Paid</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <p className="text-2xl font-bold text-green-600">{formatCurrency(currentTermPayment?.amount_paid || 0)}</p>
+                                            </CardContent>
+                                        </Card>
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <p className="text-2xl font-bold text-red-600">{formatCurrency(currentTermPayment?.outstanding || 0)}</p>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                    
+                                     <Card className="bg-muted/50">
+                                        <CardContent className="p-4 flex items-center justify-between">
+                                            <p className="font-medium">Total Account Balance</p>
+                                            <p className={`text-xl font-bold ${financialDetails.account_balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                {formatCurrency(Math.abs(financialDetails.account_balance))}
+                                                <span className="text-sm font-normal ml-2">{financialDetails.account_balance < 0 ? 'Debit' : 'Credit'}</span>
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+
+                                    <div>
+                                        <h4 className="font-semibold mb-2">Payment History</h4>
+                                        <RecordCard<TermPayment>
+                                            title=""
+                                            description=""
+                                            icon={() => null}
+                                            records={financialDetails.payment_history}
+                                            columns={['Term', 'Total Billed', 'Amount Paid', 'Outstanding', 'Status']}
+                                            renderRow={(rec, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell>{rec.term}</TableCell>
+                                                    <TableCell>{formatCurrency(rec.total_fees)}</TableCell>
+                                                    <TableCell>{formatCurrency(rec.amount_paid)}</TableCell>
+                                                    <TableCell>{formatCurrency(rec.outstanding)}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={rec.status === 'Paid' ? 'secondary' : (rec.status === 'Partially Paid' ? 'default' : 'destructive')}>
+                                                            {rec.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-muted-foreground text-center py-8">No financial records found for this student.</p>
+                            )}
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                  <TabsContent value="health" asChild>
                     <Card>

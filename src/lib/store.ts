@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -148,7 +149,37 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
             uploadedDocuments: [
                 { name: 'Birth Certificate', url: '#', uploaded_at: '2024-03-15T10:00:00.000Z', type: 'Birth Certificate' },
                 { name: 'Admission Form', url: '#', uploaded_at: '2024-03-15T10:05:00.000Z', type: 'Admission Form' }
-            ]
+            ],
+             financialDetails: {
+                account_balance: -500, // owes 500
+                payment_history: [
+                    {
+                        term: '1st Term 2023/2024',
+                        total_fees: 2000,
+                        amount_paid: 2000,
+                        outstanding: 0,
+                        status: 'Paid',
+                        payment_date: '2023-09-05',
+                        bill_items: [
+                            { description: 'Tuition', amount: 1500 },
+                            { description: 'Books', amount: 300 },
+                            { description: 'Uniform', amount: 200 },
+                        ]
+                    },
+                    {
+                        term: '2nd Term 2023/2024',
+                        total_fees: 1800,
+                        amount_paid: 1300,
+                        outstanding: 500,
+                        status: 'Partially Paid',
+                        payment_date: '2024-01-10',
+                        bill_items: [
+                            { description: 'Tuition', amount: 1500 },
+                            { description: 'Extra Curricular', amount: 300 },
+                        ]
+                    }
+                ]
+            }
         },
         {
             student: { student_no: student2StudentNo, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser, avatarUrl: 'https://picsum.photos/seed/student2/200/200' },

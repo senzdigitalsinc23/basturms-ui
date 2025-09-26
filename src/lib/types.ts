@@ -1,5 +1,6 @@
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -206,6 +207,25 @@ export interface UploadedDocument {
     type: 'Birth Certificate' | 'Transcript' | 'Report Card' | 'Admission Form' | 'Admission Letter';
 }
 
+export type FeeItem = {
+    description: string;
+    amount: number;
+};
+
+export type TermPayment = {
+    term: string; // e.g., "1st Term 2023/2024"
+    total_fees: number;
+    amount_paid: number;
+    outstanding: number;
+    status: 'Paid' | 'Partially Paid' | 'Unpaid';
+    payment_date?: string;
+    bill_items: FeeItem[];
+};
+
+export interface FinancialDetails {
+    account_balance: number; // Positive for credit, negative for debit/outstanding
+    payment_history: TermPayment[];
+}
 
 export interface StudentProfile {
     student: Student;
@@ -219,6 +239,7 @@ export interface StudentProfile {
     attendanceRecords?: StudentAttendanceRecord[];
     communicationLogs?: CommunicationLog[];
     uploadedDocuments?: UploadedDocument[];
+    financialDetails?: FinancialDetails;
 }
 
 // Staff Management Types
