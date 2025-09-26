@@ -54,7 +54,7 @@ export function StaffManagement() {
   
   const handleUpdateStaff = (data: {staffData: Staff, academic_history: any[], appointment_history: any}) => {
     if (!currentUser) return;
-    storeUpdateStaff(data.staffData.staff_id, data.staffData, data.academic_history, data.appointment_history, currentUser.id);
+    storeUpdateStaff(data.staffData.staff_id, data.staffData, currentUser.id);
     refreshStaff();
     setIsEditFormOpen(false);
     setEditingStaff(null);
