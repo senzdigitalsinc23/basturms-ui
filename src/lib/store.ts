@@ -84,7 +84,7 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
 const getInitialStaff = (): Staff[] => {
     return [
         {
-            "staff_id": "STF001", "user_id": "", "first_name": "Douglas", "last_name": "Senzu", "email": "douglas.senzu@staff.com", "phone": "123-456-7890", "roles": ["Admin"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
+            "staff_id": "STF001", "user_id": "1", "first_name": "Douglas", "last_name": "Senzu", "email": "admin@campus.com", "phone": "123-456-7890", "roles": ["Admin"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
         },
         {
             "staff_id": "STF002", "user_id": "", "first_name": "Jane", "last_name": "Smith", "email": "jane.smith@staff.com", "phone": "098-765-4321", "roles": ["Headmaster"], "id_type": "Passport", "id_no": "P0123456", "date_of_joining": "2022-09-01T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Kumasi", "hometown": "Kumasi", "house_no": "H2", "gps_no": "AK-456-789" }
@@ -327,6 +327,13 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     updated_at: now,
   };
   
+  addAuditLog({
+    user: 'System',
+    name: 'System',
+    action: 'Create User',
+    details: `Created user: ${newUser.name}, Email: ${newUser.email}, Role: ${user.role}`,
+  });
+
   saveToStorage(USERS_KEY, [...users, newUser]);
 
   // Link the new user ID back to the staff or student record
@@ -354,13 +361,20 @@ export const updateUser = (updatedUser: User): User => {
     const role = roles.find(r => r.name === updatedUser.role);
     const { role: _, ...userToStore } = updatedUser;
 
+    const originalUser = users[userIndex];
     users[userIndex] = {
-        ...users[userIndex],
+        ...originalUser,
         ...userToStore,
-        role_id: role ? role.id : users[userIndex].role_id,
+        role_id: role ? role.id : originalUser.role_id,
         updated_at: new Date().toISOString(),
     };
     saveToStorage(USERS_KEY, users);
+     addAuditLog({
+        user: 'System',
+        name: 'System',
+        action: 'Update User',
+        details: `Updated user: ${users[userIndex].name}, Email: ${users[userIndex].email}`,
+    });
   }
   return updatedUser;
 };
@@ -370,10 +384,15 @@ export const toggleUserStatus = (userId: string): User | undefined => {
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
         const user = users[userIndex];
-        user.status = user.status === 'active' ? 'frozen' : 'active';
-        user.updated_at = new Date().toISOString();
-        saveToStorage(USERS_KEY, users);
-        return mapUser(user);
+        const updatedUser = {
+            ...user,
+            status: user.status === 'active' ? 'frozen' : 'active',
+            updated_at: new Date().toISOString(),
+        };
+        const newUsers = [...users];
+        newUsers[userIndex] = updatedUser;
+        saveToStorage(USERS_KEY, newUsers);
+        return mapUser(updatedUser);
     }
     return undefined;
 };
@@ -543,6 +562,7 @@ export const addStudentProfile = (
         password: `${lastName}${studentNoSuffix}`,
         role: 'Student' as Role,
         status: 'frozen' as 'frozen',
+        entityId: newProfile.student.student_no,
     };
     addUser(userToCreate);
 
@@ -792,14 +812,24 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): 
         return null;
     }
 
-    const newStaff = { ...staffData, user_id: '' }; // Start with no user_id
+    const userToCreate = {
+        name: `${staffData.first_name} ${staffData.last_name}`,
+        email: staffData.email,
+        username: staffData.email,
+        password: `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`,
+        role: staffData.roles[0], // Use the first role for user creation
+        status: 'active' as 'active' | 'frozen',
+    };
+    const newUser = addUser(userToCreate);
+
+    const newStaff = { ...staffData, user_id: newUser.id }; 
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
         action: 'Create Staff',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} (Staff ID: ${newStaff.staff_id}). No user account created yet.`
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} and linked user account.`
     });
 
     return newStaff;
