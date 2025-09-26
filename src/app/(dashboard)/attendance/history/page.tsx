@@ -3,19 +3,21 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords } from '@/lib/store';
-import { Class, StudentProfile, Staff, StaffAttendanceRecord, StudentAttendanceRecord } from '@/lib/types';
+import { Class, StudentProfile, Staff, StaffAttendanceRecord, StudentAttendanceRecord, Role } from '@/lib/types';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Search } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { DateRange } from 'react-day-picker';
 
 type StudentAttendanceHistory = {
     id: string;
@@ -27,55 +29,76 @@ type StaffAttendanceHistory = {
     id: string;
     name: string;
     status: StaffAttendanceRecord['status'];
+    roles: Role[];
 }
 
 export default function AttendanceHistoryPage() {
     const [classes, setClasses] = useState<Class[]>([]);
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
-    const [attendanceDate, setAttendanceDate] = useState<Date>(new Date());
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: startOfMonth(new Date()),
+        to: endOfMonth(new Date()),
+    });
+    const [studentSearch, setStudentSearch] = useState('');
+    const [staffSearch, setStaffSearch] = useState('');
     
     const [studentRecords, setStudentRecords] = useState<StudentAttendanceHistory[]>([]);
     const [staffRecords, setStaffRecords] = useState<StaffAttendanceHistory[]>([]);
+    
+    const [groupedStaffRecords, setGroupedStaffRecords] = useState<Record<string, StaffAttendanceHistory[]>>({});
 
     useEffect(() => {
         setClasses(getClasses());
     }, []);
 
-    // Effect for student records
     useEffect(() => {
-        if (selectedClass) {
+        if (selectedClass && dateRange?.from) {
             const allProfiles = getStudentProfiles();
             const filteredStudents = allProfiles
                 .filter(p => p.admissionDetails.class_assigned === selectedClass)
                 .map(p => {
-                    const record = p.attendanceRecords?.find(rec => format(new Date(rec.date), 'yyyy-MM-dd') === format(attendanceDate, 'yyyy-MM-dd'));
+                    const record = p.attendanceRecords?.find(rec => format(new Date(rec.date), 'yyyy-MM-dd') === format(dateRange.from!, 'yyyy-MM-dd'));
                     return {
                         id: p.student.student_no,
                         name: `${p.student.first_name} ${p.student.last_name}`,
-                        status: record?.status || 'N/A' // Show N/A if no record found for that date
+                        status: record?.status || 'N/A'
                     };
-                });
+                })
+                .filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
             setStudentRecords(filteredStudents);
         } else {
             setStudentRecords([]);
         }
-    }, [selectedClass, attendanceDate]);
+    }, [selectedClass, dateRange, studentSearch]);
     
-    // Effect for staff records
      useEffect(() => {
-        const allStaff = getStaff();
-        const allStaffAttendance = getStaffAttendanceRecords();
+        if (dateRange?.from) {
+            const allStaff = getStaff();
+            const allStaffAttendance = getStaffAttendanceRecords();
 
-        const filteredStaffRecords = allStaff.map(staff => {
-            const record = allStaffAttendance.find(rec => rec.staff_id === staff.staff_id && format(new Date(rec.date), 'yyyy-MM-dd') === format(attendanceDate, 'yyyy-MM-dd'));
-            return {
-                id: staff.staff_id,
-                name: `${staff.first_name} ${staff.last_name}`,
-                status: record?.status || 'N/A'
-            };
-        });
-        setStaffRecords(filteredStaffRecords);
-    }, [attendanceDate]);
+            const filteredStaffRecords = allStaff.map(staff => {
+                const record = allStaffAttendance.find(rec => rec.staff_id === staff.staff_id && format(new Date(rec.date), 'yyyy-MM-dd') === format(dateRange.from!, 'yyyy-MM-dd'));
+                return {
+                    id: staff.staff_id,
+                    name: `${staff.first_name} ${staff.last_name}`,
+                    status: record?.status || 'N/A',
+                    roles: staff.roles || []
+                };
+            }).filter(s => s.name.toLowerCase().includes(staffSearch.toLowerCase()));;
+            setStaffRecords(filteredStaffRecords);
+
+            const grouped = filteredStaffRecords.reduce((acc, record) => {
+                const role = record.roles[0] || 'Uncategorized';
+                if (!acc[role]) {
+                    acc[role] = [];
+                }
+                acc[role].push(record);
+                return acc;
+            }, {} as Record<string, StaffAttendanceHistory[]>);
+            setGroupedStaffRecords(grouped);
+
+        }
+    }, [dateRange, staffSearch]);
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -87,6 +110,19 @@ export default function AttendanceHistoryPage() {
             default: return 'outline';
         }
     }
+    
+    const handleDatePreset = (preset: 'this_month' | 'last_month' | 'this_year') => {
+        const now = new Date();
+        if (preset === 'this_month') {
+            setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+        } else if (preset === 'last_month') {
+            const lastMonth = subDays(now, 30);
+            setDateRange({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
+        } else if (preset === 'this_year') {
+            setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+        }
+    };
+
 
     return (
         <ProtectedRoute allowedRoles={['Admin', 'Headmaster']}>
@@ -97,6 +133,48 @@ export default function AttendanceHistoryPage() {
                         Review past attendance records for students and staff.
                     </p>
                 </div>
+                 <div className="flex items-center gap-4">
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn("w-full md:w-[280px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        `${format(dateRange.from, "LLL dd, y")} - ${format(dateRange.to, "LLL dd, y")}`
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    <span>Pick a date range</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                             <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={2}
+                                disabled={(date) => date > new Date() || date < subDays(new Date(), 365)}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Select onValueChange={handleDatePreset}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Select a preset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="this_month">This Month</SelectItem>
+                            <SelectItem value="last_month">Last Month</SelectItem>
+                            <SelectItem value="this_year">This Year</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
                 <Tabs defaultValue="students">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="students">Students</TabsTrigger>
@@ -118,26 +196,16 @@ export default function AttendanceHistoryPage() {
                                             {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                className={cn("w-full md:w-[240px] justify-start text-left font-normal", !attendanceDate && "text-muted-foreground")}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {attendanceDate ? format(attendanceDate, "PPP") : <span>Pick a date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={attendanceDate}
-                                                onSelect={(date) => setAttendanceDate(date || new Date())}
-                                                disabled={(date) => date > new Date()}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
+                                     <div className="relative flex-1">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            type="search"
+                                            placeholder="Search by student name..."
+                                            className="pl-8 w-full"
+                                            value={studentSearch}
+                                            onChange={(e) => setStudentSearch(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                                 {selectedClass && (
                                      <div className="rounded-md border">
@@ -178,53 +246,46 @@ export default function AttendanceHistoryPage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center gap-4">
-                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                className={cn("w-full md:w-[240px] justify-start text-left font-normal", !attendanceDate && "text-muted-foreground")}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {attendanceDate ? format(attendanceDate, "PPP") : <span>Pick a date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={attendanceDate}
-                                                onSelect={(date) => setAttendanceDate(date || new Date())}
-                                                disabled={(date) => date > new Date()}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                                 <div className="rounded-md border">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Staff Name</TableHead>
-                                                    <TableHead className="text-right">Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {staffRecords.length > 0 ? staffRecords.map(record => (
-                                                    <TableRow key={record.id}>
-                                                        <TableCell className="font-medium">{record.name}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )) : (
-                                                    <TableRow>
-                                                        <TableCell colSpan={2} className="h-24 text-center">
-                                                           No records found for this date.
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
+                                      <div className="relative flex-1">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            type="search"
+                                            placeholder="Search by staff name..."
+                                            className="pl-8 w-full"
+                                            value={staffSearch}
+                                            onChange={(e) => setStaffSearch(e.target.value)}
+                                        />
                                     </div>
+                                </div>
+                                {Object.keys(groupedStaffRecords).length > 0 ? Object.entries(groupedStaffRecords).map(([role, records]) => (
+                                    <div key={role}>
+                                        <h3 className="text-md font-semibold my-4 pl-2">{role}</h3>
+                                        <div className="rounded-md border">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Staff Name</TableHead>
+                                                        <TableHead className="text-right">Status</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {records.map(record => (
+                                                        <TableRow key={record.id}>
+                                                            <TableCell className="font-medium">{record.name}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="h-24 text-center flex items-center justify-center text-muted-foreground border rounded-md">
+                                        No records found for this date.
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
