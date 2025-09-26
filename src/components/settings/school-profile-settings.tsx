@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '../ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Upload } from 'lucide-react';
-import { getSchoolProfile, saveSchoolProfile } from '@/lib/store';
+import { getSchoolProfile, saveSchoolProfile, addAuditLog } from '@/lib/store';
 import { useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 const profileSchema = z.object({
   schoolName: z.string().min(1, 'School name is required'),
@@ -26,6 +27,7 @@ export type SchoolProfileData = z.infer<typeof profileSchema>;
 
 export function SchoolProfileSettings() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<SchoolProfileData>({
@@ -49,6 +51,14 @@ export function SchoolProfileSettings() {
   function onSubmit(values: SchoolProfileData) {
     saveSchoolProfile(values);
     window.dispatchEvent(new Event('schoolProfileUpdated'));
+    if (user) {
+        addAuditLog({
+            user: user.email,
+            name: user.name,
+            action: 'Update School Profile',
+            details: `Updated the school's profile information.`,
+        });
+    }
     toast({
         title: 'School Profile Updated',
         description: 'Your school\'s information has been saved.',
