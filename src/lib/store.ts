@@ -3,6 +3,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -33,6 +34,8 @@ import {
   EmploymentStatus,
   StudentAttendanceRecord,
   StaffAttendanceRecord,
+  AcademicYear,
+  GradeSetting,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -47,6 +50,11 @@ const STUDENTS_KEY = 'campusconnect_students';
 const CLASSES_KEY = 'campusconnect_classes';
 const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 const SCHOOL_KEY = 'campusconnect_school';
+
+// Settings Keys
+const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
+const GRADING_SCHEME_KEY = 'campusconnect_grading_scheme';
+
 
 // New keys for staff management
 const STAFF_KEY = 'campusconnect_staff';
@@ -229,6 +237,27 @@ const getInitialSubjects = (): Subject[] => {
     }));
 };
 
+const getInitialAcademicYears = (): AcademicYear[] => {
+    return [
+        { year: "2023/2024", terms: 3, status: "Active" },
+        { year: "2022/2023", terms: 3, status: "Completed" },
+    ];
+};
+
+const getInitialGradingScheme = (): GradeSetting[] => {
+    return [
+        { grade: "A+", range: "90-100", remarks: "Excellent" },
+        { grade: "A", range: "80-89", remarks: "Very Good" },
+        { grade: "B+", range: "75-79", remarks: "Good" },
+        { grade: "B", range: "70-74", remarks: "Credit" },
+        { grade: "C+", range: "65-69", remarks: "Credit" },
+        { grade: "C", range: "60-64", remarks: "Pass" },
+        { grade: "D+", range: "55-59", remarks: "Pass" },
+        { grade: "D", range: "50-54", remarks: "Pass" },
+        { grade: "F", range: "0-49", remarks: "Fail" },
+    ];
+};
+
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') {
     return defaultValue;
@@ -277,6 +306,13 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(STAFF_PROFILES_KEY)) {
         saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
     }
+    // Initialize settings
+    if (!window.localStorage.getItem(ACADEMIC_YEARS_KEY)) {
+        saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
+    }
+    if (!window.localStorage.getItem(GRADING_SCHEME_KEY)) {
+        saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
+    }
     // Initialize new staff storages
     if (!window.localStorage.getItem(STAFF_KEY)) {
         saveToStorage(STAFF_KEY, getInitialStaff());
@@ -317,6 +353,12 @@ export const getSchoolProfile = (): SchoolProfileData | null => {
 export const saveSchoolProfile = (profile: SchoolProfileData): void => {
     saveToStorage(SCHOOL_KEY, profile);
 };
+
+// Settings Functions
+export const getAcademicYears = (): AcademicYear[] => getFromStorage<AcademicYear[]>(ACADEMIC_YEARS_KEY, []);
+export const saveAcademicYears = (years: AcademicYear[]): void => saveToStorage(ACADEMIC_YEARS_KEY, years);
+export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSetting[]>(GRADING_SCHEME_KEY, []);
+export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
 
 
 // Role Functions

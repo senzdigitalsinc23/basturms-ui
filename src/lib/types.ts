@@ -1,6 +1,7 @@
 
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -81,6 +82,20 @@ export interface AuthLog {
   clientInfo?: string;
 }
 
+// Settings Types
+export type AcademicYearStatus = 'Active' | 'Completed' | 'Upcoming';
+export const ALL_ACADEMIC_YEAR_STATUSES: AcademicYearStatus[] = ['Active', 'Completed', 'Upcoming'];
+export interface AcademicYear {
+    year: string; // e.g., "2023/2024"
+    terms: number;
+    status: AcademicYearStatus;
+}
+
+export interface GradeSetting {
+    grade: string;
+    range: string;
+    remarks: string;
+}
 
 // Student Management Types
 export type AdmissionStatus = 'Admitted' | 'Pending' | 'Graduated' | 'Stopped' | 'Transferred' | 'Suspended' | 'Withdrawn';
