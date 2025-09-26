@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -20,11 +21,11 @@ export function UserManagement() {
 
   useEffect(() => {
     refreshUsers();
-  }, []);
+  }, [refreshTrigger]);
 
   const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, entityId?: string }) => {
     const newUser = addUser(user);
-    refreshUsers();
+    setRefreshTrigger(prev => prev + 1); // Trigger refresh
     if(currentUser) {
         addAuditLog({
             user: currentUser.email,
