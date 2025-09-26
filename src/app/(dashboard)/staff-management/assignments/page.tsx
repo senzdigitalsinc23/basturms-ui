@@ -9,12 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown, Save } from 'lucide-react';
+import { Check, ChevronsUpDown, Save, Search } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 
 type TeacherAssignments = {
@@ -29,6 +30,7 @@ export default function AssignmentsPage() {
     const [allClasses, setAllClasses] = useState<Class[]>([]);
     const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -104,13 +106,31 @@ export default function AssignmentsPage() {
             });
         }
     }
+    
+    const filteredTeachers = teachers.filter(teacher =>
+        teacher.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Headmaster']}>
       <Card>
         <CardHeader>
-            <CardTitle>Class & Subject Assignments</CardTitle>
-            <CardDescription>Manage which teachers are assigned to which classes and subjects.</CardDescription>
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle>Class & Subject Assignments</CardTitle>
+                    <CardDescription>Manage which teachers are assigned to which classes and subjects.</CardDescription>
+                </div>
+                <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search by teacher name..."
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
         </CardHeader>
         <CardContent>
             <div className="rounded-md border">
@@ -128,8 +148,8 @@ export default function AssignmentsPage() {
                              <TableRow>
                                 <TableCell colSpan={4} className="h-24 text-center">Loading teachers...</TableCell>
                             </TableRow>
-                        ) : teachers.length > 0 ? (
-                           teachers.map(teacher => (
+                        ) : filteredTeachers.length > 0 ? (
+                           filteredTeachers.map(teacher => (
                             <TableRow key={teacher.staff_id}>
                                 <TableCell className="font-medium">{teacher.name}</TableCell>
                                 <TableCell>
