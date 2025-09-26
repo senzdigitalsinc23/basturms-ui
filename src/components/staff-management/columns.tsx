@@ -79,18 +79,20 @@ export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<StaffDisp
         );
         },
         cell: ({ row }) => {
+            const staffMember = row.original.staff;
             const user = row.original.user;
-            const userInitials = user.name
+            const name = `${staffMember.first_name} ${staffMember.last_name}`;
+            const userInitials = name
                 .split(' ')
                 .map((n) => n[0])
                 .join('');
             return (
                  <Link href={`/staff-management/${row.original.staff_id}`} className="flex items-center gap-3 group">
                     <Avatar>
-                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                        <AvatarImage src={user?.avatarUrl} alt={name} />
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
-                    <span className="font-medium group-hover:text-primary group-hover:underline">{user.name}</span>
+                    <span className="font-medium group-hover:text-primary group-hover:underline">{name}</span>
                 </Link>
             );
         },

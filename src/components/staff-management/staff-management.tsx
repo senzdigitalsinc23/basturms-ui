@@ -12,8 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AddStaffForm } from './add-staff-form';
 
 export type StaffDisplay = {
-  user: User;
-  staff: Staff; // Pass the whole staff object
+  user?: User; // User can be optional
+  staff: Staff;
   staff_id: string;
   roles: Role[];
   status: string;
@@ -33,11 +33,8 @@ export function StaffManagement() {
 
     const displayData = allStaff.map(staffMember => {
         const user = allUsers.find(u => u.id === staffMember.user_id);
-        // This is a placeholder for a more complex status logic
         const status = user?.status === 'active' ? 'Active' : 'Inactive';
         
-        if (!user) return null;
-
         return { 
             user,
             staff: staffMember,
@@ -93,12 +90,6 @@ export function StaffManagement() {
     const success = storeDeleteStaff(staffId, currentUser.id);
     if(success) {
       toast({ title: 'Staff Deleted', description: "The staff member has been removed." });
-      addAuditLog({
-        user: currentUser.email,
-        name: currentUser.name,
-        action: 'Delete Staff',
-        details: `Deleted staff with ID ${staffId}.`
-      });
       refreshStaff();
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete staff member.' });
@@ -133,7 +124,7 @@ export function StaffManagement() {
         <DialogContent className="sm:max-w-4xl max-h-screen flex flex-col">
             <DialogHeader>
                 <DialogTitle>Edit Staff Member</DialogTitle>
-                <DialogDescription>Update details for {editingStaff?.user.name}</DialogDescription>
+                <DialogDescription>Update details for {editingStaff?.user?.name}</DialogDescription>
             </DialogHeader>
             {editingStaff && <AddStaffForm isEditMode defaultValues={editingStaff.staff} onSubmit={handleUpdateStaff} />}
         </DialogContent>
