@@ -10,27 +10,47 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '../ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Upload } from 'lucide-react';
+import { getSchoolProfile, saveSchoolProfile } from '@/lib/store';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const profileSchema = z.object({
   schoolName: z.string().min(1, 'School name is required'),
   motto: z.string().optional(),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(1, 'Phone number is required'),
+  logo: z.string().optional(),
 });
 
+export type SchoolProfileData = z.infer<typeof profileSchema>;
+
 export function SchoolProfileSettings() {
-  const form = useForm({
+  const { toast } = useToast();
+
+  const form = useForm<SchoolProfileData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       schoolName: 'Metoxi School',
       motto: 'Excellence and Integrity',
       email: 'info@metoxischool.edu',
       phone: '+233 24 123 4567',
+      logo: '/placeholder-logo.png',
     },
   });
 
-  function onSubmit(values: z.infer<typeof profileSchema>) {
-    console.log(values);
+  useEffect(() => {
+    const profile = getSchoolProfile();
+    if (profile) {
+      form.reset(profile);
+    }
+  }, [form]);
+
+  function onSubmit(values: SchoolProfileData) {
+    saveSchoolProfile(values);
+    toast({
+        title: 'School Profile Updated',
+        description: 'Your school\'s information has been saved.',
+    });
   }
 
   return (
@@ -39,7 +59,7 @@ export function SchoolProfileSettings() {
         <div className="flex items-center gap-6">
             <div className="relative">
                 <Avatar className="h-24 w-24">
-                    <AvatarImage src="/placeholder-logo.png" alt="School Logo" />
+                    <AvatarImage src={form.watch('logo')} alt="School Logo" />
                     <AvatarFallback>MS</AvatarFallback>
                 </Avatar>
                 <Button size="icon" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full">

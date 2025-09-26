@@ -2,6 +2,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -35,6 +36,7 @@ import {
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
+import { SchoolProfileData } from '@/components/settings/school-profile-settings';
 
 
 const USERS_KEY = 'campusconnect_users';
@@ -44,6 +46,7 @@ const AUTH_LOGS_KEY = 'campusconnect_auth_logs';
 const STUDENTS_KEY = 'campusconnect_students';
 const CLASSES_KEY = 'campusconnect_classes';
 const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
+const SCHOOL_KEY = 'campusconnect_school';
 
 // New keys for staff management
 const STAFF_KEY = 'campusconnect_staff';
@@ -305,6 +308,16 @@ export const initializeStore = () => {
     }
   }
 };
+
+// School Profile Functions
+export const getSchoolProfile = (): SchoolProfileData | null => {
+    return getFromStorage<SchoolProfileData | null>(SCHOOL_KEY, null);
+};
+
+export const saveSchoolProfile = (profile: SchoolProfileData): void => {
+    saveToStorage(SCHOOL_KEY, profile);
+};
+
 
 // Role Functions
 export const getRoles = (): RoleStorage[] => getFromStorage<RoleStorage[]>(ROLES_KEY, []);
@@ -761,7 +774,7 @@ export const addAttendanceRecord = (entityId: string, record: AttendanceRecord, 
         return updateProfileSubArray(entityId, editorId, 'attendanceRecords', studentRecord);
     } else { // staff
         const staffRecord: StaffAttendanceRecord = { ...record, staff_id: entityId };
-        const allRecords = getStaffAttendanceRecords();
+        const allRecords = getFromStorage<StaffAttendanceRecord[]>(STAFF_ATTENDANCE_RECORDS_KEY, []);
         saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, [...allRecords, staffRecord]);
     }
 };

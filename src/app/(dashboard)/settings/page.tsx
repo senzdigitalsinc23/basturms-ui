@@ -7,6 +7,8 @@ import { SchoolProfileSettings } from '@/components/settings/school-profile-sett
 import { AcademicSettings } from '@/components/settings/academic-settings';
 import { GradingSchemeSettings } from '@/components/settings/grading-scheme-settings';
 import { RolesPermissionsSettings } from '@/components/settings/roles-permissions-settings';
+import { IntegrationSettings } from '@/components/settings/integration-settings';
+import { BackupSettings } from '@/components/settings/backup-settings';
 
 export default function SettingsPage() {
   return (
@@ -19,11 +21,13 @@ export default function SettingsPage() {
           </p>
         </div>
         <Tabs defaultValue="school-profile">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="school-profile">School Profile</TabsTrigger>
                 <TabsTrigger value="academic">Academic Settings</TabsTrigger>
                 <TabsTrigger value="grading">Grading Scheme</TabsTrigger>
                 <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
+                <TabsTrigger value="integrations">Integrations</TabsTrigger>
+                <TabsTrigger value="backup">Backup & Recovery</TabsTrigger>
             </TabsList>
             <TabsContent value="school-profile">
                 <Card>
@@ -66,6 +70,28 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent>
                         <RolesPermissionsSettings />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="integrations">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Integration Settings</CardTitle>
+                        <CardDescription>Connect third-party services like SMS, Email, and Payment Gateways.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <IntegrationSettings />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+             <TabsContent value="backup">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Data Backup & Recovery</CardTitle>
+                        <CardDescription>Manage data backups to cloud or local storage.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <BackupSettings />
                     </CardContent>
                 </Card>
             </TabsContent>
