@@ -84,10 +84,13 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
 const getInitialStaff = (): Staff[] => {
     return [
         {
-            "staff_id": "STF001", "user_id": "", "first_name": "John", "last_name": "Doe", "email": "john.doe@staff.com", "phone": "123-456-7890", "roles": ["Teacher"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
+            "staff_id": "STF001", "user_id": "", "first_name": "Douglas", "last_name": "Senzu", "email": "douglas.senzu@staff.com", "phone": "123-456-7890", "roles": ["Admin"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
         },
         {
             "staff_id": "STF002", "user_id": "", "first_name": "Jane", "last_name": "Smith", "email": "jane.smith@staff.com", "phone": "098-765-4321", "roles": ["Headmaster"], "id_type": "Passport", "id_no": "P0123456", "date_of_joining": "2022-09-01T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Kumasi", "hometown": "Kumasi", "house_no": "H2", "gps_no": "AK-456-789" }
+        },
+        {
+            "staff_id": "STF003", "user_id": "", "first_name": "John", "last_name": "Doe", "email": "john.doe@staff.com", "phone": "123-456-7890", "roles": ["Teacher"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
         }
     ];
 };
@@ -412,27 +415,16 @@ export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KE
 export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
   const logs = getAuditLogs();
   const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
-  
-  const actingUser = getUserByEmail(log.user);
-  let phone = 'N/A';
-  if (actingUser) {
-      const staff = getStaff().find(s => s.user_id === actingUser.id);
-      if (staff) {
-          phone = staff.phone;
-      }
-  }
-  
-  const userDetails = `User: ${log.name}\nEmail: ${log.user}\nPhone: ${phone}`;
-  
+    
   const newLog: AuditLog = {
     ...log,
     id: nextId,
     timestamp: new Date().toISOString(),
     clientInfo: typeof window !== 'undefined' ? navigator.userAgent : 'N/A',
-    details: `${userDetails}\n\nAction Details:\n${log.details}`
   };
   saveToStorage(LOGS_KEY, [newLog, ...logs]);
 };
+
 
 export const deleteAuditLog = (logId: string): boolean => {
     const logs = getAuditLogs();
@@ -800,26 +792,14 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): 
         return null;
     }
 
-    const staffIdSuffix = staffData.staff_id.slice(-3);
-    const password = `${staffData.last_name.toLowerCase()}${staffIdSuffix}`;
-    const newUser = addUser({
-        name: `${staffData.first_name} ${staffData.last_name}`,
-        email: staffData.email,
-        username: staffData.email,
-        role: staffData.roles[0], // Use the first role for user creation
-        password: password,
-        status: 'active',
-        entityId: staffData.staff_id,
-    });
-
-    const newStaff = { ...staffData, user_id: newUser.id };
+    const newStaff = { ...staffData, user_id: '' }; // Start with no user_id
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
 
     addAuditLog({
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
         action: 'Create Staff',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} and associated user account.`
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} (Staff ID: ${newStaff.staff_id}). No user account created yet.`
     });
 
     return newStaff;

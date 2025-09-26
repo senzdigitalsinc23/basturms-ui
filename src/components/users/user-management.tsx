@@ -31,7 +31,7 @@ export function UserManagement() {
             user: currentUser.email,
             name: currentUser.name,
             action: 'Create User',
-            details: `Created user ${newUser.email} with role ${newUser.role}`,
+            details: `Created user for ${newUser.name} (${newUser.email}) with role ${newUser.role}.`,
         });
     }
   };
