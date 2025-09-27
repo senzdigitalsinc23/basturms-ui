@@ -66,6 +66,29 @@ export function LeaveManagementTable() {
         }
     }
 
+    const handleBulkUpdateStatus = (leaveIds: string[], status: LeaveStatus, comments: string) => {
+        if (!user) return;
+        let successCount = 0;
+        leaveIds.forEach(id => {
+            const updated = updateLeaveRequestStatus(id, status, user.id, comments);
+            if (updated) successCount++;
+        });
+
+        if (successCount > 0) {
+            fetchLeaveData();
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Bulk Update Leave Status',
+                details: `Bulk updated ${successCount} leave requests to ${status}.`
+            });
+            toast({
+                title: 'Bulk Update Successful',
+                description: `${successCount} leave requests have been updated to ${status}.`
+            });
+        }
+    };
+
 
     return (
         <>
@@ -73,6 +96,7 @@ export function LeaveManagementTable() {
                 columns={columns({ onUpdateStatus: handleUpdateStatus })}
                 data={leaveRequests}
                 onOpenRequestForm={() => setIsRequestFormOpen(true)}
+                onBulkUpdateStatus={handleBulkUpdateStatus}
             />
             <Dialog open={isRequestFormOpen} onOpenChange={setIsRequestFormOpen}>
                 <DialogContent>
@@ -86,4 +110,3 @@ export function LeaveManagementTable() {
         </>
     );
 }
-

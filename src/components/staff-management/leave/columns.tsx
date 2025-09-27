@@ -31,6 +31,7 @@ import {
 import { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type ColumnsProps = {
     onUpdateStatus: (leaveId: string, status: LeaveStatus, comments: string) => void;
@@ -49,6 +50,28 @@ const statusIcons: Record<LeaveStatus, React.ElementType> = {
 }
 
 export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveRequest>[] => [
+     {
+        id: 'select',
+        header: ({ table }) => (
+        <Checkbox
+            checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+        />
+        ),
+        cell: ({ row }) => (
+        <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+        />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+    },
     {
         accessorKey: 'staff_name',
         header: ({ column }) => {

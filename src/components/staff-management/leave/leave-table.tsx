@@ -12,6 +12,7 @@ import {
   SortingState,
   getFacetedRowModel,
   getFacetedUniqueValues,
+  RowSelectionState,
 } from '@tanstack/react-table';
 
 import {
@@ -25,24 +26,32 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
-import { LeaveRequest, ALL_LEAVE_TYPES, ALL_LEAVE_STATUSES } from '@/lib/types';
-import { PlusCircle, X } from 'lucide-react';
+import { LeaveRequest, ALL_LEAVE_TYPES, ALL_LEAVE_STATUSES, LeaveStatus } from '@/lib/types';
+import { PlusCircle, X, ChevronsUpDown } from 'lucide-react';
 import { DataTableFacetedFilter } from '@/components/users/data-table-faceted-filter';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface DataTableProps {
   columns: ColumnDef<LeaveRequest>[];
   data: LeaveRequest[];
   onOpenRequestForm: () => void;
+  onBulkUpdateStatus: (leaveIds: string[], status: LeaveStatus, comments: string) => void;
 }
 
 const typeOptions = ALL_LEAVE_TYPES.map(t => ({ value: t, label: t }));
 const statusOptions = ALL_LEAVE_STATUSES.map(s => ({ value: s, label: s }));
 
-export function DataTable({ columns, data, onOpenRequestForm }: DataTableProps) {
+export function DataTable({ columns, data, onOpenRequestForm, onBulkUpdateStatus }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<LeaveStatus | null>(null);
+  const [bulkComments, setBulkComments] = useState('');
 
   const table = useReactTable({
     data,
@@ -56,14 +65,33 @@ export function DataTable({ columns, data, onOpenRequestForm }: DataTableProps) 
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
       globalFilter,
+      rowSelection
     },
   });
 
   const isFiltered = table.getState().columnFilters.length > 0 || !!globalFilter;
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedLeaveIds = selectedRows.map(row => row.original.id);
+  
+  const handleBulkAction = (status: LeaveStatus) => {
+      setBulkAction(status);
+      setIsAlertOpen(true);
+  }
+  
+  const handleConfirmBulkAction = () => {
+    if (bulkAction) {
+        onBulkUpdateStatus(selectedLeaveIds, bulkAction, bulkComments);
+        table.resetRowSelection();
+        setIsAlertOpen(false);
+        setBulkComments('');
+        setBulkAction(null);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -113,6 +141,24 @@ export function DataTable({ columns, data, onOpenRequestForm }: DataTableProps) 
                     </Button>
                 )}
             </div>
+             {selectedRows.length > 0 && (
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">{selectedRows.length} selected</span>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onSelect={() => handleBulkAction('Approved')}>
+                                Approve Selected
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => handleBulkAction('Rejected')} className="text-destructive focus:text-destructive">
+                                Reject Selected
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            )}
         </div>
         <div className="rounded-md border">
             <Table>
@@ -137,7 +183,7 @@ export function DataTable({ columns, data, onOpenRequestForm }: DataTableProps) 
             <TableBody>
                 {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
                         {flexRender(
@@ -181,7 +227,29 @@ export function DataTable({ columns, data, onOpenRequestForm }: DataTableProps) 
                 </Button>
             </div>
         </div>
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Bulk {bulkAction}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You are about to {bulkAction?.toLowerCase()} {selectedLeaveIds.length} leave request(s).
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="grid gap-2">
+                    <Label htmlFor="comments">Comments (Optional)</Label>
+                    <Textarea 
+                        id="comments" 
+                        placeholder="Add comments for the staff members..."
+                        value={bulkComments}
+                        onChange={(e) => setBulkComments(e.target.value)}
+                    />
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmBulkAction}>Confirm</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
-
