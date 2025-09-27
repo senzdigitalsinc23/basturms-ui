@@ -117,20 +117,19 @@ export function RolesPermissionsSettings() {
 
                                 return (
                                 <AccordionItem value={module} key={module}>
-                                    <AccordionTrigger>
-                                        <div className="flex items-center gap-4">
+                                    <div className="flex items-center w-full">
+                                        <AccordionTrigger>
                                             <span>{module.charAt(0).toUpperCase() + module.slice(1)}</span>
-                                            <div className="flex items-center space-x-2">
-                                                <Checkbox 
-                                                    id={`select-all-${module}`} 
-                                                    checked={isAllSelectedInModule}
-                                                    onCheckedChange={(checked) => handleSelectAll(permissions, !!checked)}
-                                                    onClick={(e) => e.stopPropagation()} // prevent accordion from toggling
-                                                />
-                                                <label htmlFor={`select-all-${module}`} className="text-sm font-normal text-muted-foreground" onClick={(e) => e.stopPropagation()}>Select All</label>
-                                            </div>
+                                        </AccordionTrigger>
+                                        <div className="flex items-center space-x-2 ml-4 pr-4" onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox 
+                                                id={`select-all-${module}`} 
+                                                checked={isAllSelectedInModule}
+                                                onCheckedChange={(checked) => handleSelectAll(permissions, !!checked)}
+                                            />
+                                            <label htmlFor={`select-all-${module}`} className="text-sm font-normal text-muted-foreground">Select All</label>
                                         </div>
-                                    </AccordionTrigger>
+                                    </div>
                                     <AccordionContent>
                                         <div className="space-y-2 pl-4">
                                             {permissions.map((permission) => (
