@@ -34,6 +34,12 @@ const academicYearSchema = z.object({
     status: z.enum(ALL_ACADEMIC_YEAR_STATUSES),
 });
 
+// Separate schema for the 'add' form
+const addAcademicYearSchema = academicYearSchema.omit({ terms: true }).extend({
+    numberOfTerms: z.number().min(1, 'Number of terms is required.'),
+});
+
+
 export function AcademicSettings() {
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -44,16 +50,31 @@ export function AcademicSettings() {
 
     const form = useForm<z.infer<typeof academicYearSchema>>({
         resolver: zodResolver(academicYearSchema),
+        defaultValues: {
+            year: '',
+            terms: [],
+            status: 'Upcoming',
+        }
+    });
+    
+    const addForm = useForm<z.infer<typeof addAcademicYearSchema>>({
+        resolver: zodResolver(addAcademicYearSchema),
+         defaultValues: {
+            year: '',
+            numberOfTerms: 3,
+            status: 'Upcoming',
+        }
     });
 
     useEffect(() => {
         setAcademicYears(getAcademicYears());
     }, []);
 
-    const handleAddYear = (values: z.infer<typeof academicYearSchema>) => {
+    const handleAddYear = (values: z.infer<typeof addAcademicYearSchema>) => {
         const newYear: AcademicYear = {
-            ...values,
-            terms: Array.from({ length: values.terms.length }, (_, i) => ({
+            year: values.year,
+            status: values.status,
+            terms: Array.from({ length: values.numberOfTerms }, (_, i) => ({
                 name: `Term ${i + 1}`,
                 startDate: new Date().toISOString(),
                 endDate: new Date().toISOString(),
@@ -76,14 +97,14 @@ export function AcademicSettings() {
         
         toast({ title: 'Academic Year Added', description: `The year ${values.year} has been created.` });
         setIsAddDialogOpen(false);
-        form.reset();
+        addForm.reset();
     };
     
     const handleManageTerms = (year: AcademicYear) => {
         setSelectedYear(year);
         form.reset({
             ...year,
-            terms: year.terms.map(t => ({...t, startDate: parseISO(t.startDate), endDate: parseISO(t.endDate)}))
+            terms: Array.isArray(year.terms) ? year.terms.map(t => ({...t, startDate: parseISO(t.startDate), endDate: parseISO(t.endDate)})) : []
         });
         setIsManageTermsOpen(true);
     };
@@ -124,10 +145,10 @@ export function AcademicSettings() {
                             <DialogTitle>Add New Academic Year</DialogTitle>
                             <DialogDescription>Define a new academic year and its terms.</DialogDescription>
                         </DialogHeader>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(handleAddYear)} className="space-y-4">
+                        <Form {...addForm}>
+                            <form onSubmit={addForm.handleSubmit(handleAddYear)} className="space-y-4">
                                 <FormField
-                                    control={form.control}
+                                    control={addForm.control}
                                     name="year"
                                     render={({ field }) => (
                                         <FormItem>
@@ -138,18 +159,18 @@ export function AcademicSettings() {
                                     )}
                                 />
                                  <FormField
-                                    control={form.control}
-                                    name="terms"
+                                    control={addForm.control}
+                                    name="numberOfTerms"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Number of Terms</FormLabel>
-                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                                 <FormField
-                                    control={form.control}
+                                    control={addForm.control}
                                     name="status"
                                     render={({ field }) => (
                                         <FormItem>
@@ -186,7 +207,7 @@ export function AcademicSettings() {
                         {academicYears.map(year => (
                             <TableRow key={year.year}>
                                 <TableCell>{year.year}</TableCell>
-                                <TableCell>{year.terms.length}</TableCell>
+                                <TableCell>{Array.isArray(year.terms) ? year.terms.length : 0}</TableCell>
                                 <TableCell>{year.status}</TableCell>
                                 <TableCell><Button variant="outline" size="sm" onClick={() => handleManageTerms(year)}>Manage Terms</Button></TableCell>
                             </TableRow>
