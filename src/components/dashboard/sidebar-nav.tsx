@@ -35,6 +35,7 @@ import {
   Fingerprint,
   Bell,
   CalendarCheck,
+  Plane,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -108,6 +109,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management', label: 'Staff List' },
         { href: '/staff-management/add', label: 'Add Staff' },
         { href: '/staff-management/assignments', label: 'Assign Class/Subjects' },
+        { href: '/staff-management/leave', label: 'Leave Management' },
       ]
     },
     { href: '/users', label: 'User Management', icon: Users },
@@ -162,6 +164,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/add', label: 'Add Staff' },
         { href: '/staff-management/assignments', label: 'Assign Class/Subjects' },
         { href: '/staff-management/attendance', label: 'Staff Attendance' },
+        { href: '/staff-management/leave', label: 'Leave Management' },
       ]
     },
     { href: '/#', label: 'Curriculum', icon: BookUser },

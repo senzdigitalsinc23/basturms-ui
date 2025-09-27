@@ -342,6 +342,25 @@ export interface StaffAppointmentHistory {
     appointment_status: AppointmentStatus;
 }
 
+export type LeaveType = 'Annual' | 'Sick' | 'Maternity' | 'Paternity' | 'Unpaid';
+export const ALL_LEAVE_TYPES: LeaveType[] = ['Annual', 'Sick', 'Maternity', 'Paternity', 'Unpaid'];
+export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
+export const ALL_LEAVE_STATUSES: LeaveStatus[] = ['Pending', 'Approved', 'Rejected'];
+export interface LeaveRequest {
+    id: string;
+    staff_id: string;
+    staff_name: string;
+    leave_type: LeaveType;
+    start_date: string;
+    end_date: string;
+    reason: string;
+    status: LeaveStatus;
+    request_date: string;
+    approver_id?: string;
+    approver_name?: string;
+    comments?: string;
+}
+
 
 export type EmploymentStatus = 'Active' | 'On-leave' | 'Inactive';
 export const ALL_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['Active', 'On-leave', 'Inactive'];
