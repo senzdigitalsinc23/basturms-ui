@@ -5,26 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/dashboard/sidebar-nav';
-import { DashboardHeader } from '@/components/dashboard/dashboard-header';
-import { useSidebar } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
-
-function DashboardMain({ children }: { children: React.ReactNode }) {
-  const { state } = useSidebar();
-  return (
-    <div
-      className={cn(
-        'relative flex min-h-svh flex-1 flex-col bg-background transition-[margin-left] duration-200',
-        state === 'expanded'
-          ? 'md:ml-[--sidebar-width]'
-          : 'md:ml-[--sidebar-width-icon]'
-      )}
-    >
-      <DashboardHeader />
-      <main className="flex-1 p-4 md:p-6 bg-card">{children}</main>
-    </div>
-  );
-}
+import { DashboardMain } from '@/components/dashboard/dashboard-main';
 
 export default function DashboardLayout({
   children,
