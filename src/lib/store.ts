@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -35,6 +36,8 @@ import {
   RolePermissions,
   ALL_PERMISSIONS,
   Permission,
+  LeaveRequest,
+  LeaveStatus,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -63,6 +66,7 @@ export const STAFF_ACADEMIC_HISTORY_KEY = 'campusconnect_staff_academic_history'
 export const STAFF_DOCUMENTS_KEY = 'campusconnect_staff_documents';
 export const STAFF_APPOINTMENT_HISTORY_KEY = 'campusconnect_staff_appointment_history';
 export const STAFF_ATTENDANCE_RECORDS_KEY = 'campusconnect_staff_attendance_records';
+export const LEAVE_REQUESTS_KEY = 'campusconnect_leave_requests';
 
 
 // New keys for subjects
@@ -280,6 +284,36 @@ const getInitialRolePermissions = (): RolePermissions => {
     };
 };
 
+const getInitialLeaveRequests = (): LeaveRequest[] => {
+    return [
+        {
+            id: '1',
+            staff_id: 'STF003',
+            staff_name: 'John Doe',
+            leave_type: 'Sick',
+            start_date: new Date(2024, 5, 10).toISOString(),
+            end_date: new Date(2024, 5, 12).toISOString(),
+            reason: 'Flu symptoms.',
+            status: 'Approved',
+            request_date: new Date(2024, 5, 9).toISOString(),
+            approver_id: '1',
+            approver_name: 'Admin User',
+            comments: 'Approved. Get well soon.'
+        },
+        {
+            id: '2',
+            staff_id: 'STF002',
+            staff_name: 'Jane Smith',
+            leave_type: 'Annual',
+            start_date: new Date(2024, 6, 1).toISOString(),
+            end_date: new Date(2024, 6, 15).toISOString(),
+            reason: 'Family vacation.',
+            status: 'Pending',
+            request_date: new Date(2024, 5, 1).toISOString(),
+        }
+    ];
+};
+
 
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') {
@@ -338,6 +372,9 @@ export const initializeStore = () => {
     }
     if (!window.localStorage.getItem(ROLE_PERMISSIONS_KEY)) {
         saveToStorage(ROLE_PERMISSIONS_KEY, getInitialRolePermissions());
+    }
+    if (!window.localStorage.getItem(LEAVE_REQUESTS_KEY)) {
+        saveToStorage(LEAVE_REQUESTS_KEY, getInitialLeaveRequests());
     }
     // Initialize new staff storages
     if (!window.localStorage.getItem(STAFF_KEY)) {
@@ -1125,3 +1162,46 @@ export const getStaffProfileByUserId = (userId: string): StaffProfile | undefine
     const profiles = getStaffProfiles();
     return profiles.find(p => p.user_id === userId);
 }
+
+
+// Leave Management Functions
+export const getLeaveRequests = (): LeaveRequest[] => getFromStorage<LeaveRequest[]>(LEAVE_REQUESTS_KEY, []);
+
+export const addLeaveRequest = (
+  request: Omit<LeaveRequest, 'id' | 'request_date' | 'status' | 'staff_name'>,
+  requesterId: string
+): LeaveRequest | null => {
+  const requests = getLeaveRequests();
+  const staff = getStaffByStaffId(request.staff_id);
+  if (!staff) return null;
+
+  const newRequest: LeaveRequest = {
+    ...request,
+    id: (requests.length + 1).toString(),
+    staff_name: `${staff.first_name} ${staff.last_name}`,
+    request_date: new Date().toISOString(),
+    status: 'Pending',
+  };
+  saveToStorage(LEAVE_REQUESTS_KEY, [...requests, newRequest]);
+  return newRequest;
+};
+
+export const updateLeaveRequestStatus = (
+  leaveId: string,
+  status: LeaveStatus,
+  approverId: string,
+  comments: string
+): LeaveRequest | null => {
+  const requests = getLeaveRequests();
+  const requestIndex = requests.findIndex((r) => r.id === leaveId);
+  if (requestIndex !== -1) {
+    const approver = getUserById(approverId);
+    requests[requestIndex].status = status;
+    requests[requestIndex].approver_id = approverId;
+    requests[requestIndex].approver_name = approver?.name;
+    requests[requestIndex].comments = comments;
+    saveToStorage(LEAVE_REQUESTS_KEY, requests);
+    return requests[requestIndex];
+  }
+  return null;
+};
