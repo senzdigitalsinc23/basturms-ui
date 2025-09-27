@@ -1,10 +1,9 @@
 
-
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '../ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -32,7 +31,7 @@ const termSchema = z.object({
 
 const academicYearSchema = z.object({
     year: z.string().regex(/^\d{4}\/\d{4}$/, 'Year must be in YYYY/YYYY format'),
-    terms: z.array(termSchema),
+    terms: z.array(termSchema).optional(),
     status: z.enum(ALL_ACADEMIC_YEAR_STATUSES),
 });
 
@@ -150,7 +149,7 @@ export function AcademicSettings() {
         if (!selectedYear) return;
 
         const updatedYears = academicYears.map(year => 
-            year.year === selectedYear.year ? { ...values, terms: values.terms.map(t => ({...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString()})) } : year
+            year.year === selectedYear.year ? { ...values, terms: (values.terms || []).map(t => ({...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString()})) } : year
         );
 
         saveAcademicYears(updatedYears);
@@ -278,8 +277,8 @@ export function AcademicSettings() {
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(handleUpdateYear)} className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
-                            {fields.map((field, index) => (
-                                <div key={field.id} className="p-4 border rounded-lg space-y-4">
+                            {(form.getValues('terms') || []).map((term, index) => (
+                                <div key={index} className="p-4 border rounded-lg space-y-4">
                                      <FormField control={form.control} name={`terms.${index}.name`} render={({ field }) => (
                                         <FormItem><FormLabel>Term Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                                      )}/>
@@ -356,3 +355,5 @@ export function AcademicSettings() {
         </div>
     )
 }
+
+    
