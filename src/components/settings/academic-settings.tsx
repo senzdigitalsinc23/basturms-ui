@@ -215,7 +215,7 @@ export function AcademicSettings() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {form.getValues('terms').map((term, index) => (
+                                        {(form.getValues('terms') || []).map((term, index) => (
                                             <TableRow key={index}>
                                                 <TableCell>
                                                     <FormField control={form.control} name={`terms.${index}.name`} render={({ field }) => (
