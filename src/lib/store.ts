@@ -4,6 +4,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -36,6 +37,7 @@ import {
   StaffAttendanceRecord,
   AcademicYear,
   GradeSetting,
+  Term,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -238,9 +240,13 @@ const getInitialSubjects = (): Subject[] => {
 };
 
 const getInitialAcademicYears = (): AcademicYear[] => {
+    const defaultTerms: Term[] = [
+        { name: 'First Term', startDate: new Date(2023, 8, 1).toISOString(), endDate: new Date(2023, 11, 15).toISOString(), status: 'Completed' },
+        { name: 'Second Term', startDate: new Date(2024, 0, 10).toISOString(), endDate: new Date(2024, 3, 5).toISOString(), status: 'Active' },
+        { name: 'Third Term', startDate: new Date(2024, 4, 1).toISOString(), endDate: new Date(2024, 6, 19).toISOString(), status: 'Upcoming' },
+    ];
     return [
-        { year: "2023/2024", terms: 3, status: "Active" },
-        { year: "2022/2023", terms: 3, status: "Completed" },
+        { year: "2023/2024", terms: defaultTerms, status: "Active" },
     ];
 };
 
@@ -524,7 +530,7 @@ export const bulkDeleteUsers = (userIds: string[]): number => {
         saveToStorage(USERS_KEY, newUsers);
     }
     return deletedCount;
-};
+}
 
 // Audit Log Functions
 export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KEY, []);

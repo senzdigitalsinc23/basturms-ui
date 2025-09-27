@@ -1,42 +1,49 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { PlusCircle, Loader2 } from "lucide-react";
+import { CalendarIcon, PlusCircle, Loader2 } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AcademicYear, ALL_ACADEMIC_YEAR_STATUSES } from '@/lib/types';
+import { AcademicYear, ALL_ACADEMIC_YEAR_STATUSES, Term } from '@/lib/types';
 import { getAcademicYears, saveAcademicYears, addAuditLog } from '@/lib/store';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+
+const termSchema = z.object({
+    name: z.string().min(1, 'Term name is required.'),
+    startDate: z.date({ required_error: 'Start date is required.'}),
+    endDate: z.date({ required_error: 'End date is required.'}),
+    status: z.enum(['Upcoming', 'Active', 'Completed']),
+});
 
 const academicYearSchema = z.object({
     year: z.string().regex(/^\d{4}\/\d{4}$/, 'Year must be in YYYY/YYYY format'),
-    terms: z.coerce.number().min(1, 'At least one term is required.'),
+    terms: z.array(termSchema),
     status: z.enum(ALL_ACADEMIC_YEAR_STATUSES),
 });
 
 export function AcademicSettings() {
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+    const [isManageTermsOpen, setIsManageTermsOpen] = useState(false);
     const [selectedYear, setSelectedYear] = useState<AcademicYear | null>(null);
     const { user } = useAuth();
     const { toast } = useToast();
 
     const form = useForm<z.infer<typeof academicYearSchema>>({
         resolver: zodResolver(academicYearSchema),
-        defaultValues: {
-            year: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
-            terms: 3,
-            status: 'Upcoming',
-        }
     });
 
     useEffect(() => {
@@ -44,7 +51,17 @@ export function AcademicSettings() {
     }, []);
 
     const handleAddYear = (values: z.infer<typeof academicYearSchema>) => {
-        const newYears = [...academicYears, values];
+        const newYear: AcademicYear = {
+            ...values,
+            terms: Array.from({ length: values.terms.length }, (_, i) => ({
+                name: `Term ${i + 1}`,
+                startDate: new Date().toISOString(),
+                endDate: new Date().toISOString(),
+                status: 'Upcoming'
+            }))
+        };
+
+        const newYears = [...academicYears, newYear];
         saveAcademicYears(newYears);
         setAcademicYears(newYears);
         
@@ -64,8 +81,36 @@ export function AcademicSettings() {
     
     const handleManageTerms = (year: AcademicYear) => {
         setSelectedYear(year);
-        setIsManageDialogOpen(true);
+        form.reset({
+            ...year,
+            terms: year.terms.map(t => ({...t, startDate: parseISO(t.startDate), endDate: parseISO(t.endDate)}))
+        });
+        setIsManageTermsOpen(true);
     };
+
+    const handleUpdateYear = (values: z.infer<typeof academicYearSchema>) => {
+        if (!selectedYear) return;
+
+        const updatedYears = academicYears.map(year => 
+            year.year === selectedYear.year ? { ...values, terms: values.terms.map(t => ({...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString()})) } : year
+        );
+
+        saveAcademicYears(updatedYears);
+        setAcademicYears(updatedYears);
+
+        if(user) {
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Update Academic Year Terms',
+                details: `Updated terms for academic year: ${selectedYear.year}`,
+            });
+        }
+        
+        toast({ title: 'Academic Year Updated', description: `The terms for ${selectedYear.year} have been updated.` });
+        setIsManageTermsOpen(false);
+        setSelectedYear(null);
+    }
 
     return (
         <div className="space-y-4">
@@ -98,7 +143,7 @@ export function AcademicSettings() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Number of Terms</FormLabel>
-                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -141,7 +186,7 @@ export function AcademicSettings() {
                         {academicYears.map(year => (
                             <TableRow key={year.year}>
                                 <TableCell>{year.year}</TableCell>
-                                <TableCell>{year.terms}</TableCell>
+                                <TableCell>{year.terms.length}</TableCell>
                                 <TableCell>{year.status}</TableCell>
                                 <TableCell><Button variant="outline" size="sm" onClick={() => handleManageTerms(year)}>Manage Terms</Button></TableCell>
                             </TableRow>
@@ -149,15 +194,90 @@ export function AcademicSettings() {
                     </TableBody>
                 </Table>
             </div>
-             <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-                <DialogContent>
+             <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>
+                <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>Manage Terms for {selectedYear?.year}</DialogTitle>
                         <DialogDescription>
-                            This academic year has {selectedYear?.terms} term(s). Future functionality will allow editing term dates here.
+                            Edit term names and dates for this academic year.
                         </DialogDescription>
                     </DialogHeader>
-                    {/* Future term management UI will go here */}
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(handleUpdateYear)}>
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Term Name</TableHead>
+                                            <TableHead>Start Date</TableHead>
+                                            <TableHead>End Date</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {form.getValues('terms').map((term, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>
+                                                    <FormField control={form.control} name={`terms.${index}.name`} render={({ field }) => (
+                                                        <Input {...field} />
+                                                    )} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <FormField control={form.control} name={`terms.${index}.startDate`} render={({ field }) => (
+                                                         <Popover>
+                                                            <PopoverTrigger asChild>
+                                                                <FormControl>
+                                                                    <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                    </Button>
+                                                                </FormControl>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-auto p-0" align="start">
+                                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                                            </PopoverContent>
+                                                        </Popover>
+                                                    )} />
+                                                </TableCell>
+                                                <TableCell>
+                                                     <FormField control={form.control} name={`terms.${index}.endDate`} render={({ field }) => (
+                                                         <Popover>
+                                                            <PopoverTrigger asChild>
+                                                                <FormControl>
+                                                                    <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                    </Button>
+                                                                </FormControl>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-auto p-0" align="start">
+                                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                                            </PopoverContent>
+                                                        </Popover>
+                                                    )} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <FormField control={form.control} name={`terms.${index}.status`} render={({ field }) => (
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="Upcoming">Upcoming</SelectItem>
+                                                                <SelectItem value="Active">Active</SelectItem>
+                                                                <SelectItem value="Completed">Completed</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )} />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                             <DialogFooter className="pt-4">
+                                <Button type="submit">Save Changes</Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
                 </DialogContent>
             </Dialog>
         </div>

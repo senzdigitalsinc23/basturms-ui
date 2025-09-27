@@ -2,6 +2,7 @@
 
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -85,11 +86,19 @@ export interface AuthLog {
 // Settings Types
 export type AcademicYearStatus = 'Active' | 'Completed' | 'Upcoming';
 export const ALL_ACADEMIC_YEAR_STATUSES: AcademicYearStatus[] = ['Active', 'Completed', 'Upcoming'];
+export interface Term {
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: 'Upcoming' | 'Active' | 'Completed';
+}
+
 export interface AcademicYear {
     year: string; // e.g., "2023/2024"
-    terms: number;
+    terms: Term[];
     status: AcademicYearStatus;
 }
+
 
 export interface GradeSetting {
     grade: string;
