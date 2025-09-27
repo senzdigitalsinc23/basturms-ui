@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 'use client';
 
 import {
@@ -38,6 +32,9 @@ import {
   AcademicYear,
   GradeSetting,
   Term,
+  RolePermissions,
+  ALL_PERMISSIONS,
+  Permission,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -56,6 +53,7 @@ const SCHOOL_KEY = 'campusconnect_school';
 // Settings Keys
 const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
 const GRADING_SCHEME_KEY = 'campusconnect_grading_scheme';
+const ROLE_PERMISSIONS_KEY = 'campusconnect_role_permissions';
 
 
 // New keys for staff management
@@ -264,6 +262,25 @@ const getInitialGradingScheme = (): GradeSetting[] => {
     ];
 };
 
+const getInitialRolePermissions = (): RolePermissions => {
+    return {
+        'Admin': ALL_PERMISSIONS,
+        'Teacher': ['student:view', 'attendance:student'],
+        'Headmaster': ['staff:view', 'staff:create', 'staff:update', 'student:view', 'student:promote'],
+        'Librarian': [],
+        'Security': ['attendance:view_history'],
+        'Procurement Manager': [],
+        'Stores Manager': [],
+        'Proprietor': ['logs:view_audit'],
+        'I.T Manager': ['user:view', 'user:create', 'user:update', 'logs:view_auth', 'settings:edit'],
+        'I.T Support': [],
+        'Accountant': [],
+        'Parent': [],
+        'Student': [],
+    };
+};
+
+
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') {
     return defaultValue;
@@ -319,6 +336,9 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(GRADING_SCHEME_KEY)) {
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
     }
+    if (!window.localStorage.getItem(ROLE_PERMISSIONS_KEY)) {
+        saveToStorage(ROLE_PERMISSIONS_KEY, getInitialRolePermissions());
+    }
     // Initialize new staff storages
     if (!window.localStorage.getItem(STAFF_KEY)) {
         saveToStorage(STAFF_KEY, getInitialStaff());
@@ -365,6 +385,8 @@ export const getAcademicYears = (): AcademicYear[] => getFromStorage<AcademicYea
 export const saveAcademicYears = (years: AcademicYear[]): void => saveToStorage(ACADEMIC_YEARS_KEY, years);
 export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSetting[]>(GRADING_SCHEME_KEY, []);
 export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
+export const getRolePermissions = (): RolePermissions => getFromStorage<RolePermissions>(ROLE_PERMISSIONS_KEY, {});
+export const saveRolePermissions = (permissions: RolePermissions): void => saveToStorage(ROLE_PERMISSIONS_KEY, permissions);
 
 
 // Role Functions

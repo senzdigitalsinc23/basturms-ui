@@ -1,8 +1,4 @@
 
-
-
-
-
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -40,6 +36,35 @@ export interface RoleStorage {
   id: string;
   name: Role;
 }
+
+// Permissions
+export const PERMISSIONS = {
+  'student:create': 'Create Student',
+  'student:view': 'View Student',
+  'student:update': 'Update Student',
+  'student:delete': 'Delete Student',
+  'student:promote': 'Promote/Graduate Student',
+  'staff:create': 'Create Staff',
+  'staff:view': 'View Staff',
+  'staff:update': 'Update Staff',
+  'staff:delete': 'Delete Staff',
+  'user:create': 'Create User',
+  'user:view': 'View User',
+  'user:update': 'Update User',
+  'user:delete': 'Delete User',
+  'attendance:student': 'Take Student Attendance',
+  'attendance:staff': 'Take Staff Attendance',
+  'attendance:view_history': 'View Attendance History',
+  'settings:edit': 'Manage System Settings',
+  'logs:view_audit': 'View Audit Logs',
+  'logs:view_auth': 'View Authentication Logs',
+  'notifications:view': 'View Notifications',
+} as const;
+
+export type Permission = keyof typeof PERMISSIONS;
+export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
+export type RolePermissions = Partial<Record<Role, Permission[]>>;
+
 
 export interface Class {
   id: string;
