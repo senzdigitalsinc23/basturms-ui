@@ -57,6 +57,7 @@ const SCHOOL_KEY = 'campusconnect_school';
 const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
 const GRADING_SCHEME_KEY = 'campusconnect_grading_scheme';
 const ROLE_PERMISSIONS_KEY = 'campusconnect_role_permissions';
+const BACKUP_SETTINGS_KEY = 'campusconnect_backup_settings';
 
 
 // New keys for staff management
@@ -270,13 +271,13 @@ const getInitialRolePermissions = (): RolePermissions => {
     return {
         'Admin': ALL_PERMISSIONS,
         'Teacher': ['student:view', 'attendance:student'],
-        'Headmaster': ['staff:view', 'staff:create', 'staff:update', 'student:view', 'student:promote'],
+        'Headmaster': ['staff:view', 'staff:create', 'staff:update', 'student:view', 'student:promote', 'leave:view', 'leave:approve'],
         'Librarian': [],
         'Security': ['attendance:view_history'],
         'Procurement Manager': [],
         'Stores Manager': [],
         'Proprietor': ['logs:view_audit'],
-        'I.T Manager': ['user:view', 'user:create', 'user:update', 'logs:view_auth', 'settings:edit'],
+        'I.T Manager': ['user:view', 'user:create', 'user:update', 'logs:view_auth', 'settings:edit', 'backup:create', 'backup:restore'],
         'I.T Support': [],
         'Accountant': [],
         'Parent': [],
@@ -375,6 +376,9 @@ export const initializeStore = () => {
     }
     if (!window.localStorage.getItem(LEAVE_REQUESTS_KEY)) {
         saveToStorage(LEAVE_REQUESTS_KEY, getInitialLeaveRequests());
+    }
+    if (!window.localStorage.getItem(BACKUP_SETTINGS_KEY)) {
+        saveToStorage(BACKUP_SETTINGS_KEY, { autoBackupEnabled: true, frequency: 'daily', backupTime: '00:00', lastBackup: null });
     }
     // Initialize new staff storages
     if (!window.localStorage.getItem(STAFF_KEY)) {
@@ -1205,3 +1209,5 @@ export const updateLeaveRequestStatus = (
   }
   return null;
 };
+
+    

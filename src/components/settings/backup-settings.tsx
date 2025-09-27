@@ -4,12 +4,14 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Cloud, Download, Server, Upload, RefreshCw } from 'lucide-react';
+import { Cloud, Download, Server, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useAuth } from '@/hooks/use-auth';
+import { addAuditLog } from '@/lib/store';
 
 const ALL_STORAGE_KEYS = [
     'campusconnect_users', 'campusconnect_roles', 'campusconnect_logs', 
@@ -26,15 +28,18 @@ const BACKUP_SETTINGS_KEY = 'campusconnect_backup_settings';
 type BackupSettings = {
     autoBackupEnabled: boolean;
     frequency: 'daily' | 'weekly' | 'monthly';
+    backupTime: string;
     lastBackup: string | null;
 }
 
 export function BackupSettings() {
     const { toast } = useToast();
+    const { user } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [backupSettings, setBackupSettings] = useState<BackupSettings>({
         autoBackupEnabled: true,
         frequency: 'daily',
+        backupTime: '00:00',
         lastBackup: null
     });
 
@@ -52,11 +57,20 @@ export function BackupSettings() {
         setBackupSettings(prev => {
             const updated = {...prev, ...newSettings};
             localStorage.setItem(BACKUP_SETTINGS_KEY, JSON.stringify(updated));
+             if(user) {
+                addAuditLog({
+                    user: user.email,
+                    name: user.name,
+                    action: 'Update Backup Settings',
+                    details: `Automatic backup settings updated. Enabled: ${updated.autoBackupEnabled}, Frequency: ${updated.frequency}, Time: ${updated.backupTime}`
+                });
+            }
             return updated;
         });
     }
 
     const handleDownloadBackup = () => {
+        if (!user) return;
         const backupData: Record<string, any> = {};
 
         ALL_STORAGE_KEYS.forEach(key => {
@@ -84,6 +98,13 @@ export function BackupSettings() {
         
         const newLastBackup = new Date().toISOString();
         updateBackupSettings({ lastBackup: newLastBackup });
+        
+        addAuditLog({
+            user: user.email,
+            name: user.name,
+            action: 'Create Backup',
+            details: `Created a local backup of the system data.`
+        });
 
         toast({
             title: "Backup Downloaded",
@@ -97,7 +118,7 @@ export function BackupSettings() {
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -117,6 +138,13 @@ export function BackupSettings() {
                     if (ALL_STORAGE_KEYS.includes(key)) {
                         localStorage.setItem(key, JSON.stringify(restoredData[key]));
                     }
+                });
+                
+                addAuditLog({
+                    user: user.email,
+                    name: user.name,
+                    action: 'Restore Backup',
+                    details: `Restored system data from file: ${file.name}.`
                 });
 
                 toast({
@@ -162,21 +190,40 @@ export function BackupSettings() {
                 </div>
                 {backupSettings.autoBackupEnabled && (
                     <div className="space-y-4">
-                        <div className="grid w-full max-w-sm items-center gap-1.5">
-                            <Label htmlFor="frequency">Backup Frequency</Label>
-                             <Select 
-                                value={backupSettings.frequency} 
-                                onValueChange={(value: 'daily' | 'weekly' | 'monthly') => updateBackupSettings({ frequency: value })}
-                            >
-                                <SelectTrigger id="frequency">
-                                    <SelectValue placeholder="Select frequency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="daily">Daily</SelectItem>
-                                    <SelectItem value="weekly">Weekly</SelectItem>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="grid md:grid-cols-2 gap-4">
+                             <div className="grid w-full max-w-sm items-center gap-1.5">
+                                <Label htmlFor="frequency">Backup Frequency</Label>
+                                <Select 
+                                    value={backupSettings.frequency} 
+                                    onValueChange={(value: 'daily' | 'weekly' | 'monthly') => updateBackupSettings({ frequency: value })}
+                                >
+                                    <SelectTrigger id="frequency">
+                                        <SelectValue placeholder="Select frequency" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="daily">Daily</SelectItem>
+                                        <SelectItem value="weekly">Weekly</SelectItem>
+                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                <Label htmlFor="backup-time">Time of Day</Label>
+                                <Select 
+                                    value={backupSettings.backupTime} 
+                                    onValueChange={(value: string) => updateBackupSettings({ backupTime: value })}
+                                >
+                                    <SelectTrigger id="backup-time">
+                                        <SelectValue placeholder="Select time" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="00:00">12:00 AM (Midnight)</SelectItem>
+                                        <SelectItem value="06:00">6:00 AM</SelectItem>
+                                        <SelectItem value="12:00">12:00 PM (Noon)</SelectItem>
+                                        <SelectItem value="18:00">6:00 PM</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
                             Last backup: {backupSettings.lastBackup ? format(new Date(backupSettings.lastBackup), 'PPP p') : 'Never'}
@@ -220,3 +267,4 @@ export function BackupSettings() {
   );
 }
 
+    

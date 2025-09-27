@@ -59,6 +59,11 @@ export const PERMISSIONS = {
   'logs:view_audit': 'View Audit Logs',
   'logs:view_auth': 'View Authentication Logs',
   'notifications:view': 'View Notifications',
+  'leave:view': 'View Leave Requests',
+  'leave:create': 'Create Leave Request',
+  'leave:approve': 'Approve/Reject Leave Request',
+  'backup:create': 'Create Data Backup',
+  'backup:restore': 'Restore Data from Backup',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -403,3 +408,5 @@ export interface TeacherSubject {
     staff_id: string;
     subject_id: string;
 }
+
+    
