@@ -39,6 +39,8 @@ const addAcademicYearSchema = academicYearSchema.omit({ terms: true }).extend({
     numberOfTerms: z.number().min(1, 'Number of terms is required.'),
 });
 
+const editAcademicYearSchema = addAcademicYearSchema.omit({ numberOfTerms: true });
+
 
 export function AcademicSettings() {
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -66,6 +68,10 @@ export function AcademicSettings() {
             numberOfTerms: 3,
             status: 'Upcoming',
         }
+    });
+
+    const editForm = useForm<z.infer<typeof editAcademicYearSchema>>({
+        resolver: zodResolver(editAcademicYearSchema)
     });
 
     useEffect(() => {
@@ -113,15 +119,14 @@ export function AcademicSettings() {
 
     const handleEditYear = (year: AcademicYear) => {
         setSelectedYear(year);
-        addForm.reset({
+        editForm.reset({
             year: year.year,
             status: year.status,
-            numberOfTerms: Array.isArray(year.terms) ? year.terms.length : 0,
         });
         setIsEditYearOpen(true);
     }
     
-    const processYearUpdate = (values: z.infer<typeof addAcademicYearSchema>) => {
+    const processYearUpdate = (values: z.infer<typeof editAcademicYearSchema>) => {
         if (!selectedYear) return;
 
         const updatedYears = academicYears.map(year => 
@@ -332,21 +337,22 @@ export function AcademicSettings() {
                         <DialogTitle>Edit Academic Year</DialogTitle>
                         <DialogDescription>Update details for {selectedYear?.year}</DialogDescription>
                     </DialogHeader>
-                    <Form {...addForm}>
-                        <form onSubmit={addForm.handleSubmit(processYearUpdate)} className="space-y-4">
-                             <FormField control={addForm.control} name="year" render={({ field }) => (
+                    <Form {...editForm}>
+                        <form onSubmit={editForm.handleSubmit(processYearUpdate)} className="space-y-4">
+                             <FormField control={editForm.control} name="year" render={({ field }) => (
                                 <FormItem><FormLabel>Academic Year</FormLabel><FormControl><Input placeholder="e.g., 2024/2025" {...field} /></FormControl><FormMessage /></FormItem>
                             )}/>
-                            <FormField control={addForm.control} name="status" render={({ field }) => (
+                            <FormField control={editForm.control} name="status" render={({ field }) => (
                                 <FormItem><FormLabel>Status</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                                     <SelectContent>{ALL_ACADEMIC_YEAR_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
                                 </Select><FormMessage /></FormItem>
                             )}/>
-                             <FormField control={addForm.control} name="numberOfTerms" render={({ field }) => (
-                                <FormItem><FormLabel>Number of Terms</FormLabel><FormControl><Input type="number" {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
-                            )}/>
+                             <FormItem>
+                                <FormLabel>Number of Terms</FormLabel>
+                                <FormControl><Input type="number" value={Array.isArray(selectedYear?.terms) ? selectedYear?.terms.length : 0} readOnly disabled /></FormControl>
+                             </FormItem>
                             <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
                         </form>
                     </Form>
@@ -356,4 +362,5 @@ export function AcademicSettings() {
     )
 }
 
+    
     
