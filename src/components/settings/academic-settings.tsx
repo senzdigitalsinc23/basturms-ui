@@ -277,7 +277,7 @@ export function AcademicSettings() {
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(handleUpdateYear)} className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
-                            {(form.getValues('terms') || []).map((term, index) => (
+                            {fields.map((term, index) => (
                                 <div key={index} className="p-4 border rounded-lg space-y-4">
                                      <FormField control={form.control} name={`terms.${index}.name`} render={({ field }) => (
                                         <FormItem><FormLabel>Term Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
