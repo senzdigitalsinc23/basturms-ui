@@ -3,7 +3,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Eye, Trash2, Pencil, UserCheck, UserX } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Eye, Trash2, Pencil, UserCheck, UserX, FileBadge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -136,6 +136,7 @@ export const columns = ({ onEdit, onDelete, onToggleStatus }: ColumnsProps): Col
         id: 'actions',
         cell: function Cell({ row }) {
             const staffDisplay = row.original;
+            const generateUrl = `/id-cards?type=staff&ids=${encodeURIComponent(JSON.stringify([staffDisplay.staff_id]))}`;
             
             return (
                 <div className="text-right">
@@ -157,6 +158,12 @@ export const columns = ({ onEdit, onDelete, onToggleStatus }: ColumnsProps): Col
                         <DropdownMenuItem onClick={() => onEdit(staffDisplay.staff)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit Staff
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                           <Link href={generateUrl}>
+                                <FileBadge className="mr-2 h-4 w-4" />
+                                Generate ID Card
+                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onToggleStatus(staffDisplay.staff_id)} disabled={!staffDisplay.user}>
                             {staffDisplay.status === 'Active' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}

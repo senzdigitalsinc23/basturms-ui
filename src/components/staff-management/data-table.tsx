@@ -28,7 +28,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useState } from 'react';
 import { StaffDisplay } from './staff-management';
-import { PlusCircle, X, ChevronLeft, ChevronRight, Download, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { PlusCircle, X, ChevronLeft, ChevronRight, Download, ChevronsUpDown, Trash2, FileBadge } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { ALL_ROLES, User, ALL_EMPLOYMENT_STATUSES, Staff, Role } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -95,6 +95,8 @@ export function StaffDataTable({ columns, data, onBulkDelete }: StaffDataTablePr
     onBulkDelete(selectedStaffIds);
     table.resetRowSelection();
   };
+  
+  const bulkGenerateUrl = `/id-cards?type=staff&ids=${encodeURIComponent(JSON.stringify(selectedStaffIds))}`;
 
   return (
     <div className="space-y-4">
@@ -153,6 +155,11 @@ export function StaffDataTable({ columns, data, onBulkDelete }: StaffDataTablePr
                             <Button variant="outline" size="sm">Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
+                             <DropdownMenuItem asChild>
+                                <Link href={bulkGenerateUrl}>
+                                    <FileBadge className="mr-2 h-4 w-4" /> Generate ID Cards
+                                </Link>
+                             </DropdownMenuItem>
                              <DropdownMenuItem>Export Selected</DropdownMenuItem>
                              <DropdownMenuSeparator />
                              <AlertDialog>

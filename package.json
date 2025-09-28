@@ -46,6 +46,7 @@
     "firebase": "^11.9.1",
     "framer-motion": "^11.5.7",
     "genkit": "^1.14.1",
+    "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.475.0",
@@ -62,6 +63,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/html2canvas": "^1.0.0",
     "@types/jspdf": "^2.0.0",
     "@types/node": "^20",
     "@types/papaparse": "^5.3.14",

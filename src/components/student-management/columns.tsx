@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Pencil, UserX, Eye, ChevronsUpDown, ArrowLeft } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Pencil, UserX, Eye, ChevronsUpDown, ArrowLeft, FileBadge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -123,6 +123,8 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisp
         id: 'actions',
         cell: function Cell({ row }) {
         const student = row.original;
+        const generateUrl = `/id-cards?type=student&ids=${encodeURIComponent(JSON.stringify([student.student_id]))}`;
+
 
         return (
             <div className="text-right">
@@ -144,6 +146,12 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisp
                     <DropdownMenuItem>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href={generateUrl}>
+                            <FileBadge className="mr-2 h-4 w-4" />
+                            Generate ID Card
+                        </Link>
                     </DropdownMenuItem>
                      <DropdownMenuSub>
                         <DropdownMenuSubTrigger>

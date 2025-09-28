@@ -36,6 +36,7 @@ import {
   Bell,
   CalendarCheck,
   Plane,
+  FileBadge,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -123,6 +124,7 @@ const menuItems: Record<Role, NavItem[]> = {
           { href: '/attendance/history', label: 'Attendance History' },
       ]
     },
+    { href: '/id-cards', label: 'ID Cards', icon: FileBadge },
     { href: '/#', label: 'Timetable', icon: Calendar },
     {
       label: 'Announcements',
@@ -167,6 +169,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/leave', label: 'Leave Management' },
       ]
     },
+    { href: '/id-cards', label: 'ID Cards', icon: FileBadge },
     { href: '/#', label: 'Curriculum', icon: BookUser },
   ],
   Librarian: [
