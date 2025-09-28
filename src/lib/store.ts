@@ -300,7 +300,8 @@ const getInitialLeaveRequests = (): LeaveRequest[] => {
             request_date: new Date(2024, 5, 9).toISOString(),
             approver_id: '1',
             approver_name: 'Admin User',
-            comments: 'Approved. Get well soon.'
+            comments: 'Approved. Get well soon.',
+            days_approved: 3,
         },
         {
             id: '2',
@@ -1196,7 +1197,8 @@ export const updateLeaveRequestStatus = (
   leaveId: string,
   status: LeaveStatus,
   approverId: string,
-  comments: string
+  comments: string,
+  days_approved?: number
 ): LeaveRequest | null => {
   const requests = getLeaveRequests();
   const requestIndex = requests.findIndex((r) => r.id === leaveId);
@@ -1206,6 +1208,9 @@ export const updateLeaveRequestStatus = (
     requests[requestIndex].approver_id = approverId;
     requests[requestIndex].approver_name = approver?.name;
     requests[requestIndex].comments = comments;
+    if (days_approved !== undefined) {
+      requests[requestIndex].days_approved = days_approved;
+    }
     saveToStorage(LEAVE_REQUESTS_KEY, requests);
     return requests[requestIndex];
   }

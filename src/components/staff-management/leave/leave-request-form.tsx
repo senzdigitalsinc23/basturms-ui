@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,6 +42,8 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
   const [returnDate, setReturnDate] = useState<string | null>(null);
   const [leaveYear, setLeaveYear] = useState<number | null>(null);
   const [hasPending, setHasPending] = useState(false);
+  const [totalDaysTakenThisYear, setTotalDaysTakenThisYear] = useState(0);
+  const [annualLeaveLimit] = useState(36);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,6 +57,36 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
   const watchedStaffId = form.watch('staff_id');
 
   useEffect(() => {
+    if (watchedDateRange?.from) {
+      const year = watchedDateRange.from.getFullYear();
+      setLeaveYear(year);
+      form.setValue('leave_year', year);
+    } else {
+      setLeaveYear(null);
+      form.setValue('leave_year', undefined);
+    }
+  }, [watchedDateRange?.from, form]);
+
+  useEffect(() => {
+    form.clearErrors(); // Clear previous errors when staff or date changes
+    if (watchedStaffId && leaveYear) {
+      const allRequests = getLeaveRequests();
+      const approvedLeaveForYear = allRequests.filter(
+        (r) =>
+          r.staff_id === watchedStaffId &&
+          r.leave_year === leaveYear &&
+          r.status === 'Approved'
+      );
+      const daysTaken = approvedLeaveForYear.reduce((acc, curr) => {
+        const days = eachDayOfInterval({
+          start: new Date(curr.start_date),
+          end: new Date(curr.end_date),
+        }).filter(day => !isWeekend(day));
+        return acc + (curr.days_approved || days.length);
+      }, 0);
+      setTotalDaysTakenThisYear(daysTaken);
+    }
+
     if (watchedDateRange?.from && watchedDateRange?.to) {
         const days = eachDayOfInterval({
             start: watchedDateRange.from,
@@ -64,17 +97,20 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
 
         const nextDay = addDays(watchedDateRange.to, 1);
         setReturnDate(format(nextDay, 'PPP'));
-        const year = watchedDateRange.from.getFullYear();
-        setLeaveYear(year);
-        form.setValue('leave_year', year);
+
+        if (businessDays.length > annualLeaveLimit) {
+            form.setError('date_range', { type: 'manual', message: `Leave cannot exceed ${annualLeaveLimit} working days.` });
+        }
+        
+        if (totalDaysTakenThisYear + businessDays.length > annualLeaveLimit) {
+            form.setError('date_range', { type: 'manual', message: `Exceeds annual leave limit of ${annualLeaveLimit} days. Days already taken: ${totalDaysTakenThisYear}.` });
+        }
 
     } else {
         setNumberOfDays(0);
         setReturnDate(null);
-        setLeaveYear(null);
-        form.setValue('leave_year', undefined);
     }
-  }, [watchedDateRange, form]);
+  }, [watchedDateRange, watchedStaffId, leaveYear, form, totalDaysTakenThisYear, annualLeaveLimit]);
   
    useEffect(() => {
     if (watchedStaffId) {
@@ -208,6 +244,7 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
                     captionLayout="dropdown-buttons"
                     fromYear={new Date().getFullYear()}
                     toYear={new Date().getFullYear() + 2}
+                    disabled={{ before: new Date() }}
                   />
                 </PopoverContent>
               </Popover>
@@ -243,7 +280,7 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
           )}
         />
         <div className="flex justify-end">
-          <Button type="submit" disabled={hasPending}>Submit Request</Button>
+          <Button type="submit" disabled={hasPending || !!form.formState.errors.date_range}>Submit Request</Button>
         </div>
       </form>
     </Form>

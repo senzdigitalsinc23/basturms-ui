@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -33,10 +34,11 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { getSchoolProfile } from '@/lib/store';
 import { useAuth } from '@/hooks/use-auth';
+import { Input } from '@/components/ui/input';
 
 
 type ColumnsProps = {
-    onUpdateStatus: (leaveId: string, status: LeaveStatus, comments: string) => void;
+    onUpdateStatus: (leaveId: string, status: LeaveStatus, comments: string, days_approved?: number) => void;
     onDelete: (leaveId: string) => void;
 };
 
@@ -74,6 +76,7 @@ const handleDownload = (request: LeaveRequest) => {
             ['Status', request.status],
             ['Approved By', request.approver_name || 'N/A'],
             ['Approval Comments', request.comments || 'N/A'],
+            ['Days Approved', request.days_approved ? `${request.days_approved} days` : 'N/A']
         ],
         theme: 'grid'
     });
@@ -140,10 +143,15 @@ export const columns = ({ onUpdateStatus, onDelete }: ColumnsProps): ColumnDef<L
     {
         id: 'duration',
         header: 'Duration',
-        cell: ({ row }) => formatDistanceStrict(new Date(row.original.end_date), new Date(row.original.start_date), {
-            unit: 'day',
-            addSuffix: false
-        })
+        cell: ({ row }) => {
+            const requestedDays = formatDistanceStrict(new Date(row.original.end_date), new Date(row.original.start_date), { unit: 'day' });
+            return (
+                <div>
+                    <div>{requestedDays}</div>
+                    {row.original.days_approved && <div className="text-xs text-muted-foreground">({row.original.days_approved} days approved)</div>}
+                </div>
+            );
+        }
     },
     {
         accessorKey: 'status',
@@ -168,6 +176,8 @@ export const columns = ({ onUpdateStatus, onDelete }: ColumnsProps): ColumnDef<L
             const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
             const [action, setAction] = useState<LeaveStatus | null>(null);
             const [comments, setComments] = useState('');
+            const requestedDays = formatDistanceStrict(new Date(request.end_date), new Date(request.start_date)).split(' ')[0];
+            const [approvedDays, setApprovedDays] = useState(requestedDays);
             const { user } = useAuth();
 
             const handleAction = (status: LeaveStatus) => {
@@ -177,7 +187,7 @@ export const columns = ({ onUpdateStatus, onDelete }: ColumnsProps): ColumnDef<L
 
             const handleConfirm = () => {
                 if (action) {
-                    onUpdateStatus(request.id, action, comments);
+                    onUpdateStatus(request.id, action, comments, action === 'Approved' ? parseInt(approvedDays, 10) : undefined);
                     setIsAlertOpen(false);
                     setComments('');
                     setAction(null);
@@ -229,14 +239,27 @@ export const columns = ({ onUpdateStatus, onDelete }: ColumnsProps): ColumnDef<L
                                     Are you sure you want to {action?.toLowerCase()} this leave request for {request.staff_name}?
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <div className="grid gap-2">
-                                <Label htmlFor="comments">Comments (Optional)</Label>
-                                <Textarea 
-                                    id="comments" 
-                                    placeholder="Add any comments for the staff member..."
-                                    value={comments}
-                                    onChange={(e) => setComments(e.target.value)}
-                                />
+                            <div className="space-y-4">
+                                {action === 'Approved' && (
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="approved_days">Days Approved</Label>
+                                        <Input
+                                            id="approved_days"
+                                            type="number"
+                                            defaultValue={approvedDays}
+                                            onChange={(e) => setApprovedDays(e.target.value)}
+                                        />
+                                    </div>
+                                )}
+                                <div className="grid gap-2">
+                                    <Label htmlFor="comments">Comments (Optional)</Label>
+                                    <Textarea 
+                                        id="comments" 
+                                        placeholder="Add any comments for the staff member..."
+                                        value={comments}
+                                        onChange={(e) => setComments(e.target.value)}
+                                    />
+                                </div>
                             </div>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>

@@ -365,6 +365,7 @@ export interface LeaveRequest {
     approver_id?: string;
     approver_name?: string;
     comments?: string;
+    days_approved?: number;
 }
 
 

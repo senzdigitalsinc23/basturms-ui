@@ -58,10 +58,10 @@ export function LeaveManagementTable() {
         }
     };
     
-    const handleUpdateStatus = (leaveId: string, status: LeaveStatus, comments: string) => {
+    const handleUpdateStatus = (leaveId: string, status: LeaveStatus, comments: string, days_approved?: number) => {
         if (!user) return;
 
-        const updatedRequest = updateLeaveRequestStatus(leaveId, status, user.id, comments);
+        const updatedRequest = updateLeaveRequestStatus(leaveId, status, user.id, comments, days_approved);
         if (updatedRequest) {
             fetchLeaveData();
             addAuditLog({
