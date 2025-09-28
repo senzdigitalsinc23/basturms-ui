@@ -38,6 +38,7 @@ import {
   Plane,
   FileBadge,
   Library,
+  BookMarked,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -96,6 +97,14 @@ const menuItems: Record<Role, NavItem[]> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
     {
+      label: 'Academics',
+      icon: BookMarked,
+      items: [
+        { href: '/academics/classes', label: 'Classes & Subjects' },
+        { href: '/academics/grading', label: 'Grading & Assignments' },
+      ],
+    },
+    {
       label: 'Student Management',
       icon: GraduationCap,
       items: [
@@ -144,6 +153,7 @@ const menuItems: Record<Role, NavItem[]> = {
   ],
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/academics/grading', label: 'Grading & Assignments', icon: PenSquare },
     { href: '/#', label: 'My Students', icon: Users },
     { href: '/#', label: 'Grades', icon: GraduationCap },
   ],
