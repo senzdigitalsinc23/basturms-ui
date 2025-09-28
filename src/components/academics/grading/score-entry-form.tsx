@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities } from '@/lib/store';
@@ -44,7 +45,11 @@ export function ScoreEntryForm() {
             const classActivityLinks = getClassAssignmentActivities().filter(ca => ca.class_id === selectedClass);
             const activityIds = classActivityLinks.map(ca => ca.activity_id);
             const activities = allActivities.filter(a => activityIds.includes(a.id));
-            setClassActivities(activities);
+            
+            // Deduplicate activities to prevent key errors
+            const uniqueActivities = Array.from(new Map(activities.map(item => [item.id, item])).values());
+            setClassActivities(uniqueActivities);
+            
             setAssignmentName(undefined); // Reset assignment selection
 
             // Get students for the selected class and their existing scores
