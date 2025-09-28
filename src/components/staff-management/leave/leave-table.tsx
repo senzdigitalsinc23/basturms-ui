@@ -1,4 +1,5 @@
 
+
 'use client';
 import {
   ColumnDef,
@@ -27,24 +28,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { LeaveRequest, ALL_LEAVE_TYPES, ALL_LEAVE_STATUSES, LeaveStatus } from '@/lib/types';
-import { PlusCircle, X, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, X, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { DataTableFacetedFilter } from '@/components/users/data-table-faceted-filter';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/hooks/use-auth';
 
 interface DataTableProps {
   columns: ColumnDef<LeaveRequest>[];
   data: LeaveRequest[];
   onOpenRequestForm: () => void;
   onBulkUpdateStatus: (leaveIds: string[], status: LeaveStatus, comments: string) => void;
+  onBulkDelete: (leaveIds: string[]) => void;
 }
 
 const typeOptions = ALL_LEAVE_TYPES.map(t => ({ value: t, label: t }));
 const statusOptions = ALL_LEAVE_STATUSES.map(s => ({ value: s, label: s }));
 
-export function DataTable({ columns, data, onOpenRequestForm, onBulkUpdateStatus }: DataTableProps) {
+export function DataTable({ columns, data, onOpenRequestForm, onBulkUpdateStatus, onBulkDelete }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -52,6 +55,8 @@ export function DataTable({ columns, data, onOpenRequestForm, onBulkUpdateStatus
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<LeaveStatus | null>(null);
   const [bulkComments, setBulkComments] = useState('');
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const { user } = useAuth();
 
   const table = useReactTable({
     data,
@@ -91,6 +96,12 @@ export function DataTable({ columns, data, onOpenRequestForm, onBulkUpdateStatus
         setBulkComments('');
         setBulkAction(null);
     }
+  }
+
+  const handleConfirmBulkDelete = () => {
+    onBulkDelete(selectedLeaveIds);
+    table.resetRowSelection();
+    setIsDeleteAlertOpen(false);
   }
 
   return (
@@ -155,6 +166,14 @@ export function DataTable({ columns, data, onOpenRequestForm, onBulkUpdateStatus
                              <DropdownMenuItem onSelect={() => handleBulkAction('Rejected')} className="text-destructive focus:text-destructive">
                                 Reject Selected
                             </DropdownMenuItem>
+                            {user?.is_super_admin && <>
+                                <DropdownMenuSeparator />
+                                 <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive" onClick={() => setIsDeleteAlertOpen(true)}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </>}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -247,6 +266,20 @@ export function DataTable({ columns, data, onOpenRequestForm, onBulkUpdateStatus
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleConfirmBulkAction}>Confirm</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete {selectedLeaveIds.length} leave requests.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmBulkDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

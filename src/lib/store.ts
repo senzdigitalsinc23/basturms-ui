@@ -1226,3 +1226,13 @@ export const deleteLeaveRequest = (leaveId: string): boolean => {
     }
     return false;
 }
+
+export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
+    const requests = getLeaveRequests();
+    const newRequests = requests.filter(r => !leaveIds.includes(r.id));
+    const deletedCount = requests.length - newRequests.length;
+    if (deletedCount > 0) {
+        saveToStorage(LEAVE_REQUESTS_KEY, newRequests);
+    }
+    return deletedCount;
+}

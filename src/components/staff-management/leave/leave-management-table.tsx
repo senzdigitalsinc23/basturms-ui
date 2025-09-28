@@ -1,0 +1,161 @@
+
+
+'use client';
+import { useEffect, useState } from 'react';
+import { getLeaveRequests, getStaff, addLeaveRequest, updateLeaveRequestStatus, addAuditLog, deleteLeaveRequest, bulkDeleteLeaveRequests } from '@/lib/store';
+import { LeaveRequest, Staff, LeaveStatus } from '@/lib/types';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { columns } from './columns';
+import { DataTable } from './data-table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { LeaveRequestForm } from './leave-request-form';
+
+export function LeaveManagementTable() {
+    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+    const [staffList, setStaffList] = useState<Staff[]>([]);
+    const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    const fetchLeaveData = () => {
+        setLeaveRequests(getLeaveRequests());
+        setStaffList(getStaff());
+    };
+
+    useEffect(() => {
+        fetchLeaveData();
+    }, []);
+
+    const handleAddRequest = (values: Omit<LeaveRequest, 'id' | 'request_date' | 'status' | 'staff_name'>) => {
+        if (!user) return;
+        
+        const existingPending = getLeaveRequests().find(r => r.staff_id === values.staff_id && r.status === 'Pending');
+        if (existingPending) {
+            toast({
+                variant: 'destructive',
+                title: 'Pending Request Exists',
+                description: 'This staff member already has a pending leave request.'
+            });
+            return;
+        }
+
+        const newRequest = addLeaveRequest(values, user.id);
+        
+        if (newRequest) {
+            fetchLeaveData();
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Create Leave Request',
+                details: `Submitted a ${values.leave_type} leave request for ${newRequest.staff_name}`
+            });
+            toast({
+                title: 'Leave Request Submitted',
+                description: `The request for ${newRequest.staff_name} has been submitted.`
+            });
+            setIsRequestFormOpen(false);
+        }
+    };
+    
+    const handleUpdateStatus = (leaveId: string, status: LeaveStatus, comments: string, days_approved?: number) => {
+        if (!user) return;
+
+        const updatedRequest = updateLeaveRequestStatus(leaveId, status, user.id, comments, days_approved);
+        if (updatedRequest) {
+            fetchLeaveData();
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Update Leave Status',
+                details: `Set status of leave request ${leaveId} for ${updatedRequest.staff_name} to ${status}`
+            });
+            toast({
+                title: 'Leave Status Updated',
+                description: `The leave request has been ${status.toLowerCase()}.`
+            });
+        }
+    }
+
+    const handleBulkUpdateStatus = (leaveIds: string[], status: LeaveStatus, comments: string) => {
+        if (!user) return;
+        let successCount = 0;
+        leaveIds.forEach(id => {
+            const updated = updateLeaveRequestStatus(id, status, user.id, comments);
+            if (updated) successCount++;
+        });
+
+        if (successCount > 0) {
+            fetchLeaveData();
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Bulk Update Leave Status',
+                details: `Bulk updated ${successCount} leave requests to ${status}.`
+            });
+            toast({
+                title: 'Bulk Update Successful',
+                description: `${successCount} leave requests have been updated to ${status}.`
+            });
+        }
+    };
+    
+    const handleDelete = (leaveId: string) => {
+        if (!user?.is_super_admin) {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'You do not have permission to delete leave requests.' });
+            return;
+        }
+        
+        const success = deleteLeaveRequest(leaveId);
+        if(success) {
+            fetchLeaveData();
+             addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Delete Leave Request',
+                details: `Deleted leave request with ID ${leaveId}.`
+            });
+            toast({ title: 'Leave Request Deleted', description: 'The leave request has been removed.' });
+        }
+    };
+    
+    const handleBulkDelete = (leaveIds: string[]) => {
+        if (!user?.is_super_admin) {
+             toast({ variant: 'destructive', title: 'Permission Denied', description: 'You do not have permission for this action.' });
+            return;
+        }
+        const deletedCount = bulkDeleteLeaveRequests(leaveIds);
+        if (deletedCount > 0) {
+            fetchLeaveData();
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Bulk Delete Leave Requests',
+                details: `Deleted ${deletedCount} leave requests.`
+            });
+            toast({ title: 'Bulk Delete Successful', description: `${deletedCount} leave requests have been deleted.` });
+        }
+    }
+
+
+    return (
+        <>
+            <DataTable
+                columns={columns({ onUpdateStatus: handleUpdateStatus, onDelete: handleDelete })}
+                data={leaveRequests}
+                onOpenRequestForm={() => setIsRequestFormOpen(true)}
+                onBulkUpdateStatus={handleBulkUpdateStatus}
+                onBulkDelete={handleBulkDelete}
+            />
+            <Dialog open={isRequestFormOpen} onOpenChange={setIsRequestFormOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>New Leave Request</DialogTitle>
+                        <DialogDescription>Submit a leave request on behalf of a staff member.</DialogDescription>
+                    </DialogHeader>
+                    <LeaveRequestForm staffList={staffList} onSubmit={handleAddRequest} />
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}

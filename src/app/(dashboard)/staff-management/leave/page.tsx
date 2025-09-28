@@ -1,7 +1,7 @@
 
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
-import { LeaveManagementTable } from '@/components/staff-management/leave/data-table';
+import { LeaveManagementTable } from '@/components/staff-management/leave/leave-management-table';
 
 export default function LeaveManagementPage() {
   return (
