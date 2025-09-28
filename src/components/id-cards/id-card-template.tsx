@@ -72,9 +72,9 @@ export function IDCardTemplate({ cardData, schoolProfile, classes }: IDCardTempl
                 </div>
                 
                 <div className="flex-1 p-3 flex justify-between items-center">
-                     <div className="text-xs space-y-1 text-gray-700">
-                        <p className="font-bold">ID No: <span className="font-mono font-normal">{id}</span></p>
-                        <p className="font-bold">Email: <span className="font-normal">{isStaff ? (profile as Staff).email : (profile as StudentProfile).contactDetails.email}</span></p>
+                     <div className="text-xs space-y-1 text-gray-700 overflow-hidden">
+                        <p className="font-bold flex items-center whitespace-nowrap">ID No: <span className="font-mono font-normal ml-1 truncate">{id}</span></p>
+                        <p className="font-bold whitespace-nowrap truncate">Email: <span className="font-normal">{isStaff ? (profile as Staff).email : (profile as StudentProfile).contactDetails.email}</span></p>
                          <p className="font-bold">Issued: <span className="font-normal">{new Date().toLocaleDateString('en-GB')}</span></p>
                          <p className="font-bold">Expires: <span className="font-normal">{new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString('en-GB')}</span></p>
                      </div>
@@ -90,4 +90,3 @@ export function IDCardTemplate({ cardData, schoolProfile, classes }: IDCardTempl
         </div>
     );
 }
-
