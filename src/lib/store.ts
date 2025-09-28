@@ -458,7 +458,12 @@ export const saveAssignmentActivities = (activities: AssignmentActivity[]): void
 
 export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>): AssignmentActivity => {
     const activities = getAssignmentActivities();
-    const newActivity = { ...activity, id: `act${activities.length + 1}` };
+    const maxId = activities.reduce((max, act) => {
+        const idNum = parseInt(act.id.replace('act', ''), 10);
+        return idNum > max ? idNum : max;
+    }, 0);
+    const newId = `act${maxId + 1}`;
+    const newActivity = { ...activity, id: newId };
     saveAssignmentActivities([...activities, newActivity]);
     return newActivity;
 };
