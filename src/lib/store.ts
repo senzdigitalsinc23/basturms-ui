@@ -460,7 +460,7 @@ export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>):
     const activities = getAssignmentActivities();
     const maxId = activities.reduce((max, act) => {
         const idNum = parseInt(act.id.replace('act', ''), 10);
-        return idNum > max ? idNum : max;
+        return isNaN(idNum) ? max : Math.max(max, idNum);
     }, 0);
     const newId = `act${maxId + 1}`;
     const newActivity = { ...activity, id: newId };
