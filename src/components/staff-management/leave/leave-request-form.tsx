@@ -24,6 +24,7 @@ const formSchema = z.object({
     to: z.date({ required_error: 'End date is required.' }),
   }),
   reason: z.string().min(1, 'A reason for the leave is required.'),
+  leave_year: z.number().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -35,6 +36,7 @@ type LeaveRequestFormProps = {
 export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps) {
   const [numberOfDays, setNumberOfDays] = useState(0);
   const [returnDate, setReturnDate] = useState<string | null>(null);
+  const [leaveYear, setLeaveYear] = useState<number | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -57,17 +59,24 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
 
         const nextDay = addDays(watchedDateRange.to, 1);
         setReturnDate(format(nextDay, 'PPP'));
+        const year = watchedDateRange.from.getFullYear();
+        setLeaveYear(year);
+        form.setValue('leave_year', year);
+
     } else {
         setNumberOfDays(0);
         setReturnDate(null);
+        setLeaveYear(null);
+        form.setValue('leave_year', undefined);
     }
-  }, [watchedDateRange]);
+  }, [watchedDateRange, form]);
 
 
   const handleSubmit = (values: FormValues) => {
     onSubmit({
         staff_id: values.staff_id,
         leave_type: values.leave_type,
+        leave_year: values.leave_year!,
         start_date: values.date_range.from.toISOString(),
         end_date: values.date_range.to.toISOString(),
         reason: values.reason,
@@ -101,30 +110,38 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
             </FormItem>
           )}
         />
-        <FormField
-          name="leave_type"
-          control={form.control}
-          render={({ field }) => (
+         <div className="grid grid-cols-2 gap-4">
+            <FormField
+            name="leave_type"
+            control={form.control}
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Leave Type</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select leave type" />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                    {ALL_LEAVE_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                        {type}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
             <FormItem>
-              <FormLabel>Leave Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormLabel>Leave Year</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select leave type" />
-                  </SelectTrigger>
+                    <Input value={leaveYear || 'Select range'} readOnly disabled />
                 </FormControl>
-                <SelectContent>
-                  {ALL_LEAVE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
             </FormItem>
-          )}
-        />
+         </div>
          <FormField
           control={form.control}
           name="date_range"

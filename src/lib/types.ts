@@ -356,6 +356,7 @@ export interface LeaveRequest {
     staff_id: string;
     staff_name: string;
     leave_type: LeaveType;
+    leave_year: number;
     start_date: string;
     end_date: string;
     reason: string;
