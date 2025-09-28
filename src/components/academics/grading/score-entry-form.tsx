@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass } from '@/lib/store';
-import { Class, StudentProfile, Subject, ClassSubject, AssignmentScore } from '@/lib/types';
+import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities } from '@/lib/store';
+import { Class, StudentProfile, Subject, ClassSubject, AssignmentScore, AssignmentActivity } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +21,8 @@ export function ScoreEntryForm() {
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
     const [classSubjects, setClassSubjects] = useState<Subject[]>([]);
     const [students, setStudents] = useState<StudentForGrading[]>([]);
-    const [assignmentName, setAssignmentName] = useState('Classwork 1');
+    const [assignmentName, setAssignmentName] = useState<string | undefined>();
+    const [classActivities, setClassActivities] = useState<AssignmentActivity[]>([]);
     const { toast } = useToast();
     const { user } = useAuth();
 
@@ -37,6 +38,14 @@ export function ScoreEntryForm() {
             const subjectIds = assignmentsForClass.map(cs => cs.subject_id);
             const subjects = allSubjects.filter(s => subjectIds.includes(s.id));
             setClassSubjects(subjects);
+
+            // Get activities for the selected class
+            const allActivities = getAssignmentActivities();
+            const classActivityLinks = getClassAssignmentActivities().filter(ca => ca.class_id === selectedClass);
+            const activityIds = classActivityLinks.map(ca => ca.activity_id);
+            const activities = allActivities.filter(a => activityIds.includes(a.id));
+            setClassActivities(activities);
+            setAssignmentName(undefined); // Reset assignment selection
 
             // Get students for the selected class and their existing scores
             const allStudents = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
@@ -59,6 +68,7 @@ export function ScoreEntryForm() {
         } else {
             setClassSubjects([]);
             setStudents([]);
+            setClassActivities([]);
         }
     }, [selectedClass, assignmentName]);
 
@@ -73,7 +83,7 @@ export function ScoreEntryForm() {
     }
 
     const handleSaveScores = () => {
-        if (!selectedClass || !user) return;
+        if (!selectedClass || !user || !assignmentName) return;
         
         let savedCount = 0;
 
@@ -113,15 +123,19 @@ export function ScoreEntryForm() {
                         {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                 </Select>
-                 <Input 
-                    className="w-[200px]" 
-                    placeholder="Enter assignment name..." 
-                    value={assignmentName}
-                    onChange={(e) => setAssignmentName(e.target.value)}
-                 />
+                {selectedClass && (
+                    <Select onValueChange={setAssignmentName} value={assignmentName}>
+                        <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder="Select assignment..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {classActivities.map(act => <SelectItem key={act.id} value={act.name}>{act.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                )}
             </div>
             
-            {selectedClass && (
+            {selectedClass && assignmentName && (
                  <div className="rounded-md border overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -140,6 +154,7 @@ export function ScoreEntryForm() {
                                         <TableCell key={subject.id}>
                                             <Input
                                                 type="number"
+                                                min="0"
                                                 className="w-20"
                                                 value={student.scores[subject.id]}
                                                 onChange={(e) => handleScoreChange(student.id, subject.id, e.target.value)}
@@ -153,7 +168,7 @@ export function ScoreEntryForm() {
                 </div>
             )}
             
-            {selectedClass && students.length > 0 && (
+            {selectedClass && students.length > 0 && assignmentName && (
                 <div className="flex justify-end pt-4">
                     <Button onClick={handleSaveScores}>
                         <Save className="mr-2 h-4 w-4" /> Save Scores

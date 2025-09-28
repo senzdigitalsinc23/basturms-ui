@@ -24,6 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DialogTrigger } from '@radix-ui/react-dialog';
 import { Separator } from '../ui/separator';
 import { SubjectManagement } from '../academics/subjects/subject-management';
+import { AssignmentActivityManagement } from '../academics/assignments/assignment-activity-management';
 
 const termSchema = z.object({
     name: z.string().min(1, 'Term name is required.'),
@@ -292,6 +293,19 @@ export function AcademicSettings() {
                     <SubjectManagement />
                 </div>
             </div>
+
+            <Separator className="my-8" />
+
+            <div>
+                <h3 className="text-lg font-medium">Assignment & Activity Management</h3>
+                <p className="text-sm text-muted-foreground">
+                    Define assignment types (e.g., Homework, Class Test) and assign them to classes.
+                </p>
+                <div className="mt-4">
+                    <AssignmentActivityManagement />
+                </div>
+            </div>
+
 
              <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>
                 <DialogContent className="sm:max-w-4xl">

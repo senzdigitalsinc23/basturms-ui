@@ -39,6 +39,8 @@ import {
   LeaveRequest,
   LeaveStatus,
   AssignmentScore,
+  AssignmentActivity,
+  ClassAssignmentActivity,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -59,6 +61,8 @@ const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
 const GRADING_SCHEME_KEY = 'campusconnect_grading_scheme';
 const ROLE_PERMISSIONS_KEY = 'campusconnect_role_permissions';
 const BACKUP_SETTINGS_KEY = 'campusconnect_backup_settings';
+const ASSIGNMENT_ACTIVITIES_KEY = 'campusconnect_assignment_activities';
+const CLASS_ASSIGNMENT_ACTIVITIES_KEY = 'campusconnect_class_assignment_activities';
 
 
 // New keys for staff management
@@ -243,6 +247,15 @@ const getInitialSubjects = (): Subject[] => {
     }));
 };
 
+const getInitialAssignmentActivities = (): AssignmentActivity[] => {
+    return [
+        { id: 'act1', name: 'Classwork 1', expected_per_term: 1 },
+        { id: 'act2', name: 'Homework 1', expected_per_term: 1 },
+        { id: 'act3', name: 'Mid-term Exam', expected_per_term: 1 },
+        { id: 'act4', name: 'End of Term Exam', expected_per_term: 1 },
+    ];
+};
+
 const getInitialAcademicYears = (): AcademicYear[] => {
     const defaultTerms: Term[] = [
         { name: 'First Term', startDate: new Date(2023, 8, 1).toISOString(), endDate: new Date(2023, 11, 15).toISOString(), status: 'Completed' },
@@ -378,6 +391,12 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(ROLE_PERMISSIONS_KEY)) {
         saveToStorage(ROLE_PERMISSIONS_KEY, getInitialRolePermissions());
     }
+     if (!window.localStorage.getItem(ASSIGNMENT_ACTIVITIES_KEY)) {
+        saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, getInitialAssignmentActivities());
+    }
+    if (!window.localStorage.getItem(CLASS_ASSIGNMENT_ACTIVITIES_KEY)) {
+        saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
+    }
     if (!window.localStorage.getItem(LEAVE_REQUESTS_KEY)) {
         saveToStorage(LEAVE_REQUESTS_KEY, getInitialLeaveRequests());
     }
@@ -432,6 +451,31 @@ export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSettin
 export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
 export const getRolePermissions = (): RolePermissions => getFromStorage<RolePermissions>(ROLE_PERMISSIONS_KEY, {});
 export const saveRolePermissions = (permissions: RolePermissions): void => saveToStorage(ROLE_PERMISSIONS_KEY, permissions);
+
+// Assignment Activity Functions
+export const getAssignmentActivities = (): AssignmentActivity[] => getFromStorage<AssignmentActivity[]>(ASSIGNMENT_ACTIVITIES_KEY, []);
+export const saveAssignmentActivities = (activities: AssignmentActivity[]): void => saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, activities);
+
+export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>): AssignmentActivity => {
+    const activities = getAssignmentActivities();
+    const newActivity = { ...activity, id: `act${activities.length + 1}` };
+    saveAssignmentActivities([...activities, newActivity]);
+    return newActivity;
+};
+
+export const deleteAssignmentActivity = (activityId: string): void => {
+    let activities = getAssignmentActivities();
+    activities = activities.filter(act => act.id !== activityId);
+    saveAssignmentActivities(activities);
+
+    let classActivities = getClassAssignmentActivities();
+    classActivities = classActivities.filter(ca => ca.activity_id !== activityId);
+    saveClassAssignmentActivities(classActivities);
+};
+
+export const getClassAssignmentActivities = (): ClassAssignmentActivity[] => getFromStorage<ClassAssignmentActivity[]>(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
+export const saveClassAssignmentActivities = (classActivities: ClassAssignmentActivity[]): void => saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, classActivities);
+
 
 
 // Role Functions

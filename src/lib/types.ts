@@ -137,6 +137,17 @@ export interface GradeSetting {
     remarks: string;
 }
 
+export interface AssignmentActivity {
+    id: string;
+    name: string;
+    expected_per_term: number;
+}
+
+export interface ClassAssignmentActivity {
+    class_id: string;
+    activity_id: string;
+}
+
 // Student Management Types
 export type AdmissionStatus = 'Admitted' | 'Pending' | 'Graduated' | 'Stopped' | 'Transferred' | 'Suspended' | 'Withdrawn';
 
