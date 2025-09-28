@@ -73,25 +73,40 @@ function IDCardGenerator() {
 
         const canvases = await Promise.all(canvasPromises);
 
-        const cardWidth = 85.6; // mm
-        const cardHeight = 53.98; // mm
-        const marginX = 10;
-        const marginY = 10;
-        
+        const cardWidth = 53.98; // mm (standard ID card height as width in landscape)
+        const cardHeight = 85.6; // mm (standard ID card width as height in landscape)
+        const a4Width = 210;
+        const a4Height = 297;
+        const cols = 3;
+        const rows = 3;
+        const marginX = (a4Width - (cols * cardWidth)) / (cols + 1);
+        const marginY = (a4Height - (rows * cardHeight)) / (rows + 1);
+
         canvases.forEach((canvas, index) => {
-            const pageIndex = Math.floor(index / 8);
-            if (pageIndex > 0 && index % 8 === 0) {
+            const pageIndex = Math.floor(index / 9); // 9 cards per page (3x3 grid)
+            if (pageIndex > 0 && index % 9 === 0) {
                 pdf.addPage();
             }
 
-            const localIndex = index % 8;
-            const row = Math.floor(localIndex / 2);
-            const col = localIndex % 2;
+            const localIndex = index % 9;
+            const row = Math.floor(localIndex / cols);
+            const col = localIndex % cols;
 
             const x = marginX + col * (cardWidth + marginX);
             const y = marginY + row * (cardHeight + marginY);
+
+            // Rotate the canvas image by 90 degrees
+            const rotatedCanvas = document.createElement('canvas');
+            rotatedCanvas.width = canvas.height;
+            rotatedCanvas.height = canvas.width;
+            const ctx = rotatedCanvas.getContext('2d');
+            if (ctx) {
+                ctx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+                ctx.rotate(90 * Math.PI / 180);
+                ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+            }
             
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, cardWidth, cardHeight);
+            pdf.addImage(rotatedCanvas.toDataURL('image/png'), 'PNG', x, y, cardWidth, cardHeight);
         });
 
         pdf.save('campusconnect_id_cards.pdf');
@@ -121,7 +136,7 @@ function IDCardGenerator() {
                 </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-2 print:gap-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-3 print:gap-0">
                  {cardData.map((item, index) => (
                     <div key={index} className="id-card-container break-inside-avoid">
                          <IDCardTemplate 
