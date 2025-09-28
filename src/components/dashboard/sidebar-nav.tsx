@@ -96,13 +96,6 @@ const menuItems: Record<Role, NavItem[]> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
     {
-      label: 'Academics',
-      icon: Library,
-      items: [
-          { href: '/academics/subjects', label: 'Subjects' },
-      ]
-    },
-    {
       label: 'Student Management',
       icon: GraduationCap,
       items: [
