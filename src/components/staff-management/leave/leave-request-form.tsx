@@ -44,6 +44,9 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
   const [hasPending, setHasPending] = useState(false);
   const [totalDaysTakenThisYear, setTotalDaysTakenThisYear] = useState(0);
   const [annualLeaveLimit] = useState(36);
+  const [maxDate, setMaxDate] = useState<Date | null>(null);
+  
+  const remainingLeaveDays = annualLeaveLimit - totalDaysTakenThisYear;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -55,6 +58,7 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
 
   const watchedDateRange = form.watch('date_range');
   const watchedStaffId = form.watch('staff_id');
+  const watchedLeaveType = form.watch('leave_type');
 
   useEffect(() => {
     if (watchedDateRange?.from) {
@@ -69,6 +73,7 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
 
   useEffect(() => {
     form.clearErrors(); // Clear previous errors when staff or date changes
+    setTotalDaysTakenThisYear(0);
     if (watchedStaffId && leaveYear) {
       const allRequests = getLeaveRequests();
       const approvedLeaveForYear = allRequests.filter(
@@ -98,19 +103,36 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
         const nextDay = addDays(watchedDateRange.to, 1);
         setReturnDate(format(nextDay, 'PPP'));
 
-        if (businessDays.length > annualLeaveLimit) {
-            form.setError('date_range', { type: 'manual', message: `Leave cannot exceed ${annualLeaveLimit} working days.` });
-        }
-        
-        if (totalDaysTakenThisYear + businessDays.length > annualLeaveLimit) {
-            form.setError('date_range', { type: 'manual', message: `Exceeds annual leave limit of ${annualLeaveLimit} days. Days already taken: ${totalDaysTakenThisYear}.` });
+        if (watchedLeaveType === 'Annual') {
+            if (businessDays > annualLeaveLimit) {
+                form.setError('date_range', { type: 'manual', message: `Leave cannot exceed ${annualLeaveLimit} working days.` });
+            }
+            if (totalDaysTakenThisYear + businessDays > annualLeaveLimit) {
+                form.setError('date_range', { type: 'manual', message: `Exceeds annual leave limit of ${annualLeaveLimit} days. Days already taken: ${totalDaysTakenThisYear}.` });
+            }
         }
 
     } else {
         setNumberOfDays(0);
         setReturnDate(null);
     }
-  }, [watchedDateRange, watchedStaffId, leaveYear, form, totalDaysTakenThisYear, annualLeaveLimit]);
+
+    // Calculate max date
+    if (watchedDateRange?.from && watchedLeaveType === 'Annual') {
+        let date = new Date(watchedDateRange.from);
+        let daysToAdd = remainingLeaveDays;
+        while (daysToAdd > 0) {
+            date = addDays(date, 1);
+            if (!isWeekend(date)) {
+                daysToAdd--;
+            }
+        }
+        setMaxDate(date);
+    } else {
+        setMaxDate(null);
+    }
+
+  }, [watchedDateRange, watchedStaffId, leaveYear, form, totalDaysTakenThisYear, annualLeaveLimit, watchedLeaveType, remainingLeaveDays]);
   
    useEffect(() => {
     if (watchedStaffId) {
@@ -194,12 +216,20 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
                 </FormItem>
             )}
             />
-            <FormItem>
-                <FormLabel>Leave Year</FormLabel>
-                <FormControl>
-                    <Input value={leaveYear || 'Select range'} readOnly disabled />
-                </FormControl>
-            </FormItem>
+             <div className="grid grid-cols-2 gap-4">
+                <FormItem>
+                    <FormLabel>Leave Year</FormLabel>
+                    <FormControl>
+                        <Input value={leaveYear || 'Select range'} readOnly disabled />
+                    </FormControl>
+                </FormItem>
+                 <FormItem>
+                    <FormLabel>Days Left</FormLabel>
+                    <FormControl>
+                        <Input value={watchedLeaveType === 'Annual' && watchedStaffId ? `${remainingLeaveDays} day(s)` : 'N/A'} readOnly disabled />
+                    </FormControl>
+                </FormItem>
+             </div>
          </div>
          <FormField
           control={form.control}
@@ -244,7 +274,11 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
                     captionLayout="dropdown-buttons"
                     fromYear={new Date().getFullYear()}
                     toYear={new Date().getFullYear() + 2}
-                    disabled={{ before: new Date() }}
+                    disabled={(date) => {
+                        if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
+                        if (maxDate && field.value?.from && date > maxDate) return true;
+                        return false;
+                    }}
                   />
                 </PopoverContent>
               </Popover>
