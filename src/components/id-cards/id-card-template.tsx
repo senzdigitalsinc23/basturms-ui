@@ -35,7 +35,7 @@ export function IDCardTemplate({ cardData, schoolProfile, classes }: IDCardTempl
         role = staff.roles.join(', ');
         photoUrl = cardData.user?.avatarUrl;
         issueDate = new Date(staff.date_of_joining);
-        expiryDate = new Date(issueDate.setFullYear(issueDate.getFullYear() + 4)); // Assumes 4 year validity for staff
+        expiryDate = new Date(new Date(issueDate).setFullYear(issueDate.getFullYear() + 4)); // Assumes 4 year validity for staff
         qrValue = JSON.stringify({ type: 'staff', id: staff.staff_id, name });
     } else {
         const student = profile as StudentProfile;
@@ -51,54 +51,47 @@ export function IDCardTemplate({ cardData, schoolProfile, classes }: IDCardTempl
     const initials = name.split(' ').map(n => n[0]).join('');
 
     return (
-        <div className="w-[325px] h-[200px] bg-blue-900 rounded-xl shadow-lg flex font-sans text-gray-800">
+        <div className="w-[204px] h-[324px] bg-blue-900 rounded-xl shadow-lg flex flex-col font-sans overflow-hidden">
+            <div className="bg-yellow-400 h-2" />
+            
             {/* Header */}
-            <div className="absolute top-0 left-0 right-0 p-2 flex items-center justify-between z-10">
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8 border-2 border-yellow-400">
-                        <AvatarImage src={schoolProfile?.logo} alt="School Logo" />
-                        <AvatarFallback className="bg-white text-blue-900 font-bold">{schoolProfile?.schoolName[0]}</AvatarFallback>
-                    </Avatar>
-                    <h1 className="text-sm font-bold uppercase tracking-wider text-white">{schoolProfile?.schoolName}</h1>
-                </div>
+            <div className="p-2 flex items-center gap-2">
+                <Avatar className="h-8 w-8 border-2 border-white">
+                    <AvatarImage src={schoolProfile?.logo} alt="School Logo" />
+                    <AvatarFallback className="bg-white text-blue-900 font-bold">{schoolProfile?.schoolName[0]}</AvatarFallback>
+                </Avatar>
+                <h1 className="text-xs font-bold uppercase tracking-wider text-white flex-1 text-center">{schoolProfile?.schoolName}</h1>
             </div>
 
             {/* Main Content */}
-            <div className="w-full flex mt-12">
-                 {/* Left Side (Photo) */}
-                <div className="w-1/3 flex flex-col items-center justify-center p-2 space-y-2">
-                    <div className="w-24 h-28 bg-white p-1 rounded-md shadow-md border-2 border-yellow-400">
-                         <Avatar className="h-full w-full rounded-none">
-                            <AvatarImage src={photoUrl} alt={name} className="object-cover" />
-                            <AvatarFallback className="text-4xl rounded-none">{initials}</AvatarFallback>
-                        </Avatar>
+            <div className="flex flex-col items-center p-2 text-white flex-grow">
+                <Avatar className="h-28 w-28 rounded-full border-4 border-yellow-400">
+                    <AvatarImage src={photoUrl} alt={name} className="object-cover" />
+                    <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="text-center mt-2">
+                    <h2 className="font-bold text-lg leading-tight break-words">{name}</h2>
+                    <p className="text-sm font-medium text-yellow-400">{role}</p>
+                </div>
+
+                <div className="text-xs space-y-1 mt-3 text-center">
+                    <p className="font-bold flex items-center justify-center whitespace-nowrap">ID No: <span className="font-mono font-normal ml-1 truncate">{id}</span></p>
+                    <div className="flex justify-center gap-4">
+                        <p className="font-bold flex items-center whitespace-nowrap">Issued: <span className="font-normal ml-1">{format(issueDate, 'MM/yy')}</span></p>
+                        <p className="font-bold flex items-center whitespace-nowrap">Expires: <span className="font-normal ml-1">{format(expiryDate, 'MM/yy')}</span></p>
                     </div>
                 </div>
 
-                {/* Right Side (Details) */}
-                 <div className="w-2/3 flex flex-col justify-between text-white p-2 pl-4">
-                    <div className="flex-1">
-                        <h2 className="font-bold text-lg leading-tight break-words">{name}</h2>
-                        <p className="text-xs font-medium bg-yellow-400 text-blue-900 inline-block px-2 py-0.5 rounded-full my-1">{role}</p>
-                        <div className="text-xs space-y-0.5 mt-2 overflow-hidden">
-                            <p className="font-bold flex items-center whitespace-nowrap">ID No: <span className="font-mono font-normal ml-1 truncate">{id}</span></p>
-                            <p className="font-bold flex items-center whitespace-nowrap">Issued: <span className="font-normal ml-1">{format(issueDate, 'MM/yy')}</span></p>
-                            <p className="font-bold flex items-center whitespace-nowrap">Expires: <span className="font-normal ml-1">{format(expiryDate, 'MM/yy')}</span></p>
-                        </div>
+                <div className="mt-auto flex flex-col items-center">
+                    <div className="bg-white p-0.5 rounded-md">
+                        <QRCode value={qrValue} />
                     </div>
-                     <div className="flex items-end justify-between">
-                         <div className="text-[8px] font-light tracking-wider w-2/3">
-                            <p>{schoolProfile?.motto}</p>
-                         </div>
-                        <div className="bg-white p-0.5 rounded-md">
-                            <QRCode value={qrValue} />
-                        </div>
-                    </div>
+                    <p className="text-[9px] font-light tracking-wider text-yellow-400/80 mt-1">{schoolProfile?.motto}</p>
                 </div>
             </div>
-             {/* Footer Bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-2 bg-yellow-400" />
+            
+            {/* Footer Bar */}
+            <div className="bg-yellow-400 h-4" />
         </div>
     );
 }
-
