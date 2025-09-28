@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import {
@@ -577,6 +575,19 @@ export const resetPassword = (userId: string, newPassword: string): boolean => {
     }
     return false;
 }
+
+export const changePassword = (userId: string, currentPassword: string, newPassword: string): boolean => {
+    const users = getUsersInternal();
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1 && users[userIndex].password === currentPassword) {
+        users[userIndex].password = newPassword;
+        users[userIndex].updated_at = new Date().toISOString();
+        saveToStorage(USERS_KEY, users);
+        return true;
+    }
+    return false;
+}
+
 
 export const deleteUser = (userId: string): boolean => {
     const users = getUsersInternal();

@@ -1,4 +1,3 @@
-
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,44 +14,77 @@ import {
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
-const FormSchema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+
+const createAdminResetSchema = (isAdmin: boolean) => {
+    let schema = z.object({
+        newPassword: z.string().min(8, 'Password must be at least 8 characters.'),
+        confirmPassword: z.string(),
+        currentPassword: z.string().optional(),
+    });
+
+    if (!isAdmin) {
+        schema = schema.extend({
+            currentPassword: z.string().min(1, 'Current password is required.'),
+        });
+    }
+    
+    return schema.refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+    });
+};
+
 
 type ResetPasswordFormProps = {
-  onSubmit: (values: z.infer<typeof FormSchema>) => void;
+  onSubmit: (values: z.infer<ReturnType<typeof createAdminResetSchema>>) => boolean | Promise<boolean>;
 };
 
 export function ResetPasswordForm({ onSubmit }: ResetPasswordFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
+  
+  const FormSchema = createAdminResetSchema(isAdmin);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      password: '',
+      newPassword: '',
       confirmPassword: '',
+      currentPassword: '',
     },
   });
 
   const handleFormSubmit = async (values: z.infer<typeof FormSchema>) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-    onSubmit(values);
+    await onSubmit(values);
     setIsLoading(false);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+        {!isAdmin && (
+           <FormField
+                control={form.control}
+                name="currentPassword"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Current Password</FormLabel>
+                    <FormControl>
+                        <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        )}
         <FormField
           control={form.control}
-          name="password"
+          name="newPassword"
           render={({ field }) => (
             <FormItem>
               <FormLabel>New Password</FormLabel>
