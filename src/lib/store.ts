@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -439,7 +440,28 @@ export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []
 
 // Subject Functions
 export const getSubjects = (): Subject[] => getFromStorage<Subject[]>(SUBJECTS_KEY, []);
-export const getClassSubjects = (): ClassSubject[] => getFromStorage<ClassSubject[]>(CLASS_SUBJECTS_KEY, []);
+
+export const addSubject = (subjectName: string): Subject => {
+    const subjects = getSubjects();
+    const newId = `SUB${(subjects.length + 1).toString().padStart(3, '0')}`;
+    const newSubject = { id: newId, name: subjectName };
+    saveToStorage(SUBJECTS_KEY, [...subjects, newSubject]);
+    return newSubject;
+};
+
+export const deleteSubject = (subjectId: string): void => {
+    const subjects = getSubjects().filter(s => s.id !== subjectId);
+    saveToStorage(SUBJECTS_KEY, subjects);
+    const classSubjects = addClassSubject().filter(cs => cs.subject_id !== subjectId);
+    saveToStorage(CLASS_SUBJECTS_KEY, classSubjects);
+};
+
+export const addClassSubject = (): ClassSubject[] => getFromStorage<ClassSubject[]>(CLASS_SUBJECTS_KEY, []);
+
+export const saveClassSubjects = (classSubjects: ClassSubject[]): void => {
+    saveToStorage(CLASS_SUBJECTS_KEY, classSubjects);
+};
+
 export const getTeacherSubjects = (): TeacherSubject[] => getFromStorage<TeacherSubject[]>(TEACHER_SUBJECTS_KEY, []);
 
 // User Functions

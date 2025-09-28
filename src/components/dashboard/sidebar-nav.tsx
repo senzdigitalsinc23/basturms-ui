@@ -37,6 +37,7 @@ import {
   CalendarCheck,
   Plane,
   FileBadge,
+  Library,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -94,6 +95,13 @@ type NavItem = {
 const menuItems: Record<Role, NavItem[]> = {
   Admin: [
     { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
+    {
+      label: 'Academics',
+      icon: Library,
+      items: [
+          { href: '/academics/subjects', label: 'Subjects' },
+      ]
+    },
     {
       label: 'Student Management',
       icon: GraduationCap,
