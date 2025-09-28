@@ -2,7 +2,7 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { getLeaveRequests, getStaff, addLeaveRequest, updateLeaveRequestStatus, addAuditLog } from '@/lib/store';
+import { getLeaveRequests, getStaff, addLeaveRequest, updateLeaveRequestStatus, addAuditLog, deleteLeaveRequest } from '@/lib/store';
 import { LeaveRequest, Staff, LeaveStatus } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,16 @@ export function LeaveManagementTable() {
     const handleAddRequest = (values: Omit<LeaveRequest, 'id' | 'request_date' | 'status' | 'staff_name'>) => {
         if (!user) return;
         
+        const existingPending = getLeaveRequests().find(r => r.staff_id === values.staff_id && r.status === 'Pending');
+        if (existingPending) {
+            toast({
+                variant: 'destructive',
+                title: 'Pending Request Exists',
+                description: 'This staff member already has a pending leave request.'
+            });
+            return;
+        }
+
         const newRequest = addLeaveRequest(values, user.id);
         
         if (newRequest) {
@@ -89,12 +99,31 @@ export function LeaveManagementTable() {
             });
         }
     };
+    
+    const handleDelete = (leaveId: string) => {
+        if (!user?.is_super_admin) {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'You do not have permission to delete leave requests.' });
+            return;
+        }
+        
+        const success = deleteLeaveRequest(leaveId);
+        if(success) {
+            fetchLeaveData();
+             addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Delete Leave Request',
+                details: `Deleted leave request with ID ${leaveId}.`
+            });
+            toast({ title: 'Leave Request Deleted', description: 'The leave request has been removed.' });
+        }
+    }
 
 
     return (
         <>
             <DataTable
-                columns={columns({ onUpdateStatus: handleUpdateStatus })}
+                columns={columns({ onUpdateStatus: handleUpdateStatus, onDelete: handleDelete })}
                 data={leaveRequests}
                 onOpenRequestForm={() => setIsRequestFormOpen(true)}
                 onBulkUpdateStatus={handleBulkUpdateStatus}
@@ -111,5 +140,3 @@ export function LeaveManagementTable() {
         </>
     );
 }
-
-    

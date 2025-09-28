@@ -15,6 +15,9 @@ import { cn } from '@/lib/utils';
 import { format, eachDayOfInterval, isWeekend, addDays } from 'date-fns';
 import { LeaveRequest, LeaveType, ALL_LEAVE_TYPES, Staff } from '@/lib/types';
 import { useEffect, useState } from 'react';
+import { getLeaveRequests } from '@/lib/store';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 const formSchema = z.object({
   staff_id: z.string({ required_error: 'Please select a staff member.' }),
@@ -37,6 +40,7 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
   const [numberOfDays, setNumberOfDays] = useState(0);
   const [returnDate, setReturnDate] = useState<string | null>(null);
   const [leaveYear, setLeaveYear] = useState<number | null>(null);
+  const [hasPending, setHasPending] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -47,6 +51,7 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
   });
 
   const watchedDateRange = form.watch('date_range');
+  const watchedStaffId = form.watch('staff_id');
 
   useEffect(() => {
     if (watchedDateRange?.from && watchedDateRange?.to) {
@@ -70,6 +75,15 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
         form.setValue('leave_year', undefined);
     }
   }, [watchedDateRange, form]);
+  
+   useEffect(() => {
+    if (watchedStaffId) {
+        const pendingRequest = getLeaveRequests().find(r => r.staff_id === watchedStaffId && r.status === 'Pending');
+        setHasPending(!!pendingRequest);
+    } else {
+        setHasPending(false);
+    }
+  }, [watchedStaffId]);
 
 
   const handleSubmit = (values: FormValues) => {
@@ -110,6 +124,15 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
             </FormItem>
           )}
         />
+        {hasPending && (
+            <Alert variant="destructive">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Pending Request Found</AlertTitle>
+                <AlertDescription>
+                    This staff member already has a pending leave request. You cannot submit another until the existing one is processed.
+                </AlertDescription>
+            </Alert>
+        )}
          <div className="grid grid-cols-2 gap-4">
             <FormField
             name="leave_type"
@@ -220,7 +243,7 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
           )}
         />
         <div className="flex justify-end">
-          <Button type="submit">Submit Request</Button>
+          <Button type="submit" disabled={hasPending}>Submit Request</Button>
         </div>
       </form>
     </Form>

@@ -1183,7 +1183,7 @@ export const addLeaveRequest = (
 
   const newRequest: LeaveRequest = {
     ...request,
-    id: (requests.length + 1).toString(),
+    id: (requests.length > 0 ? Math.max(...requests.map(r => parseInt(r.id))) + 1 : 1).toString(),
     staff_name: `${staff.first_name} ${staff.last_name}`,
     request_date: new Date().toISOString(),
     status: 'Pending',
@@ -1212,4 +1212,12 @@ export const updateLeaveRequestStatus = (
   return null;
 };
 
-    
+export const deleteLeaveRequest = (leaveId: string): boolean => {
+    const requests = getLeaveRequests();
+    const newRequests = requests.filter(r => r.id !== leaveId);
+    if (newRequests.length < requests.length) {
+        saveToStorage(LEAVE_REQUESTS_KEY, newRequests);
+        return true;
+    }
+    return false;
+}

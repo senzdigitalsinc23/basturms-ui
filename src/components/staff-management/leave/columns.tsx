@@ -2,7 +2,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, CheckCircle2, XCircle, Clock, FileDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, CheckCircle2, XCircle, Clock, FileDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -32,10 +32,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { getSchoolProfile } from '@/lib/store';
+import { useAuth } from '@/hooks/use-auth';
 
 
 type ColumnsProps = {
     onUpdateStatus: (leaveId: string, status: LeaveStatus, comments: string) => void;
+    onDelete: (leaveId: string) => void;
 };
 
 const statusColors: Record<LeaveStatus, string> = {
@@ -85,7 +87,7 @@ const handleDownload = (request: LeaveRequest) => {
     doc.save(`Leave_Form_${request.staff_name.replace(' ', '_')}.pdf`);
 }
 
-export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveRequest>[] => [
+export const columns = ({ onUpdateStatus, onDelete }: ColumnsProps): ColumnDef<LeaveRequest>[] => [
      {
         id: 'select',
         header: ({ table }) => (
@@ -163,8 +165,10 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveReques
         cell: function Cell({ row }) {
             const request = row.original;
             const [isAlertOpen, setIsAlertOpen] = useState(false);
+            const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
             const [action, setAction] = useState<LeaveStatus | null>(null);
             const [comments, setComments] = useState('');
+            const { user } = useAuth();
 
             const handleAction = (status: LeaveStatus) => {
                 setAction(status);
@@ -179,6 +183,11 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveReques
                     setAction(null);
                 }
             };
+            
+            const handleDelete = () => {
+                onDelete(request.id);
+                setIsDeleteAlertOpen(false);
+            }
             
             return (
                  <div className="text-right">
@@ -201,6 +210,14 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveReques
                         <DropdownMenuItem disabled={request.status !== 'Approved'} onClick={() => handleDownload(request)}>
                             <FileDown className="mr-2 h-4 w-4" /> Download Form
                         </DropdownMenuItem>
+                         {user?.is_super_admin && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setIsDeleteAlertOpen(true)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Request
+                                </DropdownMenuItem>
+                            </>
+                         )}
                     </DropdownMenuContent>
                     </DropdownMenu>
 
@@ -224,6 +241,21 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveReques
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction onClick={handleConfirm}>Confirm</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                    
+                    <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete this leave request. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
