@@ -12,9 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, eachDayOfInterval, isWeekend, addDays } from 'date-fns';
 import { LeaveRequest, LeaveType, ALL_LEAVE_TYPES, Staff } from '@/lib/types';
-import { DateRange } from 'react-day-picker';
+import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   staff_id: z.string({ required_error: 'Please select a staff member.' }),
@@ -33,6 +33,9 @@ type LeaveRequestFormProps = {
 };
 
 export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps) {
+  const [numberOfDays, setNumberOfDays] = useState(0);
+  const [returnDate, setReturnDate] = useState<string | null>(null);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -40,6 +43,26 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
       reason: '',
     },
   });
+
+  const watchedDateRange = form.watch('date_range');
+
+  useEffect(() => {
+    if (watchedDateRange?.from && watchedDateRange?.to) {
+        const days = eachDayOfInterval({
+            start: watchedDateRange.from,
+            end: watchedDateRange.to
+        });
+        const businessDays = days.filter(day => !isWeekend(day));
+        setNumberOfDays(businessDays.length);
+
+        const nextDay = addDays(watchedDateRange.to, 1);
+        setReturnDate(format(nextDay, 'PPP'));
+    } else {
+        setNumberOfDays(0);
+        setReturnDate(null);
+    }
+  }, [watchedDateRange]);
+
 
   const handleSubmit = (values: FormValues) => {
     onSubmit({
@@ -142,6 +165,9 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
                     selected={field.value}
                     onSelect={field.onChange}
                     numberOfMonths={2}
+                    captionLayout="dropdown-buttons"
+                    fromYear={new Date().getFullYear()}
+                    toYear={new Date().getFullYear() + 2}
                   />
                 </PopoverContent>
               </Popover>
@@ -149,6 +175,20 @@ export function LeaveRequestForm({ staffList, onSubmit }: LeaveRequestFormProps)
             </FormItem>
           )}
         />
+        <div className="grid grid-cols-2 gap-4">
+            <FormItem>
+                <FormLabel>Number of Days Applied</FormLabel>
+                <FormControl>
+                    <Input value={`${numberOfDays} working day(s)`} readOnly disabled />
+                </FormControl>
+            </FormItem>
+            <FormItem>
+                <FormLabel>Return Date</FormLabel>
+                <FormControl>
+                    <Input value={returnDate || 'Select range'} readOnly disabled />
+                </FormControl>
+            </FormItem>
+        </div>
         <FormField
           name="reason"
           control={form.control}

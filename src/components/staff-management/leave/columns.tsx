@@ -2,7 +2,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, CheckCircle2, XCircle, Clock, MessageSquare, Pencil } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, CheckCircle2, XCircle, Clock, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,13 +11,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
-import { LeaveRequest, LeaveStatus, ALL_LEAVE_STATUSES } from '@/lib/types';
+import { LeaveRequest, LeaveStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { format, formatDistanceStrict } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +29,10 @@ import { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { getSchoolProfile } from '@/lib/store';
+
 
 type ColumnsProps = {
     onUpdateStatus: (leaveId: string, status: LeaveStatus, comments: string) => void;
@@ -47,6 +48,41 @@ const statusIcons: Record<LeaveStatus, React.ElementType> = {
     Pending: Clock,
     Approved: CheckCircle2,
     Rejected: XCircle,
+}
+
+const handleDownload = (request: LeaveRequest) => {
+    const doc = new jsPDF();
+    const schoolProfile = getSchoolProfile();
+    const schoolName = schoolProfile?.schoolName || 'CampusConnect School';
+    
+    doc.setFontSize(18);
+    doc.text(`${schoolName}`, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text("Staff Leave Endorsement Form", doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+
+    (doc as any).autoTable({
+        startY: 40,
+        body: [
+            ['Staff Name', request.staff_name],
+            ['Staff ID', request.staff_id],
+            ['Leave Type', request.leave_type],
+            ['Start Date', format(new Date(request.start_date), 'PPP')],
+            ['End Date', format(new Date(request.end_date), 'PPP')],
+            ['Reason', request.reason],
+            ['Status', request.status],
+            ['Approved By', request.approver_name || 'N/A'],
+            ['Approval Comments', request.comments || 'N/A'],
+        ],
+        theme: 'grid'
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY;
+    doc.setFontSize(12);
+    doc.text("Headmaster/Administrator's Endorsement:", 14, finalY + 20);
+    doc.line(14, finalY + 40, 100, finalY + 40); // Signature line
+    doc.text("Signature & Stamp", 14, finalY + 45);
+
+    doc.save(`Leave_Form_${request.staff_name.replace(' ', '_')}.pdf`);
 }
 
 export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveRequest>[] => [
@@ -102,7 +138,7 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveReques
     {
         id: 'duration',
         header: 'Duration',
-        cell: ({ row }) => formatDistanceToNowStrict(new Date(row.original.start_date), {
+        cell: ({ row }) => formatDistanceStrict(new Date(row.original.end_date), new Date(row.original.start_date), {
             unit: 'day',
             addSuffix: false
         })
@@ -160,6 +196,10 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<LeaveReques
                         </DropdownMenuItem>
                         <DropdownMenuItem disabled={request.status !== 'Pending'} onClick={() => handleAction('Rejected')} className="text-destructive focus:text-destructive">
                            <XCircle className="mr-2 h-4 w-4" /> Reject
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem disabled={request.status !== 'Approved'} onClick={() => handleDownload(request)}>
+                            <FileDown className="mr-2 h-4 w-4" /> Download Form
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                     </DropdownMenu>
