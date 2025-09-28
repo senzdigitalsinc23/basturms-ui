@@ -100,8 +100,10 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Academics',
       icon: BookMarked,
       items: [
-        { href: '/academics/classes', label: 'Classes & Subjects' },
-        { href: '/academics/grading', label: 'Grading & Assignments' },
+        { href: '/academics/classes', label: 'Class Subjects' },
+        { href: '/academics/assignments', label: 'Assignments' },
+        { href: '/academics/grading', label: 'Score Entry' },
+        { href: '/academics/settings', label: 'Academic Settings' },
       ],
     },
     {

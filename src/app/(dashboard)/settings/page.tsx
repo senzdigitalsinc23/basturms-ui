@@ -4,8 +4,6 @@ import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SchoolProfileSettings } from '@/components/settings/school-profile-settings';
-import { AcademicSettings } from '@/components/settings/academic-settings';
-import { GradingSchemeSettings } from '@/components/settings/grading-scheme-settings';
 import { RolesPermissionsSettings } from '@/components/settings/roles-permissions-settings';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { BackupSettings } from '@/components/settings/backup-settings';
@@ -21,10 +19,8 @@ export default function SettingsPage() {
           </p>
         </div>
         <Tabs defaultValue="school-profile">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="school-profile">School Profile</TabsTrigger>
-                <TabsTrigger value="academic">Academic Settings</TabsTrigger>
-                <TabsTrigger value="grading">Grading Scheme</TabsTrigger>
                 <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
                 <TabsTrigger value="integrations">Integrations</TabsTrigger>
                 <TabsTrigger value="backup">Backup & Recovery</TabsTrigger>
@@ -37,28 +33,6 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent>
                         <SchoolProfileSettings />
-                    </CardContent>
-                </Card>
-            </TabsContent>
-             <TabsContent value="academic">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Academic Settings</CardTitle>
-                        <CardDescription>Configure academic years, terms, subjects and their assignments.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <AcademicSettings />
-                    </CardContent>
-                </Card>
-            </TabsContent>
-             <TabsContent value="grading">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Grading Scheme</CardTitle>
-                        <CardDescription>Define the grading scale for student assessments.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <GradingSchemeSettings />
                     </CardContent>
                 </Card>
             </TabsContent>
