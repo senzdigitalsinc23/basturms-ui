@@ -131,15 +131,15 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
     
     // Student 1 admitted this year
     const student1EnrollDate = new Date(currentYear, 2, 15).toISOString(); // Mar 15
-    const student1StudentNo = `WR-TK001-LBA${'${yearYY}'}001`;
-    const student1AdmissionNo = `ADM${'${yearYY}'}001`;
+    const student1StudentNo = `WR-TK001-LBA${yearYY}001`;
+    const student1AdmissionNo = `ADM${yearYY}001`;
 
     // Student 2 admitted last year
     const lastYear = currentYear - 1;
     const lastYearYY = lastYear.toString().slice(-2);
     const student2EnrollDate = new Date(lastYear, 8, 1).toISOString(); // Sep 1
-    const student2StudentNo = `WR-TK001-LBA${'${lastYearYY}'}001`;
-    const student2AdmissionNo = `ADM${'${lastYearYY}'}001`;
+    const student2StudentNo = `WR-TK001-LBA${lastYearYY}001`;
+    const student2AdmissionNo = `ADM${lastYearYY}001`;
 
     return [
         {
@@ -786,8 +786,8 @@ export const addStudentProfile = (
     const nextInYear = studentsInYear.length + 1;
     const nextNumberPadded = nextInYear.toString().padStart(3, '0');
 
-    const newStudentNo = `WR-TK001-LBA${'${yearYY}'}${nextNumberPadded}`;
-    const newAdmissionNo = `ADM${'${yearYY}'}${nextNumberPadded}`;
+    const newStudentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
+    const newAdmissionNo = `ADM${yearYY}${nextNumberPadded}`;
     
     const newProfile: StudentProfile = {
         student: {
@@ -820,7 +820,7 @@ export const addStudentProfile = (
         name: `${newProfile.student.first_name} ${newProfile.student.last_name}`,
         email: hasEmail ? newProfile.contactDetails.email! : `${usernameFromStudentNo}@student.com`,
         username: hasEmail ? newProfile.contactDetails.email! : usernameFromStudentNo,
-        password: `${'${lastName}'}${studentNoSuffix}`,
+        password: `${lastName}${studentNoSuffix}`,
         role: 'Student' as Role,
         status: 'frozen' as 'frozen',
         entityId: newProfile.student.student_no,
@@ -1136,7 +1136,7 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: 
         name: `${staffData.first_name} ${staffData.last_name}`,
         email: staffData.email,
         username: staffData.email,
-        password: `${staffData.last_name.toLowerCase()}${'${staffData.staff_id.slice(-3)}'}`,
+        password: `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`,
         role: staffData.roles[0], // Use the first role for user creation
         status: 'active' as 'active' | 'frozen',
     };
@@ -1350,3 +1350,5 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     }
     return deletedCount;
 }
+
+    
