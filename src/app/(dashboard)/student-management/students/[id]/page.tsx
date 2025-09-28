@@ -3,17 +3,17 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment } from '@/lib/types';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile } from '@/lib/store';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark, Image as ImageIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,6 +28,10 @@ import { AttendanceRecordForm } from '@/components/student-management/profile/at
 import { CommunicationLogForm } from '@/components/student-management/profile/communication-log-form';
 import { DocumentUploadForm } from '@/components/student-management/profile/document-upload-form';
 import { HealthRecordsForm } from '@/components/student-management/profile/health-records-form';
+import { IDCardTemplate } from '@/components/id-cards/id-card-template';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+
 
 const statusColors: Record<string, string> = {
     Admitted: 'bg-green-100 text-green-800',
@@ -108,6 +112,7 @@ export default function StudentProfilePage() {
     const [className, setClassName] = useState('');
     const [age, setAge] = useState<number | null>(null);
     const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+    const [schoolProfile, setSchoolProfile] = useState<SchoolProfileData | null>(null);
     
     // Dialog states
     const [isAcademicFormOpen, setIsAcademicFormOpen] = useState(false);
@@ -119,6 +124,7 @@ export default function StudentProfilePage() {
     
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
+    const idCardRef = useRef<HTMLDivElement>(null);
 
     const fetchProfile = () => {
         if (studentId) {
@@ -126,6 +132,7 @@ export default function StudentProfilePage() {
             setProfile(studentProfile || null);
             const allClasses = getClasses();
             setClasses(allClasses);
+            setSchoolProfile(getSchoolProfile());
 
             if(studentProfile) {
                 const studentClass = allClasses.find(c => c.id === studentProfile.admissionDetails.class_assigned);
@@ -138,6 +145,38 @@ export default function StudentProfilePage() {
     useEffect(() => {
         fetchProfile();
     }, [studentId]);
+    
+    const handleDownload = (dataUrl: string, fileName: string) => {
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleDownloadID = async (format: 'pdf' | 'png') => {
+        if (!idCardRef.current || !profile) return;
+
+        const canvas = await html2canvas(idCardRef.current, { scale: 3 });
+        const fileName = `ID_Card_${profile.student.first_name}_${profile.student.last_name}`;
+
+        if (format === 'png') {
+            const dataUrl = canvas.toDataURL('image/png');
+            handleDownload(dataUrl, `${fileName}.png`);
+        } else { // pdf
+            const cardWidth = 85.6; // mm
+            const cardHeight = 53.98; // mm
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [cardWidth, cardHeight]
+            });
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, cardWidth, cardHeight);
+            pdf.save(`${fileName}.pdf`);
+        }
+    };
+
 
     const handleUpdateProfile = (values: Partial<StudentProfile>) => {
         if (!currentUser || !profile) return;
@@ -591,7 +630,7 @@ export default function StudentProfilePage() {
                         />
                     </div>
                 </TabsContent>
-                <TabsContent value="documents" asChild>
+                <TabsContent value="documents" className="space-y-6">
                     <RecordCard<UploadedDocument>
                         title="Uploaded Documents"
                         description="Official student documents."
@@ -641,6 +680,28 @@ export default function StudentProfilePage() {
                             </Dialog>
                         }
                     />
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>ID Card</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col items-center gap-4">
+                             <div ref={idCardRef}>
+                                <IDCardTemplate
+                                    cardData={{ type: 'student', data: profile }}
+                                    schoolProfile={schoolProfile}
+                                    classes={classes}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button size="sm" variant="outline" onClick={() => handleDownloadID('pdf')}>
+                                    <FileText className="mr-2" /> PDF
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleDownloadID('png')}>
+                                    <ImageIcon className="mr-2" /> PNG
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         </div>

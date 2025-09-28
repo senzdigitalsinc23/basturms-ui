@@ -1,16 +1,16 @@
 
 
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects, addStaffAcademicHistory, addStaffAppointmentHistory, storeGetStaffAcademicHistory } from '@/lib/store';
-import { Staff, User, StaffDocument, StaffAppointmentHistory, Role, Class, Subject } from '@/lib/types';
+import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects, addStaffAcademicHistory, addStaffAppointmentHistory, storeGetStaffAcademicHistory, getSchoolProfile } from '@/lib/store';
+import { Staff, User, StaffDocument, StaffAppointmentHistory, Role, Class, Subject, SchoolProfileData } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Download, Trash2, File as FileIcon, Upload, Check, GraduationCap, Input } from 'lucide-react';
+import { ArrowLeft, Edit, Download, Trash2, File as FileIcon, Upload, Check, GraduationCap, Input, Image, FileText } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +19,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AddStaffForm } from '@/components/staff-management/add-staff-form';
 import { StaffDocumentUploadForm } from '@/components/staff-management/staff-document-upload-form';
 import { saveToStorage, STAFF_ACADEMIC_HISTORY_KEY } from '@/lib/store';
+import { IDCardTemplate } from '@/components/id-cards/id-card-template';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 
 function InfoItem({ label, value }: { label: string; value?: React.ReactNode }) {
@@ -43,8 +46,11 @@ export default function StaffProfilePage() {
     const [appointmentHistory, setAppointmentHistory] = useState<StaffAppointmentHistory | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isUploadOpen, setIsUploadOpen] = useState(false);
-    const [classes, setClasses] = useState<Class[]>([]);
+    const [classes, setClasses] =useState<Class[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [schoolProfile, setSchoolProfile] = useState<SchoolProfileData | null>(null);
+
+    const idCardRef = useRef<HTMLDivElement>(null);
 
 
     const fetchStaffData = () => {
@@ -62,6 +68,7 @@ export default function StaffProfilePage() {
                 .filter(a => a.staff_id === staffId)
                 .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
             setAppointmentHistory(latestAppointment || null);
+            setSchoolProfile(getSchoolProfile());
         } else {
             router.push('/staff-management');
         }
@@ -126,6 +133,29 @@ export default function StaffProfilePage() {
         link.click();
         document.body.removeChild(link);
     };
+    
+     const handleDownloadID = async (format: 'pdf' | 'png') => {
+        if (!idCardRef.current || !staff) return;
+
+        const canvas = await html2canvas(idCardRef.current, { scale: 3 });
+        const fileName = `ID_Card_${staff.first_name}_${staff.last_name}`;
+
+        if (format === 'png') {
+            const dataUrl = canvas.toDataURL('image/png');
+            handleDownload(dataUrl, `${fileName}.png`);
+        } else { // pdf
+            const cardWidth = 85.6; // mm
+            const cardHeight = 53.98; // mm
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [cardWidth, cardHeight]
+            });
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, cardWidth, cardHeight);
+            pdf.save(`${fileName}.pdf`);
+        }
+    };
+
 
     if (!staff) {
         return <div className="flex items-center justify-center h-full">Loading...</div>;
@@ -191,67 +221,71 @@ export default function StaffProfilePage() {
             </Card>
 
             <div className="grid md:grid-cols-3 gap-6">
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Personal & Contact Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <InfoItem label="Full Name" value={`${staff.first_name} ${staff.last_name}`} />
-                        <InfoItem label="Email Address" value={staff.email} />
-                        <InfoItem label="Phone Number" value={staff.phone} />
-                    </CardContent>
-                     <CardHeader>
-                        <CardTitle>Staff Documents</CardTitle>
-                        <CardDescription>CV, letters, and other personal files.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex justify-end items-center mb-4">
-                            <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
-                                    <StaffDocumentUploadForm onSubmit={handleUploadDocument} />
-                                </DialogContent>
-                            </Dialog>
-                        </div>
-                        <ul className="space-y-3">
-                           {documents.map((doc) => (
-                                <li key={doc.document_name} className="flex items-center justify-between p-3 rounded-md border">
-                                    <div className="flex items-center gap-3">
-                                        <FileIcon className="h-6 w-6 text-muted-foreground" />
-                                        <div>
-                                            <p className="font-medium">{doc.document_name}</p>
+                <div className="md:col-span-2 space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Personal & Contact Information</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            <InfoItem label="Full Name" value={`${staff.first_name} ${staff.last_name}`} />
+                            <InfoItem label="Email Address" value={staff.email} />
+                            <InfoItem label="Phone Number" value={staff.phone} />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Staff Documents</CardTitle>
+                            <CardDescription>CV, letters, and other personal files.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-end items-center mb-4">
+                                <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+                                        <StaffDocumentUploadForm onSubmit={handleUploadDocument} />
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                            <ul className="space-y-3">
+                            {documents.map((doc) => (
+                                    <li key={doc.document_name} className="flex items-center justify-between p-3 rounded-md border">
+                                        <div className="flex items-center gap-3">
+                                            <FileIcon className="h-6 w-6 text-muted-foreground" />
+                                            <div>
+                                                <p className="font-medium">{doc.document_name}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button variant="ghost" size="icon" onClick={() => handleDownload(doc.file, doc.document_name)}>
-                                            <Download className="h-4 w-4" />
-                                        </Button>
-                                         <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>This will permanently delete the document {doc.document_name}.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteDocument(doc.document_name)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                </li>
-                           ))}
-                        </ul>
-                    </CardContent>
-                </Card>
+                                        <div className="flex gap-2">
+                                            <Button variant="ghost" size="icon" onClick={() => handleDownload(doc.file, doc.document_name)}>
+                                                <Download className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>This will permanently delete the document {doc.document_name}.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteDocument(doc.document_name)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </li>
+                            ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                </div>
                  <div className="space-y-6">
                     <Card>
                         <CardHeader><CardTitle>Professional Information</CardTitle></CardHeader>
@@ -268,6 +302,28 @@ export default function StaffProfilePage() {
                         <CardContent className="space-y-4">
                             <InfoItem label={staff.id_type} value={staff.id_no} />
                             <InfoItem label="SSNIT Number" value={staff.snnit_no} />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>ID Card</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col items-center gap-4">
+                            <div ref={idCardRef}>
+                                <IDCardTemplate
+                                    cardData={{ type: 'staff', data: staff, user }}
+                                    schoolProfile={schoolProfile}
+                                    classes={classes}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button size="sm" variant="outline" onClick={() => handleDownloadID('pdf')}>
+                                    <FileText className="mr-2" /> PDF
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleDownloadID('png')}>
+                                    <Image className="mr-2" /> PNG
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
