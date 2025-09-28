@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -37,6 +38,7 @@ import {
   Permission,
   LeaveRequest,
   LeaveStatus,
+  AssignmentScore,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -925,6 +927,36 @@ export const addAttendanceRecord = (entityId: string, record: AttendanceRecord, 
         saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, [...allRecords, staffRecord]);
     }
 };
+
+export const getScoresForClass = (classId: string): AssignmentScore[] => {
+    const profiles = getStudentProfiles();
+    return profiles.flatMap(p => p.assignmentScores || []).filter(s => s.class_id === classId);
+}
+
+export const addScore = (score: AssignmentScore, editorId: string): void => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === score.student_id);
+
+    if (profileIndex !== -1) {
+        const profile = profiles[profileIndex];
+        if (!profile.assignmentScores) {
+            profile.assignmentScores = [];
+        }
+
+        // Remove existing score for the same assignment to avoid duplicates, then add the new one.
+        profile.assignmentScores = profile.assignmentScores.filter(s => 
+            !(s.student_id === score.student_id && s.subject_id === score.subject_id && s.assignment_name === score.assignment_name)
+        );
+        profile.assignmentScores.push(score);
+
+        profile.student.updated_at = new Date().toISOString();
+        profile.student.updated_by = editorId;
+        
+        profiles[profileIndex] = profile;
+        saveToStorage(STUDENTS_KEY, profiles);
+    }
+};
+
 
 export const getStaffAttendanceRecords = (): StaffAttendanceRecord[] => getFromStorage<StaffAttendanceRecord[]>(STAFF_ATTENDANCE_RECORDS_KEY, []);
 

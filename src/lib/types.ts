@@ -1,4 +1,5 @@
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -231,6 +232,15 @@ export interface AcademicRecord {
     teacher_remarks: string;
 }
 
+export interface AssignmentScore {
+    student_id: string;
+    class_id: string;
+    subject_id: string;
+    assignment_name: string;
+    score: number;
+}
+
+
 export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused' | 'On Leave';
 
 export interface AttendanceRecord {
@@ -290,6 +300,7 @@ export interface StudentProfile {
     healthRecords?: HealthRecords;
     disciplinaryRecords?: DisciplinaryRecord[];
     academicRecords?: AcademicRecord[];
+    assignmentScores?: AssignmentScore[];
     attendanceRecords?: StudentAttendanceRecord[];
     communicationLogs?: CommunicationLog[];
     uploadedDocuments?: UploadedDocument[];
