@@ -22,6 +22,8 @@ import { format, parseISO } from 'date-fns';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { DialogTrigger } from '@radix-ui/react-dialog';
+import { Separator } from '../ui/separator';
+import { SubjectManagement } from '../academics/subjects/subject-management';
 
 const termSchema = z.object({
     name: z.string().min(1, 'Term name is required.'),
@@ -190,91 +192,107 @@ export function AcademicSettings() {
     const isAllSelected = academicYears.length > 0 && Object.keys(rowSelection).length === academicYears.length;
 
     return (
-        <div className="space-y-4">
-             <div className="flex justify-between items-center">
-                <div>
-                     {Object.keys(rowSelection).length > 0 && (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete Selected ({Object.keys(rowSelection).length})
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>This will permanently delete the selected academic years. This action cannot be undone.</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleBulkDelete}>Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium">Academic Year & Terms</h3>
+                <div className="flex justify-between items-center mt-2">
+                    <div>
+                        {Object.keys(rowSelection).length > 0 && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete Selected ({Object.keys(rowSelection).length})
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>This will permanently delete the selected academic years. This action cannot be undone.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleBulkDelete}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="sm"><PlusCircle className="mr-2"/> Add Academic Year</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add New Academic Year</DialogTitle>
+                                <DialogDescription>Define a new academic year and its terms.</DialogDescription>
+                            </DialogHeader>
+                            <Form {...addForm}>
+                                <form onSubmit={addForm.handleSubmit(handleAddYear)} className="space-y-4">
+                                    <FormField control={addForm.control} name="year" render={({ field }) => (
+                                        <FormItem><FormLabel>Academic Year</FormLabel><FormControl><Input placeholder="e.g., 2024/2025" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )}/>
+                                    <FormField control={addForm.control} name="numberOfTerms" render={({ field }) => (
+                                        <FormItem><FormLabel>Number of Terms</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} /></FormControl><FormMessage /></FormItem>
+                                    )}/>
+                                    <FormField control={addForm.control} name="status" render={({ field }) => (
+                                        <FormItem><FormLabel>Status</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                            <SelectContent>{ALL_ACADEMIC_YEAR_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
+                                        </Select><FormMessage /></FormItem>
+                                    )}/>
+                                    <div className="flex justify-end"><Button type="submit">Create Year</Button></div>
+                                </form>
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="sm"><PlusCircle className="mr-2"/> Add Academic Year</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add New Academic Year</DialogTitle>
-                            <DialogDescription>Define a new academic year and its terms.</DialogDescription>
-                        </DialogHeader>
-                        <Form {...addForm}>
-                            <form onSubmit={addForm.handleSubmit(handleAddYear)} className="space-y-4">
-                                <FormField control={addForm.control} name="year" render={({ field }) => (
-                                    <FormItem><FormLabel>Academic Year</FormLabel><FormControl><Input placeholder="e.g., 2024/2025" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                 <FormField control={addForm.control} name="numberOfTerms" render={({ field }) => (
-                                    <FormItem><FormLabel>Number of Terms</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={addForm.control} name="status" render={({ field }) => (
-                                    <FormItem><FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                        <SelectContent>{ALL_ACADEMIC_YEAR_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
-                                    </Select><FormMessage /></FormItem>
-                                )}/>
-                                <div className="flex justify-end"><Button type="submit">Create Year</Button></div>
-                            </form>
-                        </Form>
-                    </DialogContent>
-                </Dialog>
-            </div>
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px]"><Checkbox checked={isAllSelected} onCheckedChange={checked => {
-                                const newRowSelection: Record<string, boolean> = {};
-                                if (checked) { academicYears.forEach(y => newRowSelection[y.year] = true); }
-                                setRowSelection(newRowSelection);
-                            }}/></TableHead>
-                            <TableHead>Academic Year</TableHead>
-                            <TableHead>Terms</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {academicYears.map(year => (
-                            <TableRow key={year.year}>
-                                <TableCell><Checkbox checked={rowSelection[year.year] || false} onCheckedChange={checked => setRowSelection(prev => ({...prev, [year.year]: !!checked}))} /></TableCell>
-                                <TableCell>{year.year}</TableCell>
-                                <TableCell>{Array.isArray(year.terms) ? year.terms.length : 0}</TableCell>
-                                <TableCell>{year.status}</TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="sm" onClick={() => handleEditYear(year)}><Edit className="mr-2 h-4 w-4"/> Edit</Button>
-                                    <Button variant="ghost" size="sm" onClick={() => handleManageTerms(year)}>Manage Terms</Button>
-                                </TableCell>
+                <div className="rounded-md border mt-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[50px]"><Checkbox checked={isAllSelected} onCheckedChange={checked => {
+                                    const newRowSelection: Record<string, boolean> = {};
+                                    if (checked) { academicYears.forEach(y => newRowSelection[y.year] = true); }
+                                    setRowSelection(newRowSelection);
+                                }}/></TableHead>
+                                <TableHead>Academic Year</TableHead>
+                                <TableHead>Terms</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {academicYears.map(year => (
+                                <TableRow key={year.year}>
+                                    <TableCell><Checkbox checked={rowSelection[year.year] || false} onCheckedChange={checked => setRowSelection(prev => ({...prev, [year.year]: !!checked}))} /></TableCell>
+                                    <TableCell>{year.year}</TableCell>
+                                    <TableCell>{Array.isArray(year.terms) ? year.terms.length : 0}</TableCell>
+                                    <TableCell>{year.status}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="sm" onClick={() => handleEditYear(year)}><Edit className="mr-2 h-4 w-4"/> Edit</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => handleManageTerms(year)}>Manage Terms</Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
+
+            <Separator className="my-8" />
+            
+            <div>
+                <h3 className="text-lg font-medium">Subject Management</h3>
+                 <p className="text-sm text-muted-foreground">
+                    Create new subjects and assign them to classes.
+                </p>
+                <div className="mt-4">
+                    <SubjectManagement />
+                </div>
+            </div>
+
              <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>

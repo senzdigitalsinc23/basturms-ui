@@ -9,7 +9,6 @@ import { GradingSchemeSettings } from '@/components/settings/grading-scheme-sett
 import { RolesPermissionsSettings } from '@/components/settings/roles-permissions-settings';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { BackupSettings } from '@/components/settings/backup-settings';
-import { SubjectManagement } from '@/components/academics/subjects/subject-management';
 
 export default function SettingsPage() {
   return (
@@ -22,10 +21,9 @@ export default function SettingsPage() {
           </p>
         </div>
         <Tabs defaultValue="school-profile">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="school-profile">School Profile</TabsTrigger>
                 <TabsTrigger value="academic">Academic Settings</TabsTrigger>
-                <TabsTrigger value="subjects">Subjects</TabsTrigger>
                 <TabsTrigger value="grading">Grading Scheme</TabsTrigger>
                 <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
                 <TabsTrigger value="integrations">Integrations</TabsTrigger>
@@ -46,21 +44,10 @@ export default function SettingsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Academic Settings</CardTitle>
-                        <CardDescription>Configure academic years, terms, and sessions.</CardDescription>
+                        <CardDescription>Configure academic years, terms, subjects and their assignments.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <AcademicSettings />
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            <TabsContent value="subjects">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Subject Management</CardTitle>
-                        <CardDescription>Create new subjects and assign them to classes.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <SubjectManagement />
                     </CardContent>
                 </Card>
             </TabsContent>
