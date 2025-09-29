@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects } from '@/lib/store';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects, updateAssignmentScore, deleteAssignmentScore } from '@/lib/store';
 import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData, AssignmentScore, Subject } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,11 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark, Image as ImageIcon, Pencil } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark, Image as ImageIcon, Pencil, Save, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { EditStudentForm } from '@/components/student-management/profile/edit-student-form';
 import { useAuth } from '@/hooks/use-auth';
@@ -30,6 +30,8 @@ import { HealthRecordsForm } from '@/components/student-management/profile/healt
 import { IDCardTemplate } from '@/components/id-cards/id-card-template';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 
 const statusColors: Record<string, string> = {
@@ -121,6 +123,10 @@ export default function StudentProfilePage() {
     const [isCommunicationFormOpen, setIsCommunicationFormOpen] = useState(false);
     const [isDocumentFormOpen, setIsDocumentFormOpen] = useState(false);
     const [isHealthFormOpen, setIsHealthFormOpen] = useState(false);
+    const [isEditScoreOpen, setIsEditScoreOpen] = useState(false);
+    const [editingScore, setEditingScore] = useState<AssignmentScore | null>(null);
+    const [newScoreValue, setNewScoreValue] = useState<number | string>('');
+
     
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
@@ -256,15 +262,50 @@ export default function StudentProfilePage() {
     };
 
     const handleEditScore = (score: AssignmentScore) => {
-        // Placeholder for edit functionality
-        console.log('Editing score:', score);
-        toast({ title: 'Edit Clicked', description: 'Edit functionality to be implemented.' });
+        setEditingScore(score);
+        setNewScoreValue(score.score);
+        setIsEditScoreOpen(true);
     };
 
+    const handleConfirmEditScore = () => {
+        if (!currentUser || !profile || !editingScore) return;
+        const scoreValue = Number(newScoreValue);
+        if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 100) {
+            toast({ variant: 'destructive', title: 'Invalid Score', description: 'Score must be a number between 0 and 100.' });
+            return;
+        }
+
+        const updatedProfile = updateAssignmentScore(profile.student.student_no, editingScore.subject_id, editingScore.assignment_name, scoreValue, currentUser.id);
+        
+        if (updatedProfile) {
+            fetchProfile();
+            addAuditLog({
+                user: currentUser.email,
+                name: currentUser.name,
+                action: 'Update Score',
+                details: `Updated score for ${editingScore.assignment_name} (${subjects.find(s => s.id === editingScore.subject_id)?.name}) for student ${fullName} to ${scoreValue}.`
+            });
+            toast({ title: 'Score Updated', description: 'The assignment score has been updated.' });
+        }
+        setIsEditScoreOpen(false);
+        setEditingScore(null);
+    }
+
     const handleDeleteScore = (score: AssignmentScore) => {
-        // Placeholder for delete functionality
-        console.log('Deleting score:', score);
-        toast({ title: 'Delete Clicked', description: 'Delete functionality to be implemented.' });
+        if (!currentUser || !profile) return;
+
+        const updatedProfile = deleteAssignmentScore(profile.student.student_no, score.subject_id, score.assignment_name, currentUser.id);
+        
+        if (updatedProfile) {
+            fetchProfile();
+            addAuditLog({
+                user: currentUser.email,
+                name: currentUser.name,
+                action: 'Delete Score',
+                details: `Deleted score for ${score.assignment_name} (${subjects.find(s => s.id === score.subject_id)?.name}) for student ${fullName}.`
+            });
+            toast({ title: 'Score Deleted', description: 'The assignment score has been removed.' });
+        }
     };
 
 
@@ -425,9 +466,25 @@ export default function StudentProfilePage() {
                                     <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
                                         <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteScore(rec)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action will permanently delete the score for {rec.assignment_name} in {subjects.find(s => s.id === rec.subject_id)?.name}.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteScore(rec)}>Delete Score</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </TableCell>
                             </TableRow>
                         )}
@@ -740,6 +797,32 @@ export default function StudentProfilePage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+             <Dialog open={isEditScoreOpen} onOpenChange={setIsEditScoreOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Score</DialogTitle>
+                        <DialogDescription>
+                            Update the score for {editingScore?.assignment_name} in {subjects.find(s => s.id === editingScore?.subject_id)?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="score" className="text-right">Score</Label>
+                            <Input
+                                id="score"
+                                type="number"
+                                value={newScoreValue}
+                                onChange={(e) => setNewScoreValue(e.target.value)}
+                                className="col-span-3"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsEditScoreOpen(false)}>Cancel</Button>
+                        <Button type="button" onClick={handleConfirmEditScore}>Save changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

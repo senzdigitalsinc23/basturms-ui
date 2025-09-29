@@ -249,8 +249,8 @@ const getInitialSubjects = (): Subject[] => {
 
 const getInitialAssignmentActivities = (): AssignmentActivity[] => {
     return [
-        { id: 'act1', name: 'Classwork 1', expected_per_term: 1, weight: 20 },
-        { id: 'act2', name: 'Homework 1', expected_per_term: 1, weight: 20 },
+        { id: 'act1', name: 'Classwork', expected_per_term: 2, weight: 20 },
+        { id: 'act2', name: 'Homework', expected_per_term: 3, weight: 20 },
         { id: 'act3', name: 'Mid-term Exam', expected_per_term: 1, weight: 60 },
         { id: 'act4', name: 'End of Term Exam', expected_per_term: 1, weight: 100 },
     ];
@@ -1024,6 +1024,48 @@ export const addScore = (score: AssignmentScore, editorId: string): void => {
         saveToStorage(STUDENTS_KEY, profiles);
     }
 };
+
+export const updateAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, newScore: number, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (profileIndex === -1) return null;
+
+    const profile = profiles[profileIndex];
+    if (!profile.assignmentScores) return null;
+
+    const scoreIndex = profile.assignmentScores.findIndex(s => s.subject_id === subjectId && s.assignment_name === assignmentName);
+    if (scoreIndex === -1) return null;
+
+    profile.assignmentScores[scoreIndex].score = newScore;
+    profile.student.updated_at = new Date().toISOString();
+    profile.student.updated_by = editorId;
+
+    profiles[profileIndex] = profile;
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profile;
+}
+
+export const deleteAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (profileIndex === -1) return null;
+
+    const profile = profiles[profileIndex];
+    if (!profile.assignmentScores) return null;
+    
+    const initialLength = profile.assignmentScores.length;
+    profile.assignmentScores = profile.assignmentScores.filter(s => !(s.subject_id === subjectId && s.assignment_name === assignmentName));
+
+    if (profile.assignmentScores.length < initialLength) {
+        profile.student.updated_at = new Date().toISOString();
+        profile.student.updated_by = editorId;
+        profiles[profileIndex] = profile;
+        saveToStorage(STUDENTS_KEY, profiles);
+        return profile;
+    }
+
+    return null;
+}
 
 
 export const getStaffAttendanceRecords = (): StaffAttendanceRecord[] => getFromStorage<StaffAttendanceRecord[]>(STAFF_ATTENDANCE_RECORDS_KEY, []);
