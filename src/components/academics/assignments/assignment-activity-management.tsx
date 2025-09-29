@@ -28,7 +28,9 @@ export function AssignmentActivityManagement() {
         const allClasses = getClasses();
         setClasses(allClasses);
 
-        const displayData = allActivities.map(activity => {
+        const uniqueActivities = [...new Map(allActivities.map(item => [item.id, item])).values()];
+
+        const displayData = uniqueActivities.map(activity => {
             const assigned = allClassActivities
                 .filter(ca => ca.activity_id === activity.id)
                 .map(ca => ca.class_id);
