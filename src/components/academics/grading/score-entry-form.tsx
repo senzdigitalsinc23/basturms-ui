@@ -45,7 +45,7 @@ export function ScoreEntryForm() {
             const classActivityLinks = getClassAssignmentActivities().filter(ca => ca.class_id === selectedClass);
             const activityIds = classActivityLinks.map(ca => ca.activity_id);
             const activities = allActivities.filter(a => activityIds.includes(a.id));
-            const uniqueActivities = Array.from(new Map(activities.map(item => [item.id, item])).values());
+            const uniqueActivities = [...new Map(activities.map(item => [item.id, item])).values()];
             setClassActivities(uniqueActivities);
             setAssignmentName(undefined);
 
@@ -64,7 +64,7 @@ export function ScoreEntryForm() {
     }, [selectedClass]);
 
     useEffect(() => {
-        if (selectedClass && students.length > 0) {
+        if (selectedClass && students.length > 0 && assignmentName) {
             const allScores = getScoresForClass(selectedClass);
             
             setStudents(prevStudents => prevStudents.map(student => {
