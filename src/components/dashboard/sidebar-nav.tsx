@@ -39,6 +39,7 @@ import {
   FileBadge,
   Library,
   BookMarked,
+  Landmark,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -125,6 +126,15 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/assignments', label: 'Assign Class/Subjects' },
         { href: '/staff-management/leave', label: 'Leave Management' },
       ]
+    },
+    {
+      label: 'Financial Management',
+      icon: Landmark,
+      items: [
+        { href: '/#', label: 'Fee Setup' },
+        { href: '/#', label: 'Collections' },
+        { href: '/#', label: 'Reports' },
+      ],
     },
     { href: '/notifications', label: 'Notifications', icon: Bell },
      {
@@ -346,3 +356,4 @@ export function SidebarNav() {
 }
 
     
+
