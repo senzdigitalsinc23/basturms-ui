@@ -22,7 +22,7 @@ import { format, parseISO } from 'date-fns';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { DialogTrigger } from '@radix-ui/react-dialog';
-import { Separator } from '../ui/separator';
+import { Separator } from '@/components/ui/separator';
 import { SubjectManagement } from '../academics/subjects/subject-management';
 import { AssignmentActivityManagement } from '../academics/assignments/assignment-activity-management';
 
@@ -293,20 +293,6 @@ export function AcademicSettings() {
                     <SubjectManagement />
                 </div>
             </div>
-
-            <Separator className="my-8" />
-
-            <div>
-                <h3 className="text-lg font-medium">Assignment & Activity Management</h3>
-                <p className="text-sm text-muted-foreground">
-                    Define assignment types (e.g., Homework, Class Test) and assign them to classes.
-                </p>
-                <div className="mt-4">
-                    <AssignmentActivityManagement />
-                </div>
-            </div>
-
-
              <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
