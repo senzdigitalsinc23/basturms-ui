@@ -131,15 +131,15 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
     
     // Student 1 admitted this year
     const student1EnrollDate = new Date(currentYear, 2, 15).toISOString(); // Mar 15
-    const student1StudentNo = `WR-TK001-LBA${yearYY}001`;
-    const student1AdmissionNo = `ADM${yearYY}001`;
+    const student1StudentNo = `WR-TK001-LBA${'${yearYY}'}001`;
+    const student1AdmissionNo = `ADM${'${yearYY}'}001`;
 
     // Student 2 admitted last year
     const lastYear = currentYear - 1;
     const lastYearYY = lastYear.toString().slice(-2);
     const student2EnrollDate = new Date(lastYear, 8, 1).toISOString(); // Sep 1
-    const student2StudentNo = `WR-TK001-LBA${lastYearYY}001`;
-    const student2AdmissionNo = `ADM${lastYearYY}001`;
+    const student2StudentNo = `WR-TK001-LBA${'${lastYearYY}'}001`;
+    const student2AdmissionNo = `ADM${'${lastYearYY}'}001`;
 
     return [
         {
@@ -242,7 +242,7 @@ const getInitialSubjects = (): Subject[] => {
         'Akwapim Twi', 'Dagomba', 'Ewe'
     ];
     return subjectNames.map((name, index) => ({
-        id: `SUB${(index + 1).toString().padStart(3, '0')}`,
+        id: `SUB${'${(index + 1).toString().padStart(3, \'0\')}'}`,
         name: name,
     }));
 };
@@ -341,7 +341,7 @@ const getFromStorage = <T>(key: string, defaultValue: T): T => {
     const item = window.localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
-    console.error(`Error reading from localStorage key “${key}”:`, error);
+    console.error(`Error reading from localStorage key “${'${key}'}”:`, error);
     return defaultValue;
   }
 };
@@ -353,7 +353,7 @@ export const saveToStorage = <T>(key: string, value: T) => {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
-    console.error(`Error writing to localStorage key “${key}”:`, error);
+    console.error(`Error writing to localStorage key “${'${key}'}”:`, error);
   }
 };
 
@@ -462,7 +462,7 @@ export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>):
         const idNum = parseInt(act.id.replace('act', ''), 10);
         return isNaN(idNum) ? max : Math.max(max, idNum);
     }, 0);
-    const newId = `act${maxId + 1}`;
+    const newId = `act${'${maxId + 1}'}`;
     const newActivity = { ...activity, id: newId };
     saveAssignmentActivities([...activities, newActivity]);
     return newActivity;
@@ -494,7 +494,7 @@ export const getSubjects = (): Subject[] => getFromStorage<Subject[]>(SUBJECTS_K
 
 export const addSubject = (subjectName: string): Subject => {
     const subjects = getSubjects();
-    const newId = `SUB${(subjects.length + 1).toString().padStart(3, '0')}`;
+    const newId = `SUB${'${(subjects.length + 1).toString().padStart(3, \'0\')}'}`;
     const newSubject = { id: newId, name: subjectName };
     saveToStorage(SUBJECTS_KEY, [...subjects, newSubject]);
     return newSubject;
@@ -549,7 +549,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
   
   const existingUser = users.find(u => u.email === user.email);
   if (existingUser) {
-    console.warn(`User with email ${user.email} already exists.`);
+    console.warn(`User with email ${'${user.email}'} already exists.`);
     return mapUser(existingUser);
   }
 
@@ -562,7 +562,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     password: user.password || 'password',
     role_id: role!.id,
     is_super_admin: false,
-    avatarUrl: `https://picsum.photos/seed/avatar${nextId}/40/40`,
+    avatarUrl: `https://picsum.photos/seed/avatar${'${nextId}'}/40/40`,
     status: user.status || 'active',
     created_at: now,
     updated_at: now,
@@ -572,7 +572,7 @@ export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'up
     user: 'System',
     name: 'System',
     action: 'Create User',
-    details: `Created user: ${newUser.name}, Email: ${newUser.email}, Role: ${user.role}`,
+    details: `Created user: ${'${newUser.name}'}, Email: ${'${newUser.email}'}, Role: ${'${user.role}'}`,
   });
 
   saveToStorage(USERS_KEY, [...users, newUser]);
@@ -614,7 +614,7 @@ export const updateUser = (updatedUser: User): User => {
         user: 'System',
         name: 'System',
         action: 'Update User',
-        details: `Updated user: ${users[userIndex].name}, Email: ${users[userIndex].email}`,
+        details: `Updated user: ${'${users[userIndex].name}'}, Email: ${'${users[userIndex].email}'}`,
     });
   }
   return updatedUser;
@@ -786,14 +786,14 @@ export const addStudentProfile = (
     const nextInYear = studentsInYear.length + 1;
     const nextNumberPadded = nextInYear.toString().padStart(3, '0');
 
-    const newStudentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
-    const newAdmissionNo = `ADM${yearYY}${nextNumberPadded}`;
+    const newStudentNo = `WR-TK001-LBA${'${yearYY}'}${'${nextNumberPadded}'}`;
+    const newAdmissionNo = `ADM${'${yearYY}'}${'${nextNumberPadded}'}`;
     
     const newProfile: StudentProfile = {
         student: {
             ...profile.student,
             student_no: newStudentNo,
-            avatarUrl: `https://picsum.photos/seed/${newStudentNo}/200/200`,
+            avatarUrl: `https://picsum.photos/seed/${'${newStudentNo}'}/200/200`,
             created_at: now.toISOString(),
             updated_at: now.toISOString(),
             created_by: creatorId,
@@ -817,10 +817,10 @@ export const addStudentProfile = (
     const usernameFromStudentNo = newProfile.student.student_no.split('-').pop()!.toLowerCase();
 
     const userToCreate = {
-        name: `${newProfile.student.first_name} ${newProfile.student.last_name}`,
-        email: hasEmail ? newProfile.contactDetails.email! : `${usernameFromStudentNo}@student.com`,
+        name: `${'${newProfile.student.first_name}'} ${'${newProfile.student.last_name}'}`,
+        email: hasEmail ? newProfile.contactDetails.email! : `${'${usernameFromStudentNo}'}@student.com`,
         username: hasEmail ? newProfile.contactDetails.email! : usernameFromStudentNo,
-        password: `${lastName}${studentNoSuffix}`,
+        password: `${'${lastName}'}${'${studentNoSuffix}'}`,
         role: 'Student' as Role,
         status: 'frozen' as 'frozen',
         entityId: newProfile.student.student_no,
@@ -834,7 +834,7 @@ export const addStudentProfile = (
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
         action: 'Create Student',
-        details: `Enrolled: ${newProfile.student.first_name} ${newProfile.student.last_name} (ID: ${newProfile.student.student_no}) into ${className} on ${enrollmentDateTime}`
+        details: `Enrolled: ${'${newProfile.student.first_name}'} ${'${newProfile.student.last_name}'} (ID: ${'${newProfile.student.student_no}'}) into ${'${className}'} on ${'${enrollmentDateTime}'}`
     });
 
     return newProfile;
@@ -886,12 +886,12 @@ export const updateStudentProfile = (studentId: string, updatedData: Partial<Stu
                     const originalValue = (originalSection as any)[fieldKey];
                     const updatedValue = (updatedSection as any)[fieldKey];
                     if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
-                        changes.push(`${section}.${fieldKey}`);
+                        changes.push(`${'${section}'}.${'${fieldKey}'}`);
                     }
                 });
             }
         });
-        const logDetails = `Updated fields for ${newProfile.student.first_name} ${newProfile.student.last_name}: ${changes.join(', ')}`;
+        const logDetails = `Updated fields for ${'${newProfile.student.first_name}'} ${'${newProfile.student.last_name}'}: ${'${changes.join(\', \')}'}`;
         
         addAuditLog({
             user: getUserById(editorId)?.email || 'Unknown',
@@ -1127,16 +1127,16 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: 
             user: getUserById(creatorId)?.email || 'Unknown',
             name: getUserById(creatorId)?.name || 'Unknown',
             action: 'Decline Staff Appointment',
-            details: `Appointment for ${declinedStaff.first_name} ${declinedStaff.last_name} was declined.`
+            details: `Appointment for ${'${declinedStaff.first_name}'} ${'${declinedStaff.last_name}'} was declined.`
         });
         return null; // Return null as they are not an active staff member
     }
 
     const userToCreate = {
-        name: `${staffData.first_name} ${staffData.last_name}`,
+        name: `${'${staffData.first_name}'} ${'${staffData.last_name}'}`,
         email: staffData.email,
         username: staffData.email,
-        password: `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`,
+        password: `${'${staffData.last_name.toLowerCase()}'}${'${staffData.staff_id.slice(-3)}'}`,
         role: staffData.roles[0], // Use the first role for user creation
         status: 'active' as 'active' | 'frozen',
     };
@@ -1149,7 +1149,7 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: 
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
         action: 'Create Staff',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} and linked user account.`
+        details: `Created staff member ${'${newStaff.first_name}'} ${'${newStaff.last_name}'} and linked user account.`
     });
 
     return newStaff;
@@ -1170,7 +1170,7 @@ export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editor
             user: getUserById(editorId)?.email || 'Unknown',
             name: getUserById(editorId)?.name || 'Unknown',
             action: 'Update Staff',
-            details: `Updated details for staff ID ${staffId}`
+            details: `Updated details for staff ID ${'${staffId}'}`
         });
         
         return newStaffData;
@@ -1206,7 +1206,7 @@ export const deleteStaff = (staffId: string, editorId: string): boolean => {
         user: getUserById(editorId)?.email || 'Unknown',
         name: getUserById(editorId)?.name || 'Unknown',
         action: 'Delete Staff',
-        details: `Deleted staff member ${staffToDelete.first_name} ${staffToDelete.last_name} (Staff ID: ${staffId})`
+        details: `Deleted staff member ${'${staffToDelete.first_name}'} ${'${staffToDelete.last_name}'} (Staff ID: ${'${staffId}'})`
     });
 
     return true;
@@ -1233,7 +1233,7 @@ export const toggleStaffStatus = (staffId: string, editorId: string): Staff | nu
                 user: getUserById(editorId)?.email || 'Unknown',
                 name: getUserById(editorId)?.name || 'Unknown',
                 action: 'Toggle Staff Status',
-                details: `Toggled account status for staff member ${staff.first_name} ${staff.last_name} to ${updatedUser.status}`
+                details: `Toggled account status for staff member ${'${staff.first_name}'} ${'${staff.last_name}'} to ${'${updatedUser.status}'}`
             });
             return staff;
         }
@@ -1299,7 +1299,7 @@ export const addLeaveRequest = (
   const newRequest: LeaveRequest = {
     ...request,
     id: (requests.length > 0 ? Math.max(...requests.map(r => parseInt(r.id))) + 1 : 1).toString(),
-    staff_name: `${staff.first_name} ${staff.last_name}`,
+    staff_name: `${'${staff.first_name}'} ${'${staff.last_name}'}`,
     request_date: new Date().toISOString(),
     status: 'Pending',
   };
@@ -1350,5 +1350,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     }
     return deletedCount;
 }
+
+    
 
     
