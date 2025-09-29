@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark, Image as ImageIcon } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark, Image as ImageIcon, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -255,6 +255,18 @@ export default function StudentProfilePage() {
         }
     };
 
+    const handleEditScore = (score: AssignmentScore) => {
+        // Placeholder for edit functionality
+        console.log('Editing score:', score);
+        toast({ title: 'Edit Clicked', description: 'Edit functionality to be implemented.' });
+    };
+
+    const handleDeleteScore = (score: AssignmentScore) => {
+        // Placeholder for delete functionality
+        console.log('Deleting score:', score);
+        toast({ title: 'Delete Clicked', description: 'Delete functionality to be implemented.' });
+    };
+
 
     if (!profile) {
         return (
@@ -403,12 +415,20 @@ export default function StudentProfilePage() {
                         description="Detailed scores from classwork, homework, and exams."
                         icon={FileText}
                         records={assignmentScores}
-                        columns={['Assignment', 'Subject', 'Score']}
+                        columns={['Assignment', 'Subject', 'Score', 'Actions']}
                         renderRow={(rec, i) => (
                              <TableRow key={i}>
                                 <TableCell>{rec.assignment_name}</TableCell>
                                 <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
                                 <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteScore(rec)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         )}
                         emptyMessage="No individual assignment scores have been recorded yet."
