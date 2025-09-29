@@ -41,6 +41,8 @@ import {
   AssignmentScore,
   AssignmentActivity,
   ClassAssignmentActivity,
+  FeeItem,
+  TermPayment,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -55,6 +57,7 @@ const STUDENTS_KEY = 'campusconnect_students';
 const CLASSES_KEY = 'campusconnect_classes';
 const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 const SCHOOL_KEY = 'campusconnect_school';
+const FEE_STRUCTURES_KEY = 'campusconnect_fee_structures';
 
 // Settings Keys
 const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
@@ -186,7 +189,8 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
                             { description: 'Tuition', amount: 1500 },
                             { description: 'Books', amount: 300 },
                             { description: 'Uniform', amount: 200 },
-                        ]
+                        ],
+                        payments: []
                     },
                     {
                         term: '2nd Term 2023/2024',
@@ -198,7 +202,8 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
                         bill_items: [
                             { description: 'Tuition', amount: 1500 },
                             { description: 'Extra Curricular', amount: 300 },
-                        ]
+                        ],
+                        payments: []
                     }
                 ]
             }
@@ -381,6 +386,9 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(STAFF_PROFILES_KEY)) {
         saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
     }
+    if (!window.localStorage.getItem(FEE_STRUCTURES_KEY)) {
+        saveToStorage(FEE_STRUCTURES_KEY, []);
+    }
     // Initialize settings
     if (!window.localStorage.getItem(ACADEMIC_YEARS_KEY)) {
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
@@ -443,6 +451,83 @@ export const getSchoolProfile = (): SchoolProfileData | null => {
 export const saveSchoolProfile = (profile: SchoolProfileData): void => {
     saveToStorage(SCHOOL_KEY, profile);
 };
+
+// Fee Structure Functions
+export const getFeeStructures = (): FeeStructureItem[] => getFromStorage<FeeStructureItem[]>(FEE_STRUCTURES_KEY, []);
+export const saveFeeStructures = (items: FeeStructureItem[]): void => saveToStorage(FEE_STRUCTURES_KEY, items);
+
+// Financial Management Functions
+export const prepareBills = (studentIds: string[], billDetails: { term: string, items: FeeItem[] }, editorId: string): void => {
+    const profiles = getStudentProfiles();
+    const totalBillAmount = billDetails.items.reduce((acc, item) => acc + item.amount, 0);
+
+    const updatedProfiles = profiles.map(profile => {
+        if (studentIds.includes(profile.student.student_no)) {
+            const newTermPayment: TermPayment = {
+                term: billDetails.term,
+                total_fees: totalBillAmount,
+                amount_paid: 0,
+                outstanding: totalBillAmount,
+                status: 'Unpaid',
+                bill_items: billDetails.items,
+                payments: [],
+            };
+
+            if (!profile.financialDetails) {
+                profile.financialDetails = { account_balance: 0, payment_history: [] };
+            }
+
+            profile.financialDetails.payment_history.push(newTermPayment);
+            profile.financialDetails.account_balance -= totalBillAmount; // Decrease balance (increase debt)
+        }
+        return profile;
+    });
+
+    saveToStorage(STUDENTS_KEY, updatedProfiles);
+};
+
+export const recordPayment = (studentId: string, amount: number, method: TermPayment['payments'][0]['method'], editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+
+    if (profileIndex === -1 || !profiles[profileIndex].financialDetails) {
+        return null;
+    }
+
+    const profile = profiles[profileIndex];
+    const financialDetails = profile.financialDetails!;
+    
+    // Apply payment to the most recent term with an outstanding balance
+    const termToPay = financialDetails.payment_history.slice().reverse().find(t => t.outstanding > 0);
+
+    if (!termToPay) {
+        // Or apply to overall balance if no specific term is outstanding
+        financialDetails.account_balance += amount;
+    } else {
+        const paymentAmount = Math.min(amount, termToPay.outstanding);
+        termToPay.amount_paid += paymentAmount;
+        termToPay.outstanding -= paymentAmount;
+        financialDetails.account_balance += paymentAmount;
+
+        if (termToPay.outstanding === 0) {
+            termToPay.status = 'Paid';
+        } else {
+            termToPay.status = 'Partially Paid';
+        }
+
+        termToPay.payments.push({
+            date: new Date().toISOString(),
+            amount: paymentAmount,
+            method: method,
+            recorded_by: editorId,
+        });
+    }
+
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profile;
+};
+
+
 
 // Settings Functions
 export const getAcademicYears = (): AcademicYear[] => getFromStorage<AcademicYear[]>(ACADEMIC_YEARS_KEY, []);
