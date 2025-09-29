@@ -131,8 +131,9 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Financial Management',
       icon: Landmark,
       items: [
-        { href: '/#', label: 'Fee Setup' },
-        { href: '/#', label: 'Collections' },
+        { href: '/financials/fee-setup', label: 'Fee Setup' },
+        { href: '/financials/bill-preparation', label: 'Bill Preparation' },
+        { href: '/financials/fee-collection', label: 'Collections' },
         { href: '/#', label: 'Reports' },
       ],
     },
@@ -178,10 +179,12 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/#', label: 'My Courses', icon: BookCopy },
     { href: '/#', label: 'My Grades', icon: GraduationCap },
+    { href: '/financials/history', label: 'My Financials', icon: Landmark },
     { href: '/#', label: 'Assignments', icon: PenSquare },
   ],
   Parent: [
     { href: '/dashboard/parent', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/financials/history', label: 'Child Financials', icon: Landmark },
     { href: '/#', label: 'Child Grades', icon: GraduationCap },
   ],
   Headmaster: [
@@ -356,4 +359,3 @@ export function SidebarNav() {
 }
 
     
-

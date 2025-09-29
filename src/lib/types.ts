@@ -65,6 +65,10 @@ export const PERMISSIONS = {
   'leave:approve': 'Approve/Reject Leave Request',
   'backup:create': 'Create Data Backup',
   'backup:restore': 'Restore Data from Backup',
+  'financials:setup': 'Manage Fee Structures',
+  'financials:billing': 'Prepare and Send Bills',
+  'financials:collect': 'Record Fee Payments',
+  'financials:reports': 'View Financial Reports',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -283,6 +287,12 @@ export interface UploadedDocument {
     type: 'Birth Certificate' | 'Transcript' | 'Report Card' | 'Admission Form' | 'Admission Letter';
 }
 
+export interface FeeStructureItem {
+    id: string;
+    name: string;
+    description: string;
+}
+
 export type FeeItem = {
     description: string;
     amount: number;
@@ -296,6 +306,12 @@ export type TermPayment = {
     status: 'Paid' | 'Partially Paid' | 'Unpaid';
     payment_date?: string;
     bill_items: FeeItem[];
+    payments: {
+        date: string;
+        amount: number;
+        method: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Card';
+        recorded_by: string; // user id
+    }[];
 };
 
 export interface FinancialDetails {
