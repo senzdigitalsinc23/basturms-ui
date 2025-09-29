@@ -23,7 +23,7 @@ export function ScoreEntryForm() {
     const [classSubjects, setClassSubjects] = useState<Subject[]>([]);
     const [students, setStudents] = useState<StudentForGrading[]>([]);
     const [assignmentName, setAssignmentName] = useState<string | undefined>();
-    const [classActivities, setClassActivities] = useState<AssignmentActivity[]>([]);
+    const [assignmentOptions, setAssignmentOptions] = useState<string[]>([]);
     const { toast } = useToast();
     const { user } = useAuth();
 
@@ -47,11 +47,24 @@ export function ScoreEntryForm() {
             const activityIds = classActivityLinks.map(ca => ca.activity_id);
             const activities = allActivities.filter(a => activityIds.includes(a.id));
             const uniqueActivities = [...new Map(activities.map(item => [item.id, item])).values()];
-            setClassActivities(uniqueActivities);
+            
+            const options: string[] = [];
+            uniqueActivities.forEach(act => {
+                if (act.expected_per_term > 1) {
+                    for (let i = 1; i <= act.expected_per_term; i++) {
+                        options.push(`${act.name} ${i}`);
+                    }
+                } else {
+                    options.push(act.name);
+                }
+            });
+            setAssignmentOptions(options);
+
             setAssignmentName(undefined);
 
             // Get students for the selected class and initialize scores
             const allStudents = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
+            
             const initialScores: Record<string, string> = {};
             subjects.forEach(sub => {
                 initialScores[sub.id] = '';
@@ -65,7 +78,7 @@ export function ScoreEntryForm() {
         } else {
             setClassSubjects([]);
             setStudents([]);
-            setClassActivities([]);
+            setAssignmentOptions([]);
         }
     }, [selectedClass]);
 
@@ -151,11 +164,11 @@ export function ScoreEntryForm() {
                 </Select>
                 {selectedClass && (
                     <Select onValueChange={setAssignmentName} value={assignmentName}>
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-auto">
                             <SelectValue placeholder="Select assignment..." />
                         </SelectTrigger>
                         <SelectContent>
-                            {classActivities.map(act => <SelectItem key={act.id} value={act.name}>{act.name}</SelectItem>)}
+                            {assignmentOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 )}
