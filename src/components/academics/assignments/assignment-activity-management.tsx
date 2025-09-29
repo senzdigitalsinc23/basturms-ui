@@ -20,6 +20,7 @@ export function AssignmentActivityManagement() {
     const [classes, setClasses] = useState<Class[]>([]);
     const [newActivityName, setNewActivityName] = useState('');
     const [newActivityCount, setNewActivityCount] = useState(1);
+    const [newActivityWeight, setNewActivityWeight] = useState(20);
     const { toast } = useToast();
 
     const fetchData = () => {
@@ -48,10 +49,11 @@ export function AssignmentActivityManagement() {
             toast({ variant: 'destructive', title: 'Error', description: 'Activity name cannot be empty.' });
             return;
         }
-        addAssignmentActivity({ name: newActivityName, expected_per_term: newActivityCount });
+        addAssignmentActivity({ name: newActivityName, expected_per_term: newActivityCount, weight: newActivityWeight });
         fetchData();
         setNewActivityName('');
         setNewActivityCount(1);
+        setNewActivityWeight(20);
         toast({ title: 'Activity Added', description: `"${newActivityName}" has been added.` });
     };
     
@@ -72,7 +74,7 @@ export function AssignmentActivityManagement() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row items-center gap-2">
                 <Input 
                     placeholder="Enter new activity name..."
                     value={newActivityName}
@@ -84,9 +86,18 @@ export function AssignmentActivityManagement() {
                     placeholder="Expected per term"
                     value={newActivityCount}
                     onChange={(e) => setNewActivityCount(Number(e.target.value))}
-                    className="w-48"
+                    className="w-full md:w-48"
                 />
-                <Button onClick={handleAddActivity}><PlusCircle className="mr-2 h-4 w-4" /> Add Activity</Button>
+                 <Input 
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="Weight (%)"
+                    value={newActivityWeight}
+                    onChange={(e) => setNewActivityWeight(Number(e.target.value))}
+                    className="w-full md:w-48"
+                />
+                <Button onClick={handleAddActivity} className="w-full md:w-auto"><PlusCircle className="mr-2 h-4 w-4" /> Add</Button>
             </div>
 
             <div className="rounded-md border">
@@ -95,6 +106,7 @@ export function AssignmentActivityManagement() {
                         <TableRow>
                             <TableHead>Activity Name</TableHead>
                             <TableHead>Expected Per Term</TableHead>
+                            <TableHead>Weight (%)</TableHead>
                             <TableHead>Assigned to Classes</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -104,6 +116,7 @@ export function AssignmentActivityManagement() {
                             <TableRow key={activity.id}>
                                 <TableCell className="font-medium">{activity.name}</TableCell>
                                 <TableCell>{activity.expected_per_term}</TableCell>
+                                <TableCell>{activity.weight}%</TableCell>
                                 <TableCell>
                                     <MultiSelectPopover 
                                         title="Classes"

@@ -249,10 +249,10 @@ const getInitialSubjects = (): Subject[] => {
 
 const getInitialAssignmentActivities = (): AssignmentActivity[] => {
     return [
-        { id: 'act1', name: 'Classwork 1', expected_per_term: 1 },
-        { id: 'act2', name: 'Homework 1', expected_per_term: 1 },
-        { id: 'act3', name: 'Mid-term Exam', expected_per_term: 1 },
-        { id: 'act4', name: 'End of Term Exam', expected_per_term: 1 },
+        { id: 'act1', name: 'Classwork 1', expected_per_term: 1, weight: 20 },
+        { id: 'act2', name: 'Homework 1', expected_per_term: 1, weight: 20 },
+        { id: 'act3', name: 'Mid-term Exam', expected_per_term: 1, weight: 60 },
+        { id: 'act4', name: 'End of Term Exam', expected_per_term: 1, weight: 100 },
     ];
 };
 

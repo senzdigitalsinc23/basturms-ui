@@ -141,6 +141,7 @@ export interface AssignmentActivity {
     id: string;
     name: string;
     expected_per_term: number;
+    weight: number;
 }
 
 export interface ClassAssignmentActivity {
