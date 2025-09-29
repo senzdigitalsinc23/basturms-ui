@@ -1,12 +1,11 @@
 
 
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData } from '@/lib/types';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects } from '@/lib/store';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData, AssignmentScore, Subject } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -109,6 +108,7 @@ export default function StudentProfilePage() {
     const studentId = params.id as string;
     const [profile, setProfile] = useState<StudentProfile | null>(null);
     const [classes, setClasses] = useState<Class[]>([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
     const [className, setClassName] = useState('');
     const [age, setAge] = useState<number | null>(null);
     const [isEditFormOpen, setIsEditFormOpen] = useState(false);
@@ -132,6 +132,7 @@ export default function StudentProfilePage() {
             setProfile(studentProfile || null);
             const allClasses = getClasses();
             setClasses(allClasses);
+            setSubjects(getSubjects());
             setSchoolProfile(getSchoolProfile());
 
             if(studentProfile) {
@@ -263,7 +264,7 @@ export default function StudentProfilePage() {
         );
     }
 
-    const { student, contactDetails, guardianInfo, admissionDetails, academicRecords, healthRecords, disciplinaryRecords, attendanceRecords, communicationLogs, uploadedDocuments, financialDetails } = profile;
+    const { student, contactDetails, guardianInfo, admissionDetails, academicRecords, healthRecords, disciplinaryRecords, attendanceRecords, communicationLogs, uploadedDocuments, financialDetails, assignmentScores } = profile;
     const fullName = `${student.first_name} ${student.last_name} ${student.other_name || ''}`.trim();
     const initials = `${student.first_name[0]}${student.last_name[0]}`;
     const users = getUsers();
@@ -396,10 +397,25 @@ export default function StudentProfilePage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="academic" asChild>
+                <TabsContent value="academic" className="space-y-6">
+                    <RecordCard<AssignmentScore>
+                        title="Assignment Scores"
+                        description="Detailed scores from classwork, homework, and exams."
+                        icon={FileText}
+                        records={assignmentScores}
+                        columns={['Assignment', 'Subject', 'Score']}
+                        renderRow={(rec, i) => (
+                             <TableRow key={i}>
+                                <TableCell>{rec.assignment_name}</TableCell>
+                                <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
+                                <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
+                            </TableRow>
+                        )}
+                        emptyMessage="No individual assignment scores have been recorded yet."
+                    />
                     <RecordCard<AcademicRecord>
                         title="Academic Performance"
-                        description="Review grades and remarks for each term."
+                        description="Review final grades and remarks for each term."
                         icon={GraduationCap}
                         records={academicRecords}
                         columns={['Term', 'Subject', 'Grade', 'Teacher Remarks']}
