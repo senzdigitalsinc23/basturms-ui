@@ -31,6 +31,7 @@ export function ScoreEntryForm() {
         setClasses(getClasses());
     }, []);
 
+    // Effect for when the class changes
     useEffect(() => {
         if (selectedClass) {
             // Get subjects for the selected class
@@ -49,12 +50,17 @@ export function ScoreEntryForm() {
             setClassActivities(uniqueActivities);
             setAssignmentName(undefined);
 
-            // Get students for the selected class
+            // Get students for the selected class and initialize scores
             const allStudents = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
+            const initialScores: Record<string, string> = {};
+            subjects.forEach(sub => {
+                initialScores[sub.id] = '';
+            });
+
             setStudents(allStudents.map(p => ({
                 id: p.student.student_no,
                 name: `${p.student.first_name} ${p.student.last_name}`,
-                scores: {}
+                scores: { ...initialScores } // Initialize with empty strings
             })));
         } else {
             setClassSubjects([]);
@@ -63,6 +69,7 @@ export function ScoreEntryForm() {
         }
     }, [selectedClass]);
 
+    // Effect for loading scores when an assignment is selected
     useEffect(() => {
         if (selectedClass && students.length > 0 && assignmentName) {
             const allScores = getScoresForClass(selectedClass);
@@ -77,7 +84,18 @@ export function ScoreEntryForm() {
                 return { ...student, scores: scoresBySubject };
             }));
         }
-    }, [selectedClass, assignmentName, students.length, classSubjects]);
+         else if (selectedClass && students.length > 0 && !assignmentName) {
+            // When assignment is reset, clear out the scores in the UI
+            const initialScores: Record<string, string> = {};
+            classSubjects.forEach(sub => {
+                initialScores[sub.id] = '';
+            });
+             setStudents(prevStudents => prevStudents.map(student => ({
+                ...student,
+                scores: {...initialScores}
+            })));
+        }
+    }, [selectedClass, assignmentName, classSubjects]);
 
 
     const handleScoreChange = (studentId: string, subjectId: string, value: string) => {
