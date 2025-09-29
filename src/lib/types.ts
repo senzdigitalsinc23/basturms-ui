@@ -300,6 +300,7 @@ export type FeeItem = {
 
 export type TermPayment = {
     term: string; // e.g., "1st Term 2023/2024"
+    bill_number: string;
     total_fees: number;
     amount_paid: number;
     outstanding: number;
@@ -311,6 +312,8 @@ export type TermPayment = {
         amount: number;
         method: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Card';
         recorded_by: string; // user id
+        receipt_number?: string;
+        paid_by?: string;
     }[];
 };
 

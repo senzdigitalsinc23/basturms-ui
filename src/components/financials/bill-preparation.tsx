@@ -1,8 +1,9 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
-import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog } from '@/lib/store';
-import { FeeStructureItem, Class, StudentProfile } from '@/lib/types';
+import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears } from '@/lib/store';
+import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 type BillItem = {
     id: string;
@@ -30,6 +32,9 @@ export function BillPreparation() {
     const [billItems, setBillItems] = useState<BillItem[]>([]);
     const [termName, setTermName] = useState('');
     
+    const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+    const [allTerms, setAllTerms] = useState<{ value: string; label: string }[]>([]);
+
     const [classes, setClasses] = useState<Class[]>([]);
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
@@ -43,6 +48,17 @@ export function BillPreparation() {
         setFeeStructures(getFeeStructures());
         setClasses(getClasses());
         setStudents(getStudentProfiles());
+        const years = getAcademicYears();
+        setAcademicYears(years);
+        
+        const terms = years.flatMap(year => 
+            year.terms.map(term => ({
+                value: `${term.name} ${year.year}`,
+                label: `${term.name} (${year.year})`
+            }))
+        );
+        setAllTerms(terms);
+
     }, []);
 
     const addBillItem = (item: FeeStructureItem) => {
@@ -104,7 +120,16 @@ export function BillPreparation() {
                         <CardContent className="space-y-4">
                             <div>
                                 <Label htmlFor="term-name">Term Name *</Label>
-                                <Input id="term-name" value={termName} onChange={(e) => setTermName(e.target.value)} placeholder="e.g., 1st Term 2024/2025" />
+                                <Select value={termName} onValueChange={setTermName}>
+                                    <SelectTrigger id="term-name">
+                                        <SelectValue placeholder="Select a term..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {allTerms.map(term => (
+                                            <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 {billItems.map(item => (
