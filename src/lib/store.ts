@@ -468,6 +468,25 @@ export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>):
     return newActivity;
 };
 
+export const updateAssignmentActivity = (activityId: string, updatedData: Partial<Omit<AssignmentActivity, 'id'>>): AssignmentActivity | null => {
+    const activities = getAssignmentActivities();
+    const activityIndex = activities.findIndex(act => act.id === activityId);
+
+    if (activityIndex !== -1) {
+        const updatedActivity = { ...activities[activityIndex], ...updatedData };
+        activities[activityIndex] = updatedActivity;
+        saveAssignmentActivities(activities);
+        addAuditLog({
+            user: 'System', 
+            name: 'System',
+            action: 'Update Assignment Activity',
+            details: `Updated activity: ${updatedActivity.name}`
+        });
+        return updatedActivity;
+    }
+    return null;
+}
+
 export const deleteAssignmentActivity = (activityId: string): void => {
     let activities = getAssignmentActivities();
     activities = activities.filter(act => act.id !== activityId);
