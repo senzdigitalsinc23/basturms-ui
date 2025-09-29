@@ -22,9 +22,6 @@ import { format, parseISO } from 'date-fns';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { DialogTrigger } from '@radix-ui/react-dialog';
-import { Separator } from '@/components/ui/separator';
-import { SubjectManagement } from '../academics/subjects/subject-management';
-import { AssignmentActivityManagement } from '../academics/assignments/assignment-activity-management';
 
 const termSchema = z.object({
     name: z.string().min(1, 'Term name is required.'),
@@ -195,7 +192,6 @@ export function AcademicSettings() {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-medium">Academic Year & Terms</h3>
                 <div className="flex justify-between items-center mt-2">
                     <div>
                         {Object.keys(rowSelection).length > 0 && (
@@ -279,18 +275,6 @@ export function AcademicSettings() {
                             ))}
                         </TableBody>
                     </Table>
-                </div>
-            </div>
-
-            <Separator className="my-8" />
-            
-            <div>
-                <h3 className="text-lg font-medium">Subject Management</h3>
-                 <p className="text-sm text-muted-foreground">
-                    Create new subjects and assign them to classes.
-                </p>
-                <div className="mt-4">
-                    <SubjectManagement />
                 </div>
             </div>
              <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>

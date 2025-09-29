@@ -104,6 +104,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/academics/assignments', label: 'Assignments' },
         { href: '/academics/grading', label: 'Score Entry' },
         { href: '/academics/settings', label: 'Academic Settings' },
+        { href: '/#', label: 'Timetable', icon: Calendar },
       ],
     },
     {
@@ -125,7 +126,6 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/leave', label: 'Leave Management' },
       ]
     },
-    { href: '/users', label: 'User Management', icon: Users },
     { href: '/notifications', label: 'Notifications', icon: Bell },
      {
       label: 'Attendance',
@@ -136,8 +136,6 @@ const menuItems: Record<Role, NavItem[]> = {
           { href: '/attendance/history', label: 'Attendance History' },
       ]
     },
-    { href: '/id-cards', label: 'ID Cards', icon: FileBadge },
-    { href: '/#', label: 'Timetable', icon: Calendar },
     {
       label: 'Announcements',
       icon: Megaphone,
@@ -151,7 +149,14 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/auth-logs', label: 'Authentication Logs' },
       ],
     },
-     { href: '/settings', label: 'Settings', icon: Settings },
+     { 
+        label: 'Settings', 
+        icon: Settings,
+        items: [
+          { href: '/settings', label: 'System Settings' },
+          { href: '/users', label: 'User Management' },
+        ]
+    },
   ],
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
@@ -182,7 +187,6 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/leave', label: 'Leave Management' },
       ]
     },
-    { href: '/id-cards', label: 'ID Cards', icon: FileBadge },
     { href: '/#', label: 'Curriculum', icon: BookUser },
   ],
   Librarian: [
