@@ -45,37 +45,40 @@ export function ScoreEntryForm() {
             const classActivityLinks = getClassAssignmentActivities().filter(ca => ca.class_id === selectedClass);
             const activityIds = classActivityLinks.map(ca => ca.activity_id);
             const activities = allActivities.filter(a => activityIds.includes(a.id));
-            
-            // Deduplicate activities to prevent key errors
             const uniqueActivities = Array.from(new Map(activities.map(item => [item.id, item])).values());
             setClassActivities(uniqueActivities);
-            
-            setAssignmentName(undefined); // Reset assignment selection
+            setAssignmentName(undefined);
 
-            // Get students for the selected class and their existing scores
+            // Get students for the selected class
             const allStudents = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
-            const allScores = getScoresForClass(selectedClass);
-            
-            const studentsWithScores = allStudents.map(p => {
-                const studentScores = allScores.filter(s => s.student_id === p.student.student_no && s.assignment_name === assignmentName);
-                const scoresBySubject: Record<string, number | string> = {};
-                subjects.forEach(sub => {
-                    const score = studentScores.find(s => s.subject_id === sub.id)?.score;
-                    scoresBySubject[sub.id] = score !== undefined ? score : '';
-                });
-                return {
-                    id: p.student.student_no,
-                    name: `${p.student.first_name} ${p.student.last_name}`,
-                    scores: scoresBySubject
-                };
-            });
-            setStudents(studentsWithScores);
+            setStudents(allStudents.map(p => ({
+                id: p.student.student_no,
+                name: `${p.student.first_name} ${p.student.last_name}`,
+                scores: {}
+            })));
         } else {
             setClassSubjects([]);
             setStudents([]);
             setClassActivities([]);
         }
-    }, [selectedClass, assignmentName]);
+    }, [selectedClass]);
+
+    useEffect(() => {
+        if (selectedClass && students.length > 0) {
+            const allScores = getScoresForClass(selectedClass);
+            
+            setStudents(prevStudents => prevStudents.map(student => {
+                 const studentScores = allScores.filter(s => s.student_id === student.id && s.assignment_name === assignmentName);
+                 const scoresBySubject: Record<string, number | string> = {};
+                 classSubjects.forEach(sub => {
+                    const score = studentScores.find(s => s.subject_id === sub.id)?.score;
+                    scoresBySubject[sub.id] = score !== undefined ? score : '';
+                });
+                return { ...student, scores: scoresBySubject };
+            }));
+        }
+    }, [selectedClass, assignmentName, students.length, classSubjects]);
+
 
     const handleScoreChange = (studentId: string, subjectId: string, value: string) => {
         setStudents(prev => prev.map(s => {
