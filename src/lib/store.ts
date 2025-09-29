@@ -41,7 +41,7 @@ import {
   AssignmentScore,
   AssignmentActivity,
   ClassAssignmentActivity,
-  FeeItem,
+  FeeStructureItem,
   TermPayment,
 } from './types';
 import { format } from 'date-fns';
@@ -179,6 +179,7 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
                 account_balance: -500, // owes 500
                 payment_history: [
                     {
+                        bill_number: `BILL-${Date.now()}-1`,
                         term: '1st Term 2023/2024',
                         total_fees: 2000,
                         amount_paid: 2000,
@@ -193,6 +194,7 @@ const getInitialStudentProfiles = (): StudentProfile[] => {
                         payments: []
                     },
                     {
+                        bill_number: `BILL-${Date.now()}-2`,
                         term: '2nd Term 2023/2024',
                         total_fees: 1800,
                         amount_paid: 1300,
@@ -457,19 +459,20 @@ export const getFeeStructures = (): FeeStructureItem[] => getFromStorage<FeeStru
 export const saveFeeStructures = (items: FeeStructureItem[]): void => saveToStorage(FEE_STRUCTURES_KEY, items);
 
 // Financial Management Functions
-export const prepareBills = (studentIds: string[], billDetails: { term: string, items: FeeItem[] }, editorId: string): void => {
+export const prepareBills = (studentIds: string[], billDetails: { term: string, items: FeeStructureItem[] }, editorId: string): void => {
     const profiles = getStudentProfiles();
-    const totalBillAmount = billDetails.items.reduce((acc, item) => acc + item.amount, 0);
+    const totalBillAmount = billDetails.items.reduce((acc, item) => acc + Number(item.amount), 0);
 
     const updatedProfiles = profiles.map(profile => {
         if (studentIds.includes(profile.student.student_no)) {
             const newTermPayment: TermPayment = {
+                bill_number: `BILL-${Date.now()}-${profile.student.student_no.slice(-4)}`,
                 term: billDetails.term,
                 total_fees: totalBillAmount,
                 amount_paid: 0,
                 outstanding: totalBillAmount,
                 status: 'Unpaid',
-                bill_items: billDetails.items,
+                bill_items: billDetails.items.map(i => ({ description: i.name, amount: Number(i.amount) })),
                 payments: [],
             };
 
@@ -486,7 +489,7 @@ export const prepareBills = (studentIds: string[], billDetails: { term: string, 
     saveToStorage(STUDENTS_KEY, updatedProfiles);
 };
 
-export const recordPayment = (studentId: string, amount: number, method: TermPayment['payments'][0]['method'], editorId: string): StudentProfile | null => {
+export const recordPayment = (studentId: string, paymentDetails: {amount: number, method: TermPayment['payments'][0]['method'], receipt_number?: string, paid_by?: string}, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfiles();
     const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
 
@@ -497,34 +500,55 @@ export const recordPayment = (studentId: string, amount: number, method: TermPay
     const profile = profiles[profileIndex];
     const financialDetails = profile.financialDetails!;
     
-    // Apply payment to the most recent term with an outstanding balance
-    const termToPay = financialDetails.payment_history.slice().reverse().find(t => t.outstanding > 0);
+    let amountToApply = paymentDetails.amount;
+    financialDetails.account_balance += amountToApply;
+    
+    // Apply payment to the most recent terms with an outstanding balance first
+    const termsToPay = financialDetails.payment_history.filter(t => t.outstanding > 0).sort((a, b) => new Date(b.bill_number.split('-')[1]).getTime() - new Date(a.bill_number.split('-')[1]).getTime());
 
-    if (!termToPay) {
-        // Or apply to overall balance if no specific term is outstanding
-        financialDetails.account_balance += amount;
-    } else {
-        const paymentAmount = Math.min(amount, termToPay.outstanding);
-        termToPay.amount_paid += paymentAmount;
-        termToPay.outstanding -= paymentAmount;
-        financialDetails.account_balance += paymentAmount;
+    for (const term of termsToPay) {
+        if (amountToApply <= 0) break;
 
-        if (termToPay.outstanding === 0) {
-            termToPay.status = 'Paid';
+        const paymentForThisTerm = Math.min(amountToApply, term.outstanding);
+        term.amount_paid += paymentForThisTerm;
+        term.outstanding -= paymentForThisTerm;
+        amountToApply -= paymentForThisTerm;
+
+        if (term.outstanding === 0) {
+            term.status = 'Paid';
         } else {
-            termToPay.status = 'Partially Paid';
+            term.status = 'Partially Paid';
         }
 
-        termToPay.payments.push({
+        term.payments.push({
             date: new Date().toISOString(),
-            amount: paymentAmount,
-            method: method,
+            amount: paymentForThisTerm,
+            method: paymentDetails.method,
             recorded_by: editorId,
+            receipt_number: paymentDetails.receipt_number,
+            paid_by: paymentDetails.paid_by,
         });
     }
 
+
     saveToStorage(STUDENTS_KEY, profiles);
     return profile;
+};
+
+export const deleteAllFinancialRecords = (editorId: string) => {
+    const profiles = getStudentProfiles();
+    profiles.forEach(p => {
+        p.financialDetails = undefined;
+    });
+    saveToStorage(STUDENTS_KEY, profiles);
+
+    const editor = getUserById(editorId);
+    addAuditLog({
+        user: editor?.email || 'Unknown',
+        name: editor?.name || 'Unknown User',
+        action: 'Delete All Financial Records',
+        details: 'Permanently deleted all financial records for all students.'
+    });
 };
 
 
