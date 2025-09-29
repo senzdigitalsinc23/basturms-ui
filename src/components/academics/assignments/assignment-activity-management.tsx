@@ -114,7 +114,7 @@ export function AssignmentActivityManagement() {
                     min="1"
                     placeholder="Expected per term"
                     value={newActivityCount}
-                    onChange={(e) => setNewActivityCount(Number(e.target.value))}
+                    onChange={(e) => setNewActivityCount(Number(e.target.value) || 1)}
                     className="w-full md:w-48"
                 />
                  <Input 
@@ -123,7 +123,7 @@ export function AssignmentActivityManagement() {
                     max="100"
                     placeholder="Weight (%)"
                     value={newActivityWeight}
-                    onChange={(e) => setNewActivityWeight(Number(e.target.value))}
+                    onChange={(e) => setNewActivityWeight(Number(e.target.value) || 0)}
                     className="w-full md:w-48"
                 />
                 <Button onClick={handleAddActivity} className="w-full md:w-auto"><PlusCircle className="mr-2 h-4 w-4" /> Add</Button>
@@ -196,11 +196,11 @@ export function AssignmentActivityManagement() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-count">Expected Per Term</Label>
-                                <Input id="edit-count" type="number" min="1" value={editFormState.expected_per_term} onChange={(e) => setEditFormState({...editFormState, expected_per_term: Number(e.target.value)})} />
+                                <Input id="edit-count" type="number" min="1" value={editFormState.expected_per_term} onChange={(e) => setEditFormState({...editFormState, expected_per_term: Number(e.target.value) || 1})} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-weight">Weight (%)</Label>
-                                <Input id="edit-weight" type="number" min="0" max="100" value={editFormState.weight} onChange={(e) => setEditFormState({...editFormState, weight: Number(e.target.value)})} />
+                                <Input id="edit-weight" type="number" min="0" max="100" value={editFormState.weight} onChange={(e) => setEditFormState({...editFormState, weight: Number(e.target.value) || 0})} />
                             </div>
                         </div>
                     </div>
