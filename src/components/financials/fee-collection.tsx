@@ -183,6 +183,8 @@ export function FeeCollection() {
 
     const latestTermPayment = selectedStudent?.financialDetails?.payment_history
         .sort((a, b) => new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime())[0];
+    
+    const accountBalance = selectedStudent?.financialDetails?.account_balance || 0;
 
     return (
         <div className="grid md:grid-cols-3 gap-6">
@@ -241,8 +243,11 @@ export function FeeCollection() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-sm text-muted-foreground">Total Outstanding</p>
-                                        <p className="text-2xl font-bold text-red-600">{formatCurrency(selectedStudent.financialDetails?.account_balance ? Math.abs(selectedStudent.financialDetails.account_balance) : 0)}</p>
+                                        <p className="text-sm text-muted-foreground">Total Account Balance</p>
+                                        <p className={`text-2xl font-bold ${accountBalance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                            {formatCurrency(Math.abs(accountBalance))}
+                                            <span className="text-xs font-normal ml-1">{accountBalance < 0 ? 'Debit' : 'Credit'}</span>
+                                        </p>
                                     </div>
                                 </div>
                             </CardHeader>
@@ -276,7 +281,7 @@ export function FeeCollection() {
                                         <DialogHeader>
                                             <DialogTitle>Record Payment for {selectedStudent.student.first_name}</DialogTitle>
                                             <DialogDescription>
-                                                Enter the amount being paid. The current outstanding balance is <span className="font-bold">{formatCurrency(selectedStudent.financialDetails?.account_balance ? Math.abs(selectedStudent.financialDetails.account_balance) : 0)}</span>.
+                                                The current account balance is <span className={`font-bold ${accountBalance < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(Math.abs(accountBalance))} {accountBalance < 0 ? 'Debit' : 'Credit'}</span>.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="space-y-4 py-4">
