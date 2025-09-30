@@ -1,5 +1,3 @@
-
-
 'use client';
 import { useState, useEffect } from 'react';
 import { getStudentProfiles, recordPayment, addAuditLog, getSchoolProfile } from '@/lib/store';
@@ -9,13 +7,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Wallet } from 'lucide-react';
+import { Search, Wallet, Landmark } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -67,7 +66,7 @@ const generateReceipt = (student: StudentProfile, payment: {amount: number, meth
             ['Payment Method', payment.method],
         ],
         theme: 'striped',
-        didDrawCell: (data) => {
+        didDrawCell: (data: any) => {
             if (data.section === 'body' && data.column.index === 1) {
                 if (data.row.index === 0) { // Amount Paid row
                     doc.setFont('helvetica', 'bold');
@@ -223,96 +222,143 @@ export function FeeCollection() {
             </div>
             <div className="md:col-span-2">
                 {selectedStudent ? (
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
+                    <div className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="h-16 w-16">
+                                            <AvatarImage src={selectedStudent.student.avatarUrl} />
+                                            <AvatarFallback className="text-2xl">{selectedStudent.student.first_name[0]}{selectedStudent.student.last_name[0]}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <CardTitle>{selectedStudent.student.first_name} {selectedStudent.student.last_name}</CardTitle>
+                                            <CardDescription>{selectedStudent.student.student_no}</CardDescription>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm text-muted-foreground">Total Outstanding</p>
+                                        <p className="text-2xl font-bold text-red-600">{formatCurrency(selectedStudent.financialDetails?.account_balance ? Math.abs(selectedStudent.financialDetails.account_balance) : 0)}</p>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="border-t pt-4">
+                                    <h4 className="font-semibold mb-2">Current Term Bill ({latestTermPayment?.term})</h4>
+                                    <div className="space-y-1 text-sm">
+                                        {latestTermPayment?.bill_items.map((item, index) => (
+                                            <div key={index} className="flex justify-between">
+                                                <p className="text-muted-foreground">{item.description}</p>
+                                                <p>{formatCurrency(item.amount)}</p>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between font-bold border-t pt-2 mt-2">
+                                            <p>Total Billed</p>
+                                            <p>{formatCurrency(latestTermPayment?.total_fees || 0)}</p>
+                                        </div>
+                                        <div className="flex justify-between font-medium text-green-600">
+                                            <p>Amount Paid</p>
+                                            <p>{formatCurrency(latestTermPayment?.amount_paid || 0)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="justify-end">
+                                <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button><Wallet className="mr-2 h-4 w-4" /> Record Payment</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Record Payment for {selectedStudent.student.first_name}</DialogTitle>
+                                            <DialogDescription>
+                                                Enter the amount being paid. The current outstanding balance is <span className="font-bold">{formatCurrency(selectedStudent.financialDetails?.account_balance ? Math.abs(selectedStudent.financialDetails.account_balance) : 0)}</span>.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="space-y-4 py-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="amount">Amount (GHS)</Label>
+                                                <Input id="amount" type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(Number(e.target.value))} placeholder="0.00" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="method">Payment Method</Label>
+                                                <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as any)}>
+                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Cash">Cash</SelectItem>
+                                                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                                                        <SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                                                        <SelectItem value="Card">Card</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            {paymentMethod === 'Cash' && (
+                                                <>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="paid_by">Paid By</Label>
+                                                        <Input id="paid_by" value={paidBy} onChange={(e) => setPaidBy(e.target.value)} placeholder="e.g., John Doe (Father)" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="receipt_number">Receipt Number</Label>
+                                                        <Input id="receipt_number" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} placeholder="Enter manual receipt number" />
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        <DialogFooter>
+                                            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
+                                            <Button onClick={handleRecordPayment}>Confirm Payment & Generate Receipt</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardFooter>
+                        </Card>
+                        <Card>
+                            <CardHeader>
                                 <div className="flex items-center gap-4">
-                                     <Avatar className="h-16 w-16">
-                                        <AvatarImage src={selectedStudent.student.avatarUrl} />
-                                        <AvatarFallback className="text-2xl">{selectedStudent.student.first_name[0]}{selectedStudent.student.last_name[0]}</AvatarFallback>
-                                    </Avatar>
+                                    <Landmark className="h-6 w-6 text-primary"/>
                                     <div>
-                                        <CardTitle>{selectedStudent.student.first_name} {selectedStudent.student.last_name}</CardTitle>
-                                        <CardDescription>{selectedStudent.student.student_no}</CardDescription>
+                                        <CardTitle>Payment History</CardTitle>
+                                        <CardDescription>Full payment history for {selectedStudent.student.first_name}.</CardDescription>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-muted-foreground">Total Outstanding</p>
-                                    <p className="text-2xl font-bold text-red-600">{formatCurrency(selectedStudent.financialDetails?.account_balance ? Math.abs(selectedStudent.financialDetails.account_balance) : 0)}</p>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="border-t pt-4">
-                                <h4 className="font-semibold mb-2">Current Term Bill ({latestTermPayment?.term})</h4>
-                                <div className="space-y-1 text-sm">
-                                    {latestTermPayment?.bill_items.map((item, index) => (
-                                        <div key={index} className="flex justify-between">
-                                            <p className="text-muted-foreground">{item.description}</p>
-                                            <p>{formatCurrency(item.amount)}</p>
-                                        </div>
-                                    ))}
-                                    <div className="flex justify-between font-bold border-t pt-2 mt-2">
-                                        <p>Total Billed</p>
-                                        <p>{formatCurrency(latestTermPayment?.total_fees || 0)}</p>
+                            </CardHeader>
+                            <CardContent>
+                                {selectedStudent.financialDetails && selectedStudent.financialDetails.payment_history.length > 0 ? (
+                                    <div className="rounded-md border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Term</TableHead>
+                                                    <TableHead>Total Billed</TableHead>
+                                                    <TableHead>Amount Paid</TableHead>
+                                                    <TableHead>Outstanding</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {selectedStudent.financialDetails.payment_history.map((rec, i) => (
+                                                    <TableRow key={i}>
+                                                        <TableCell className="font-medium">{rec.term}</TableCell>
+                                                        <TableCell>{formatCurrency(rec.total_fees)}</TableCell>
+                                                        <TableCell className="text-green-600">{formatCurrency(rec.amount_paid)}</TableCell>
+                                                        <TableCell className="text-red-600">{formatCurrency(rec.outstanding)}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={rec.status === 'Paid' ? 'secondary' : (rec.status === 'Partially Paid' ? 'default' : 'destructive')}>
+                                                                {rec.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
                                     </div>
-                                     <div className="flex justify-between font-medium text-green-600">
-                                        <p>Amount Paid</p>
-                                        <p>{formatCurrency(latestTermPayment?.amount_paid || 0)}</p>
-                                    </div>
-                                </div>
-                             </div>
-                        </CardContent>
-                        <CardFooter className="justify-end">
-                            <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button><Wallet className="mr-2 h-4 w-4" /> Record Payment</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Record Payment for {selectedStudent.student.first_name}</DialogTitle>
-                                        <DialogDescription>
-                                            Enter the amount being paid. The current outstanding balance is <span className="font-bold">{formatCurrency(selectedStudent.financialDetails?.account_balance ? Math.abs(selectedStudent.financialDetails.account_balance) : 0)}</span>.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="amount">Amount (GHS)</Label>
-                                            <Input id="amount" type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(Number(e.target.value))} placeholder="0.00" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="method">Payment Method</Label>
-                                            <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as any)}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Cash">Cash</SelectItem>
-                                                    <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                                                    <SelectItem value="Mobile Money">Mobile Money</SelectItem>
-                                                    <SelectItem value="Card">Card</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        {paymentMethod === 'Cash' && (
-                                            <>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="paid_by">Paid By</Label>
-                                                    <Input id="paid_by" value={paidBy} onChange={(e) => setPaidBy(e.target.value)} placeholder="e.g., John Doe (Father)" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="receipt_number">Receipt Number</Label>
-                                                    <Input id="receipt_number" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} placeholder="Enter manual receipt number" />
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleRecordPayment}>Confirm Payment & Generate Receipt</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                        </CardFooter>
-                    </Card>
+                                ) : (
+                                    <p className="text-muted-foreground text-center py-8">No payment history found.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 ) : (
                     <div className="flex items-center justify-center h-full rounded-lg border-2 border-dashed border-muted-foreground/30 text-muted-foreground p-12">
                         <p>Select a student to view their financial details.</p>

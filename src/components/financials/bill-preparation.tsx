@@ -1,48 +1,39 @@
-
-
 'use client';
 import { useState, useEffect } from 'react';
-import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears } from '@/lib/store';
-import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term } from '@/lib/types';
+import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill } from '@/lib/store';
+import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term, TermlyBill } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Trash2, X, ChevronsUpDown, Check, Users, User, ArrowRight, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowRight, Loader2, Users, User, Check, ChevronsUpDown, MoreHorizontal, Pencil } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { format } from 'date-fns';
 
-type BillItem = {
-    id: string;
-    name: string;
-    amount: number | '';
-};
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
-export function BillPreparation() {
+function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<TermlyBill, 'id' | 'created_by' | 'created_at'>) => void, existingBill?: TermlyBill | null }) {
     const [step, setStep] = useState(1);
     const [feeStructures, setFeeStructures] = useState<FeeStructureItem[]>([]);
-    const [billItems, setBillItems] = useState<BillItem[]>([]);
-    const [termName, setTermName] = useState('');
+    const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => ({...i, id: i.description, name: i.description, amount: i.amount })) || []);
+    const [termName, setTermName] = useState(existingBill?.term || '');
     
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
     const [allTerms, setAllTerms] = useState<{ value: string; label: string }[]>([]);
 
     const [classes, setClasses] = useState<Class[]>([]);
     const [students, setStudents] = useState<StudentProfile[]>([]);
-    const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
-    const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const { user } = useAuth();
-    const { toast } = useToast();
+    const [selectedClasses, setSelectedClasses] = useState<string[]>(existingBill?.assigned_classes || []);
+    const [selectedStudents, setSelectedStudents] = useState<string[]>(existingBill?.assigned_students || []);
 
     useEffect(() => {
         setFeeStructures(getFeeStructures());
@@ -58,7 +49,6 @@ export function BillPreparation() {
             }))
         );
         setAllTerms(terms);
-
     }, []);
 
     const addBillItem = (item: FeeStructureItem) => {
@@ -74,50 +64,31 @@ export function BillPreparation() {
     const updateBillItemAmount = (id: string, amount: number | '') => {
         setBillItems(billItems.map(item => item.id === id ? { ...item, amount } : item));
     };
-    
+
     const totalBillAmount = billItems.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
     const studentIdsToBill = [...new Set([...selectedStudents, ...students.filter(s => selectedClasses.includes(s.admissionDetails.class_assigned)).map(s => s.student.student_no)])];
 
-    const handlePrepareBills = () => {
-        if (!user || studentIdsToBill.length === 0 || !termName.trim() || billItems.some(item => item.amount === '')) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please fill all required fields: Term Name, at least one student/class, and amounts for all bill items.' });
-            return;
-        }
-        setIsLoading(true);
-
+    const handlePrepareBill = () => {
         const finalBillItems = billItems.map(({ id, name, amount }) => ({ description: name, amount: Number(amount) }));
-        const billDetails = { term: termName, items: finalBillItems };
-
-        prepareBills(studentIdsToBill, billDetails, user.id);
         
-        setTimeout(() => {
-            setIsLoading(false);
-            toast({ title: 'Bills Prepared', description: `Bills have been successfully prepared for ${studentIdsToBill.length} students.` });
-            addAuditLog({
-                user: user.email,
-                name: user.name,
-                action: 'Prepare Bills',
-                details: `Prepared bill for term "${termName}" for ${studentIdsToBill.length} students.`
-            });
-            // Reset form
-            setStep(1);
-            setBillItems([]);
-            setTermName('');
-            setSelectedClasses([]);
-            setSelectedStudents([]);
-        }, 1000);
-    };
+        onSave({
+            term: termName,
+            total_amount: totalBillAmount,
+            items: finalBillItems,
+            assigned_classes: selectedClasses,
+            assigned_students: selectedStudents,
+            billed_student_ids: studentIdsToBill,
+        });
+    }
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Prepare New Bill</CardTitle>
-                        <CardDescription>Step {step} of 2: {step === 1 ? 'Define bill items and amounts.' : 'Assign bill to students.'}</CardDescription>
-                    </CardHeader>
+            <div className="lg:col-span-2 space-y-6">
+                <div className="p-4 border rounded-md">
+                    <h3 className="font-semibold mb-2">Step {step} of 2: {step === 1 ? 'Define bill items and amounts.' : 'Assign bill to students.'}</h3>
+                    <Separator />
                     {step === 1 && (
-                        <CardContent className="space-y-4">
+                        <div className="space-y-4 mt-4">
                             <div>
                                 <Label htmlFor="term-name">Term Name *</Label>
                                 <Select value={termName} onValueChange={setTermName}>
@@ -146,18 +117,16 @@ export function BillPreparation() {
                                     </div>
                                 ))}
                             </div>
-                            <CardFooter className="px-0 pb-0 justify-between">
-                                <div className="font-semibold text-lg">
-                                    Total: {new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(totalBillAmount)}
-                                </div>
+                            <div className="flex justify-between items-center font-semibold text-lg">
+                                <div>Total: {formatCurrency(totalBillAmount)}</div>
                                 <Button onClick={() => setStep(2)} disabled={billItems.length === 0 || !termName.trim() || billItems.some(i => i.amount === '')}>
                                     Next: Assign Students <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
-                            </CardFooter>
-                        </CardContent>
+                            </div>
+                        </div>
                     )}
                      {step === 2 && (
-                        <CardContent className="space-y-4">
+                        <div className="space-y-4 mt-4">
                            <Accordion type="single" collapsible defaultValue="classes">
                                 <AccordionItem value="classes">
                                     <AccordionTrigger><div className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Assign by Class</div></AccordionTrigger>
@@ -176,40 +145,19 @@ export function BillPreparation() {
                                 <h3 className="font-semibold">Summary</h3>
                                 <p className="text-sm text-muted-foreground">A total of <span className="font-bold">{studentIdsToBill.length}</span> student(s) will be billed.</p>
                             </div>
-                           <CardFooter className="px-0 pb-0 justify-between">
+                           <div className="flex justify-between">
                                 <Button variant="outline" onClick={() => setStep(1)}>Previous</Button>
-                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button disabled={isLoading || studentIdsToBill.length === 0}>
-                                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                            Finalize & Prepare Bills
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will generate a bill of {new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(totalBillAmount)} for {studentIdsToBill.length} students for the term "{termName}". This action cannot be easily undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handlePrepareBills}>Confirm</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </CardFooter>
-                        </CardContent>
+                                <Button onClick={handlePrepareBill}>Save Bill</Button>
+                            </div>
+                        </div>
                     )}
-                </Card>
+                </div>
             </div>
             {step === 1 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Available Fee Items</CardTitle>
-                        <CardDescription>Click to add items to the current bill.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
+                <div className="space-y-2 p-4 border rounded-md">
+                    <h3 className="font-semibold">Available Fee Items</h3>
+                    <p className="text-sm text-muted-foreground">Click to add items to the current bill.</p>
+                    <div className="space-y-2">
                         {feeStructures.map(item => (
                             <Button
                                 key={item.id}
@@ -221,13 +169,138 @@ export function BillPreparation() {
                                 <PlusCircle className="mr-2 h-4 w-4" /> {item.name}
                             </Button>
                         ))}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             )}
+        </div>
+    )
+}
+
+export function TermlyBillManagement() {
+    const [bills, setBills] = useState<TermlyBill[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingBill, setEditingBill] = useState<TermlyBill | null>(null);
+
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    const fetchBills = () => {
+        setBills(getTermlyBills());
+    }
+
+    useEffect(() => {
+        fetchBills();
+    }, []);
+
+    const handleSave = (billData: Omit<TermlyBill, 'id' | 'created_by' | 'created_at'>) => {
+        if (!user) return;
+        setIsLoading(true);
+
+        const allBills = getTermlyBills();
+        let newBills: TermlyBill[];
+        let action: 'created' | 'updated' = 'created';
+        
+        if (editingBill) { // Update existing
+            action = 'updated';
+            newBills = allBills.map(b => b.id === editingBill.id ? { ...editingBill, ...billData } : b);
+        } else { // Create new
+            const newBill: TermlyBill = {
+                ...billData,
+                id: `BILL-${Date.now()}`,
+                created_at: new Date().toISOString(),
+                created_by: user.id
+            }
+            newBills = [...allBills, newBill];
+        }
+
+        saveTermlyBills(newBills);
+        prepareBills(billData.billed_student_ids, { term: billData.term, items: billData.items }, user.id);
+        
+        setTimeout(() => {
+            setIsLoading(false);
+            fetchBills();
+            setIsFormOpen(false);
+            setEditingBill(null);
+            toast({ title: 'Bill Saved', description: `The bill for term "${billData.term}" has been ${action}.` });
+            addAuditLog({
+                user: user.email, name: user.name, action: `Bill ${action}`,
+                details: `${action} bill for term "${billData.term}" for ${billData.billed_student_ids.length} students.`
+            });
+        }, 1000);
+    }
+    
+    const handleDelete = (billId: string) => {
+        if (!user) return;
+        deleteTermlyBill(billId, user.id);
+        fetchBills();
+        toast({ title: "Bill Deleted", description: "The termly bill and associated student records have been removed." });
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-end">
+                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="sm" onClick={() => setEditingBill(null)}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Prepare New Bill
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-6xl">
+                         <DialogHeader>
+                            <DialogTitle>{editingBill ? 'Edit Bill' : 'Prepare New Bill'}</DialogTitle>
+                        </DialogHeader>
+                        <BillPreparationForm onSave={handleSave} existingBill={editingBill} />
+                    </DialogContent>
+                </Dialog>
+            </div>
+            
+            <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Term</TableHead>
+                            <TableHead>Total Amount</TableHead>
+                            <TableHead>Students Billed</TableHead>
+                            <TableHead>Date Created</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {bills.map(bill => (
+                            <TableRow key={bill.id}>
+                                <TableCell className="font-medium">{bill.term}</TableCell>
+                                <TableCell>{formatCurrency(bill.total_amount)}</TableCell>
+                                <TableCell>{bill.billed_student_ids.length}</TableCell>
+                                <TableCell>{format(new Date(bill.created_at), 'PPP')}</TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => { setEditingBill(bill); setIsFormOpen(true); }}>
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>This will delete the bill for {bill.term} and remove the associated charges from all {bill.billed_student_ids.length} students. This action is irreversible.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(bill.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     );
 }
-
 
 function MultiSelectPopover({ title, options, selectedValues, onSelect }: { 
     title: string;

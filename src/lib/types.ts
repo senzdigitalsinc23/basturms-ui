@@ -1,5 +1,6 @@
 
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -290,13 +291,26 @@ export interface UploadedDocument {
 export interface FeeStructureItem {
     id: string;
     name: string;
-    description: string;
+    description?: string;
+    amount?: number;
 }
 
 export type FeeItem = {
     description: string;
     amount: number;
 };
+
+export type TermlyBill = {
+    id: string;
+    term: string;
+    total_amount: number;
+    items: FeeItem[];
+    assigned_classes: string[];
+    assigned_students: string[];
+    billed_student_ids: string[];
+    created_at: string;
+    created_by: string; // user id
+}
 
 export type TermPayment = {
     term: string; // e.g., "1st Term 2023/2024"

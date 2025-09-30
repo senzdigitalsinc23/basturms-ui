@@ -1,7 +1,6 @@
-
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
-import { BillPreparation } from '@/components/financials/bill-preparation';
+import { TermlyBillManagement } from '@/components/financials/bill-preparation';
 
 export default function BillPreparationPage() {
   return (
@@ -10,10 +9,10 @@ export default function BillPreparationPage() {
         <div>
           <h1 className="text-3xl font-bold font-headline">Bill Preparation</h1>
           <p className="text-muted-foreground">
-            Create and assign termly bills to students by class or individually.
+            Create, view, and manage termly bills for students.
           </p>
         </div>
-        <BillPreparation />
+        <TermlyBillManagement />
       </div>
     </ProtectedRoute>
   );

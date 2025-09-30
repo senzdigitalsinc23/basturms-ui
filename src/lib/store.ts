@@ -43,6 +43,7 @@ import {
   ClassAssignmentActivity,
   FeeStructureItem,
   TermPayment,
+  TermlyBill,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -58,6 +59,7 @@ const CLASSES_KEY = 'campusconnect_classes';
 const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 const SCHOOL_KEY = 'campusconnect_school';
 const FEE_STRUCTURES_KEY = 'campusconnect_fee_structures';
+const TERMLY_BILLS_KEY = 'campusconnect_termly_bills';
 
 // Settings Keys
 const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
@@ -391,6 +393,9 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(FEE_STRUCTURES_KEY)) {
         saveToStorage(FEE_STRUCTURES_KEY, []);
     }
+    if (!window.localStorage.getItem(TERMLY_BILLS_KEY)) {
+        saveToStorage(TERMLY_BILLS_KEY, []);
+    }
     // Initialize settings
     if (!window.localStorage.getItem(ACADEMIC_YEARS_KEY)) {
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
@@ -459,7 +464,44 @@ export const getFeeStructures = (): FeeStructureItem[] => getFromStorage<FeeStru
 export const saveFeeStructures = (items: FeeStructureItem[]): void => saveToStorage(FEE_STRUCTURES_KEY, items);
 
 // Financial Management Functions
-export const prepareBills = (studentIds: string[], billDetails: { term: string, items: FeeStructureItem[] }, editorId: string): void => {
+export const getTermlyBills = (): TermlyBill[] => getFromStorage<TermlyBill[]>(TERMLY_BILLS_KEY, []);
+export const saveTermlyBills = (bills: TermlyBill[]): void => saveToStorage(TERMLY_BILLS_KEY, bills);
+
+export const deleteTermlyBill = (billId: string, editorId: string): void => {
+    const bills = getTermlyBills();
+    const billToDelete = bills.find(b => b.id === billId);
+    if (!billToDelete) return;
+
+    // Reverse financial impact on students
+    const profiles = getStudentProfiles();
+    profiles.forEach(profile => {
+        if (profile.financialDetails && billToDelete.billed_student_ids.includes(profile.student.student_no)) {
+            const billAmount = billToDelete.total_amount;
+            profile.financialDetails.account_balance += billAmount; // Increase balance (reduce debt)
+
+            // Remove the specific term payment from history
+            profile.financialDetails.payment_history = profile.financialDetails.payment_history.filter(
+                p => p.term !== billToDelete.term
+            );
+        }
+    });
+    saveToStorage(STUDENTS_KEY, profiles);
+
+    // Delete the bill itself
+    const updatedBills = bills.filter(b => b.id !== billId);
+    saveTermlyBills(updatedBills);
+
+    // Audit Log
+    const editor = getUserById(editorId);
+    addAuditLog({
+        user: editor?.email || 'Unknown',
+        name: editor?.name || 'Unknown User',
+        action: 'Delete Termly Bill',
+        details: `Deleted bill for term "${billToDelete.term}" affecting ${billToDelete.billed_student_ids.length} students.`
+    });
+};
+
+export const prepareBills = (studentIds: string[], billDetails: { term: string, items: {description: string, amount: number}[] }, editorId: string): void => {
     const profiles = getStudentProfiles();
     const totalBillAmount = billDetails.items.reduce((acc, item) => acc + Number(item.amount), 0);
 
@@ -472,12 +514,20 @@ export const prepareBills = (studentIds: string[], billDetails: { term: string, 
                 amount_paid: 0,
                 outstanding: totalBillAmount,
                 status: 'Unpaid',
-                bill_items: billDetails.items.map(i => ({ description: i.name, amount: Number(i.amount) })),
+                bill_items: billDetails.items.map(i => ({ description: i.description, amount: Number(i.amount) })),
                 payments: [],
             };
 
             if (!profile.financialDetails) {
                 profile.financialDetails = { account_balance: 0, payment_history: [] };
+            }
+
+            // Avoid adding duplicate bills for the same term
+            const existingBillIndex = profile.financialDetails.payment_history.findIndex(p => p.term === billDetails.term);
+            if (existingBillIndex > -1) {
+                // Adjust balance for old bill being replaced
+                profile.financialDetails.account_balance += profile.financialDetails.payment_history[existingBillIndex].total_fees;
+                profile.financialDetails.payment_history.splice(existingBillIndex, 1);
             }
 
             profile.financialDetails.payment_history.push(newTermPayment);
@@ -519,6 +569,8 @@ export const recordPayment = (studentId: string, paymentDetails: {amount: number
         } else {
             term.status = 'Partially Paid';
         }
+        
+        term.payment_date = new Date().toISOString();
 
         term.payments.push({
             date: new Date().toISOString(),
@@ -530,7 +582,7 @@ export const recordPayment = (studentId: string, paymentDetails: {amount: number
         });
     }
 
-
+    profiles[profileIndex] = profile;
     saveToStorage(STUDENTS_KEY, profiles);
     return profile;
 };
@@ -1524,3 +1576,4 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
