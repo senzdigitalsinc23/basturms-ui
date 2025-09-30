@@ -292,6 +292,7 @@ export interface FeeStructureItem {
     name: string;
     description?: string;
     amount?: number;
+    isMiscellaneous?: boolean;
 }
 
 export type FeeItem = {

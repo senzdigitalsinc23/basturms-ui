@@ -11,13 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '../ui/checkbox';
 
 export function FeeStructureSetup() {
     const [feeItems, setFeeItems] = useState<FeeStructureItem[]>([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentItem, setCurrentItem] = useState<FeeStructureItem | null>(null);
-    const [formState, setFormState] = useState({ name: '', description: '' });
+    const [formState, setFormState] = useState({ name: '', description: '', isMiscellaneous: false });
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -28,7 +29,7 @@ export function FeeStructureSetup() {
     const openForm = (item: FeeStructureItem | null) => {
         setIsEditMode(!!item);
         setCurrentItem(item);
-        setFormState(item ? { name: item.name, description: item.description } : { name: '', description: '' });
+        setFormState(item ? { name: item.name, description: item.description || '', isMiscellaneous: !!item.isMiscellaneous } : { name: '', description: '', isMiscellaneous: false });
         setIsFormOpen(true);
     };
 
@@ -105,6 +106,7 @@ export function FeeStructureSetup() {
                         <TableRow>
                             <TableHead>Fee Name</TableHead>
                             <TableHead>Description</TableHead>
+                            <TableHead>Type</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -113,6 +115,11 @@ export function FeeStructureSetup() {
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.description}</TableCell>
+                                <TableCell>
+                                    <span className={`px-2 py-1 text-xs rounded-full ${item.isMiscellaneous ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                                        {item.isMiscellaneous ? 'Miscellaneous' : 'Standard'}
+                                    </span>
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Button variant="ghost" size="icon" onClick={() => openForm(item)}>
                                         <Edit className="h-4 w-4" />
@@ -143,6 +150,10 @@ export function FeeStructureSetup() {
                             <Label htmlFor="description">Description</Label>
                             <Input id="description" value={formState.description} onChange={(e) => setFormState({ ...formState, description: e.target.value })} />
                         </div>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="isMiscellaneous" checked={formState.isMiscellaneous} onCheckedChange={(checked) => setFormState({ ...formState, isMiscellaneous: !!checked })}/>
+                            <Label htmlFor="isMiscellaneous">Mark as Miscellaneous Item</Label>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
@@ -153,4 +164,3 @@ export function FeeStructureSetup() {
         </div>
     );
 }
-

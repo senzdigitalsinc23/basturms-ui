@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill } from '@/lib/store';
@@ -25,7 +26,7 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { styl
 function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at'>) => void, existingBill?: TermlyBill | null }) {
     const [step, setStep] = useState(1);
     const [feeStructures, setFeeStructures] = useState<FeeStructureItem[]>([]);
-    const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => ({...i, id: i.description, name: i.description, amount: i.amount })) || []);
+    const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => ({...i, id: i.description, name: i.description, amount: i.amount, isMiscellaneous: true })) || []);
     const [termName, setTermName] = useState(existingBill?.term || '');
     
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -66,7 +67,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     const addMiscItem = () => {
         if (miscItemName.trim() && miscItemAmount !== '') {
             const miscId = `misc_${Date.now()}`;
-            addBillItem({ id: miscId, name: miscItemName, amount: Number(miscItemAmount) });
+            addBillItem({ id: miscId, name: miscItemName, amount: Number(miscItemAmount), isMiscellaneous: true });
             setMiscItemName('');
             setMiscItemAmount('');
         }
@@ -95,6 +96,9 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
             billed_student_ids: studentIdsToBill,
         });
     }
+
+    const standardItems = feeStructures.filter(item => !item.isMiscellaneous);
+    const miscFeeItems = feeStructures.filter(item => item.isMiscellaneous);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -171,20 +175,33 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
             {step === 1 && (
                  <div className="space-y-4">
                     <div className="p-4 border rounded-md">
-                        <h3 className="font-semibold mb-2">Add Miscellaneous Item</h3>
+                        <h3 className="font-semibold mb-2">Add One-Off Item</h3>
                         <div className="space-y-2">
                              <Input placeholder="Item Name" value={miscItemName} onChange={e => setMiscItemName(e.target.value)} />
                              <Input type="number" placeholder="Amount" value={miscItemAmount} onChange={e => setMiscItemAmount(e.target.value === '' ? '' : Number(e.target.value))} />
                              <Button onClick={addMiscItem} size="sm" className="w-full">
-                                <Plus className="mr-2 h-4 w-4"/> Add Misc. Item
+                                <Plus className="mr-2 h-4 w-4"/> Add One-Off Item
                             </Button>
                         </div>
                     </div>
                     <div className="p-4 border rounded-md">
-                        <h3 className="font-semibold">Available Fee Items</h3>
-                        <p className="text-sm text-muted-foreground">Click to add items to the current bill.</p>
+                        <h3 className="font-semibold">Standard Fee Items</h3>
                         <div className="space-y-2 mt-2">
-                            {feeStructures.map(item => (
+                            {standardItems.map(item => (
+                                <Button
+                                    key={item.id}
+                                    variant="outline"
+                                    className="w-full justify-start"
+                                    onClick={() => addBillItem(item)}
+                                    disabled={billItems.some(bi => bi.id === item.id)}
+                                >
+                                    <PlusCircle className="mr-2 h-4 w-4" /> {item.name}
+                                </Button>
+                            ))}
+                        </div>
+                        <h3 className="font-semibold mt-4">Miscellaneous Items</h3>
+                         <div className="space-y-2 mt-2">
+                            {miscFeeItems.map(item => (
                                 <Button
                                     key={item.id}
                                     variant="outline"
@@ -228,13 +245,17 @@ export function TermlyBillManagement() {
         let newBills: TermlyBill[];
         let action: 'created' | 'updated' = 'created';
         
+        let finalBillNumber: string;
+
         if (editingBill) { // Update existing
             action = 'updated';
+            finalBillNumber = editingBill.bill_number;
             newBills = allBills.map(b => b.bill_number === editingBill.bill_number ? { ...editingBill, ...billData } : b);
         } else { // Create new
+            finalBillNumber = `BILL-${Date.now()}`;
             const newBill: TermlyBill = {
                 ...billData,
-                bill_number: `BILL-${Date.now()}`,
+                bill_number: finalBillNumber,
                 created_at: new Date().toISOString(),
                 created_by: user.id
             }
@@ -242,7 +263,7 @@ export function TermlyBillManagement() {
         }
 
         saveTermlyBills(newBills);
-        prepareBills(billData.billed_student_ids, { term: billData.term, items: billData.items, bill_number: editingBill?.bill_number || `BILL-${Date.now()}` }, user.id);
+        prepareBills(billData.billed_student_ids, { term: billData.term, items: billData.items, bill_number: finalBillNumber }, user.id);
         
         setTimeout(() => {
             setIsLoading(false);
