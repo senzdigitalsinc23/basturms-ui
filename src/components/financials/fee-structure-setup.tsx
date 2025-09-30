@@ -24,7 +24,7 @@ export function FeeStructureSetup() {
         name: '',
         description: '',
         isMiscellaneous: false,
-        levelAmounts: ALL_SCHOOL_LEVELS.reduce((acc, level) => ({ ...acc, [level]: 0 }), {})
+        levelAmounts: ALL_SCHOOL_LEVELS.reduce((acc, level) => ({ ...acc, [level]: 0 }), {} as Record<SchoolLevel, number>)
     };
 
     const [formState, setFormState] = useState(initialFormState);
@@ -42,7 +42,7 @@ export function FeeStructureSetup() {
              name: item.name,
              description: item.description || '',
              isMiscellaneous: !!item.isMiscellaneous,
-             levelAmounts: { ...initialFormState.levelAmounts, ...item.levelAmounts }
+             levelAmounts: { ...initialFormState.levelAmounts, ...(item.levelAmounts || {}) }
         } : initialFormState);
         setIsFormOpen(true);
     };
@@ -146,7 +146,7 @@ export function FeeStructureSetup() {
                                 </TableCell>
                                 {ALL_SCHOOL_LEVELS.map(level => (
                                     <TableCell key={level}>
-                                        {item.levelAmounts[level]?.toLocaleString() ?? 'N/A'}
+                                        {(item.levelAmounts?.[level] || 0).toLocaleString() ?? 'N/A'}
                                     </TableCell>
                                 ))}
                                 <TableCell className="text-right">
