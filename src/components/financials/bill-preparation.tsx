@@ -1,8 +1,8 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill } from '@/lib/store';
-import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term, TermlyBill } from '@/lib/types';
+import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill, getClassSchoolLevel } from '@/lib/store';
+import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term, TermlyBill, SchoolLevel } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { styl
 function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at'>) => void, existingBill?: TermlyBill | null }) {
     const [step, setStep] = useState(1);
     const [feeStructures, setFeeStructures] = useState<FeeStructureItem[]>([]);
-    const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => ({...i, id: i.description, name: i.description, amount: i.amount, isMiscellaneous: true })) || []);
+    const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => ({...i, id: i.description, name: i.description, amount: i.amount, levelAmounts: {}, isMiscellaneous: true })) || []);
     const [termName, setTermName] = useState(existingBill?.term || '');
     
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -37,7 +37,6 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     const [selectedClasses, setSelectedClasses] = useState<string[]>(existingBill?.assigned_classes || []);
     const [selectedStudents, setSelectedStudents] = useState<string[]>(existingBill?.assigned_students || []);
 
-    // State for miscellaneous item
     const [miscItemName, setMiscItemName] = useState('');
     const [miscItemAmount, setMiscItemAmount] = useState<number | ''>('');
 
@@ -60,14 +59,16 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
 
     const addBillItem = (item: FeeStructureItem) => {
         if (!billItems.some(bi => bi.id === item.id)) {
-            setBillItems([...billItems, { ...item, amount: '' }]);
+            // Amount is set to 0 initially, it will be calculated based on class
+            setBillItems([...billItems, { ...item, amount: 0 }]);
         }
     };
     
     const addMiscItem = () => {
         if (miscItemName.trim() && miscItemAmount !== '') {
             const miscId = `misc_${Date.now()}`;
-            addBillItem({ id: miscId, name: miscItemName, amount: Number(miscItemAmount), isMiscellaneous: true });
+            const miscItem: FeeStructureItem = { id: miscId, name: miscItemName, levelAmounts: {}, isMiscellaneous: true };
+            setBillItems([...billItems, { ...miscItem, amount: Number(miscItemAmount) }]);
             setMiscItemName('');
             setMiscItemAmount('');
         }
@@ -77,24 +78,51 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
         setBillItems(billItems.filter(item => item.id !== id));
     };
 
-    const updateBillItemAmount = (id: string, amount: number | '') => {
-        setBillItems(billItems.map(item => item.id === id ? { ...item, amount } : item));
+    const getStudentsToBill = () => {
+        return [...new Set([...selectedStudents, ...students.filter(s => selectedClasses.includes(s.admissionDetails.class_assigned)).map(s => s.student.student_no)])];
+    }
+    const studentIdsToBill = getStudentsToBill();
+
+    const calculateTotalBill = (studentId: string): number => {
+        const studentProfile = students.find(s => s.student.student_no === studentId);
+        if (!studentProfile) return 0;
+        const classId = studentProfile.admissionDetails.class_assigned;
+        const schoolLevel = getClassSchoolLevel(classId);
+        if (!schoolLevel) return 0;
+
+        return billItems.reduce((acc, item) => {
+            const amount = item.isMiscellaneous ? Number(item.amount) : (item.levelAmounts[schoolLevel] || 0);
+            return acc + amount;
+        }, 0);
+    }
+    
+    const getBillItemsForStudent = (studentId: string) => {
+        const studentProfile = students.find(s => s.student.student_no === studentId);
+        if (!studentProfile) return [];
+        const classId = studentProfile.admissionDetails.class_assigned;
+        const schoolLevel = getClassSchoolLevel(classId);
+        if (!schoolLevel) return [];
+
+        return billItems.map(item => ({
+            description: item.name,
+            amount: item.isMiscellaneous ? Number(item.amount) : (item.levelAmounts[schoolLevel] || 0)
+        }));
     };
 
-    const totalBillAmount = billItems.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-    const studentIdsToBill = [...new Set([...selectedStudents, ...students.filter(s => selectedClasses.includes(s.admissionDetails.class_assigned)).map(s => s.student.student_no)])];
+    // For display purposes, we can show an average or a range
+    const averageBillAmount = studentIdsToBill.length > 0
+        ? studentIdsToBill.reduce((acc, id) => acc + calculateTotalBill(id), 0) / studentIdsToBill.length
+        : 0;
 
     const handlePrepareBill = () => {
-        const finalBillItems = billItems.map(({ id, name, amount }) => ({ description: name, amount: Number(amount) }));
-        
-        onSave({
+        // The logic in the store will now need to handle per-student bill calculation
+        const billDataForStore = {
             term: termName,
-            total_amount: totalBillAmount,
-            items: finalBillItems,
+            items: billItems.map(item => ({...item, amount: 0})), // Store the structure, amount will be calculated per student
             assigned_classes: selectedClasses,
             assigned_students: selectedStudents,
-            billed_student_ids: studentIdsToBill,
-        });
+        };
+        onSave(billDataForStore as any);
     }
 
     const standardItems = feeStructures.filter(item => !item.isMiscellaneous);
@@ -125,20 +153,23 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                                 {billItems.map(item => (
                                     <div key={item.id} className="flex items-center gap-2 p-2 border rounded-md">
                                         <div className="flex-1 font-medium">{item.name}</div>
-                                        <Input
-                                            type="number"
-                                            className="w-32"
-                                            placeholder="Amount"
-                                            value={item.amount}
-                                            onChange={(e) => updateBillItemAmount(item.id, e.target.value === '' ? '' : Number(e.target.value))}
-                                        />
+                                        {item.isMiscellaneous ? (
+                                             <Input
+                                                type="number"
+                                                className="w-32"
+                                                placeholder="Amount"
+                                                value={item.amount}
+                                                onChange={(e) => setBillItems(billItems.map(bi => bi.id === item.id ? { ...bi, amount: Number(e.target.value) } : bi))}
+                                            />
+                                        ) : (
+                                            <Badge variant="outline">Per-level pricing</Badge>
+                                        )}
                                         <Button variant="ghost" size="icon" onClick={() => removeBillItem(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex justify-between items-center font-semibold text-lg">
-                                <div>Total: {formatCurrency(totalBillAmount)}</div>
-                                <Button onClick={() => setStep(2)} disabled={billItems.length === 0 || !termName.trim() || billItems.some(i => i.amount === '')}>
+                            <div className="flex justify-end items-center font-semibold text-lg">
+                                <Button onClick={() => setStep(2)} disabled={billItems.length === 0 || !termName.trim()}>
                                     Next: Assign Students <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
                             </div>
@@ -162,7 +193,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                            </Accordion>
                             <div className="pt-4">
                                 <h3 className="font-semibold">Summary</h3>
-                                <p className="text-sm text-muted-foreground">A total of <span className="font-bold">{studentIdsToBill.length}</span> student(s) will be billed.</p>
+                                <p className="text-sm text-muted-foreground">A total of <span className="font-bold">{studentIdsToBill.length}</span> student(s) will be billed. Average bill amount is <span className="font-bold">{formatCurrency(averageBillAmount)}</span>.</p>
                             </div>
                            <div className="flex justify-between">
                                 <Button variant="outline" onClick={() => setStep(1)}>Previous</Button>
@@ -174,7 +205,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
             </div>
             {step === 1 && (
                  <div className="space-y-4">
-                    <div className="p-4 border rounded-md">
+                     <div className="p-4 border rounded-md">
                         <h3 className="font-semibold mb-2">Add One-Off Item</h3>
                         <div className="space-y-2">
                              <Input placeholder="Item Name" value={miscItemName} onChange={e => setMiscItemName(e.target.value)} />
@@ -237,34 +268,39 @@ export function TermlyBillManagement() {
         fetchBills();
     }, []);
 
-    const handleSave = (billData: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at'>) => {
+    const handleSave = (billData: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at' | 'billed_student_ids' | 'total_amount'> & { items: FeeStructureItem[] }) => {
         if (!user) return;
         setIsLoading(true);
 
         const allBills = getTermlyBills();
-        let newBills: TermlyBill[];
         let action: 'created' | 'updated' = 'created';
         
         let finalBillNumber: string;
 
-        if (editingBill) { // Update existing
+        if (editingBill) {
             action = 'updated';
             finalBillNumber = editingBill.bill_number;
-            newBills = allBills.map(b => b.bill_number === editingBill.bill_number ? { ...editingBill, ...billData } : b);
-        } else { // Create new
+            const updatedBill = { ...editingBill, ...billData, bill_number: finalBillNumber };
+            const newBills = allBills.map(b => b.bill_number === editingBill.bill_number ? updatedBill : b);
+            saveTermlyBills(newBills as TermlyBill[]);
+            prepareBills(updatedBill.assigned_classes, updatedBill.assigned_students, billData.items, billData.term, user.id, finalBillNumber);
+
+        } else {
             finalBillNumber = `BILL-${Date.now()}`;
             const newBill: TermlyBill = {
                 ...billData,
                 bill_number: finalBillNumber,
                 created_at: new Date().toISOString(),
-                created_by: user.id
+                created_by: user.id,
+                billed_student_ids: [], // This will be populated by prepareBills
+                total_amount: 0, // This is now per-student
+                items: billData.items.map(i => ({ description: i.name, amount: 0}))
             }
-            newBills = [...allBills, newBill];
+            const newBills = [...allBills, newBill];
+            saveTermlyBills(newBills);
+            prepareBills(billData.assigned_classes, billData.assigned_students, billData.items, billData.term, user.id, finalBillNumber);
         }
 
-        saveTermlyBills(newBills);
-        prepareBills(billData.billed_student_ids, { term: billData.term, items: billData.items, bill_number: finalBillNumber }, user.id);
-        
         setTimeout(() => {
             setIsLoading(false);
             fetchBills();
@@ -273,7 +309,7 @@ export function TermlyBillManagement() {
             toast({ title: 'Bill Saved', description: `The bill for term "${billData.term}" has been ${action}.` });
             addAuditLog({
                 user: user.email, name: user.name, action: `Bill ${action}`,
-                details: `${action} bill for term "${billData.term}" for ${billData.billed_student_ids.length} students.`
+                details: `${action} bill for term "${billData.term}".`
             });
         }, 1000);
     }
@@ -301,7 +337,7 @@ export function TermlyBillManagement() {
                          <DialogHeader>
                             <DialogTitle>{editingBill ? 'Edit Bill' : 'Prepare New Bill'}</DialogTitle>
                         </DialogHeader>
-                        <BillPreparationForm onSave={handleSave} existingBill={editingBill} />
+                        <BillPreparationForm onSave={handleSave as any} existingBill={editingBill} />
                     </DialogContent>
                 </Dialog>
             </div>
@@ -311,7 +347,6 @@ export function TermlyBillManagement() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Term</TableHead>
-                            <TableHead>Total Amount</TableHead>
                             <TableHead>Students Billed</TableHead>
                             <TableHead>Date Created</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -321,7 +356,6 @@ export function TermlyBillManagement() {
                         {bills.map(bill => (
                             <TableRow key={bill.bill_number}>
                                 <TableCell className="font-medium">{bill.term}</TableCell>
-                                <TableCell>{formatCurrency(bill.total_amount)}</TableCell>
                                 <TableCell>{bill.billed_student_ids.length}</TableCell>
                                 <TableCell>{format(new Date(bill.created_at), 'PPP')}</TableCell>
                                 <TableCell className="text-right">

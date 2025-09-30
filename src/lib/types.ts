@@ -81,6 +81,10 @@ export interface Class {
   name: string;
 }
 
+export type SchoolLevel = 'Pre-School' | 'Lower Primary' | 'Upper Primary' | 'JHS' | 'Final Year';
+export const ALL_SCHOOL_LEVELS: SchoolLevel[] = ['Pre-School', 'Lower Primary', 'Upper Primary', 'JHS', 'Final Year'];
+
+
 export interface User {
   id: string; // Will be used as user_id as well
   name: string;
@@ -291,7 +295,7 @@ export interface FeeStructureItem {
     id: string;
     name: string;
     description?: string;
-    amount?: number;
+    levelAmounts: Partial<Record<SchoolLevel, number>>;
     isMiscellaneous?: boolean;
 }
 
@@ -303,7 +307,7 @@ export type FeeItem = {
 export type TermlyBill = {
     bill_number: string;
     term: string;
-    total_amount: number;
+    total_amount: number; // This might become dynamic based on class
     items: FeeItem[];
     assigned_classes: string[];
     assigned_students: string[];

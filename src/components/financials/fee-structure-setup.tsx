@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { getFeeStructures, saveFeeStructures, addAuditLog } from '@/lib/store';
-import { FeeStructureItem } from '@/lib/types';
+import { FeeStructureItem, ALL_SCHOOL_LEVELS, SchoolLevel } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,22 @@ import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '../ui/checkbox';
+import { Separator } from '../ui/separator';
 
 export function FeeStructureSetup() {
     const [feeItems, setFeeItems] = useState<FeeStructureItem[]>([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentItem, setCurrentItem] = useState<FeeStructureItem | null>(null);
-    const [formState, setFormState] = useState({ name: '', description: '', isMiscellaneous: false });
+    
+    const initialFormState = {
+        name: '',
+        description: '',
+        isMiscellaneous: false,
+        levelAmounts: ALL_SCHOOL_LEVELS.reduce((acc, level) => ({ ...acc, [level]: 0 }), {})
+    };
+
+    const [formState, setFormState] = useState(initialFormState);
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -29,9 +38,25 @@ export function FeeStructureSetup() {
     const openForm = (item: FeeStructureItem | null) => {
         setIsEditMode(!!item);
         setCurrentItem(item);
-        setFormState(item ? { name: item.name, description: item.description || '', isMiscellaneous: !!item.isMiscellaneous } : { name: '', description: '', isMiscellaneous: false });
+        setFormState(item ? {
+             name: item.name,
+             description: item.description || '',
+             isMiscellaneous: !!item.isMiscellaneous,
+             levelAmounts: { ...initialFormState.levelAmounts, ...item.levelAmounts }
+        } : initialFormState);
         setIsFormOpen(true);
     };
+
+    const handleAmountChange = (level: SchoolLevel, value: string) => {
+        const amount = Number(value);
+        setFormState(prev => ({
+            ...prev,
+            levelAmounts: {
+                ...prev.levelAmounts,
+                [level]: isNaN(amount) ? 0 : amount
+            }
+        }));
+    }
 
     const handleSubmit = () => {
         if (!user) return;
@@ -105,8 +130,8 @@ export function FeeStructureSetup() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Fee Name</TableHead>
-                            <TableHead>Description</TableHead>
                             <TableHead>Type</TableHead>
+                            {ALL_SCHOOL_LEVELS.map(level => <TableHead key={level}>{level}</TableHead>)}
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -114,12 +139,16 @@ export function FeeStructureSetup() {
                         {feeItems.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{item.description}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 text-xs rounded-full ${item.isMiscellaneous ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
                                         {item.isMiscellaneous ? 'Miscellaneous' : 'Standard'}
                                     </span>
                                 </TableCell>
+                                {ALL_SCHOOL_LEVELS.map(level => (
+                                    <TableCell key={level}>
+                                        {item.levelAmounts[level]?.toLocaleString() ?? 'N/A'}
+                                    </TableCell>
+                                ))}
                                 <TableCell className="text-right">
                                     <Button variant="ghost" size="icon" onClick={() => openForm(item)}>
                                         <Edit className="h-4 w-4" />
@@ -134,14 +163,14 @@ export function FeeStructureSetup() {
                 </Table>
             </div>
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>{isEditMode ? 'Edit' : 'Add'} Fee Item</DialogTitle>
                         <DialogDescription>
-                            {isEditMode ? 'Update the details of this billable item.' : 'Create a new billable item for your school.'}
+                            {isEditMode ? 'Update the details and amounts for this billable item.' : 'Create a new billable item and set its price for each school level.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
                         <div className="space-y-2">
                             <Label htmlFor="name">Fee Name</Label>
                             <Input id="name" value={formState.name} onChange={(e) => setFormState({ ...formState, name: e.target.value })} />
@@ -153,6 +182,22 @@ export function FeeStructureSetup() {
                         <div className="flex items-center space-x-2">
                             <Checkbox id="isMiscellaneous" checked={formState.isMiscellaneous} onCheckedChange={(checked) => setFormState({ ...formState, isMiscellaneous: !!checked })}/>
                             <Label htmlFor="isMiscellaneous">Mark as Miscellaneous Item</Label>
+                        </div>
+                        <Separator />
+                        <h4 className="font-semibold text-md">Set Amounts per School Level</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {ALL_SCHOOL_LEVELS.map(level => (
+                                <div key={level} className="space-y-2">
+                                    <Label htmlFor={`amount-${level}`}>{level}</Label>
+                                    <Input 
+                                        id={`amount-${level}`} 
+                                        type="number" 
+                                        value={formState.levelAmounts[level] || ''}
+                                        onChange={e => handleAmountChange(level, e.target.value)}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            ))}
                         </div>
                     </div>
                     <DialogFooter>
