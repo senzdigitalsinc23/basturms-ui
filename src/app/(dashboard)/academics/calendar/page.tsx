@@ -1,20 +1,19 @@
 'use client';
-- import { ProtectedRoute } from '@/components/protected-route';
-- import { AcademicCalendar } from '@/components/academics/calendar/academic-calendar';
-- 
-- export default function CalendarPage() {
--   return (
--     <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Student', 'Parent']}>
--       <div className="space-y-6">
--         <div>
--           <h1 className="text-3xl font-bold font-headline">Academic Calendar</h1>
--           <p className="text-muted-foreground">
--             View the school's official calendar for all academic terms.
--           </p>
--         </div>
--         <AcademicCalendar />
--       </div>
--     </ProtectedRoute>
--   );
-- }
-- 
+import { ProtectedRoute } from '@/components/protected-route';
+import { AcademicCalendar } from '@/components/academics/calendar/academic-calendar';
+
+export default function CalendarPage() {
+  return (
+    <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Student', 'Parent']}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold font-headline">Academic Calendar</h1>
+          <p className="text-muted-foreground">
+            View the school's official calendar for all academic terms.
+          </p>
+        </div>
+        <AcademicCalendar />
+      </div>
+    </ProtectedRoute>
+  );
+}
