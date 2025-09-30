@@ -21,12 +21,13 @@ import 'jspdf-autotable';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
-const generateReceipt = (student: StudentProfile, payment: {amount: number, method: string, receipt_number?: string, paid_by?: string}) => {
+const generateReceipt = (student: StudentProfile, payment: {amount: number, method: string, receipt_number?: string, paid_by?: string}, latestTermPayment?: TermPayment) => {
     const doc = new jsPDF();
     const schoolProfile = getSchoolProfile();
     const schoolName = schoolProfile?.schoolName || "CampusConnect School";
     const schoolContact = schoolProfile?.phone || "N/A";
     const receiptNumber = payment.receipt_number || `RCPT${Date.now()}`;
+    const billNumber = latestTermPayment?.bill_number || 'N/A';
     
     // Header
     doc.setFontSize(20);
@@ -42,6 +43,7 @@ const generateReceipt = (student: StudentProfile, payment: {amount: number, meth
     // Receipt Info
     doc.setFontSize(10);
     doc.text(`Receipt No: ${receiptNumber}`, 15, 55);
+    doc.text(`Bill No: ${billNumber}`, 15, 60);
     doc.text(`Date: ${format(new Date(), 'PPP')}`, 170, 55, { align: 'right' });
 
     // Student Info
@@ -76,7 +78,6 @@ const generateReceipt = (student: StudentProfile, payment: {amount: number, meth
     });
 
     // Total and Balance
-    const latestTermPayment = student.financialDetails?.payment_history.slice(-1)[0];
     (doc as any).autoTable({
         startY: (doc as any).lastAutoTable.finalY + 5,
         body: [
@@ -157,6 +158,9 @@ export function FeeCollection() {
         const updatedProfile = recordPayment(selectedStudent.student.student_no, paymentDetails, user.id);
         
         if (updatedProfile) {
+            const latestTermPayment = updatedProfile.financialDetails?.payment_history
+                .sort((a, b) => new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime())[0];
+
             setSelectedStudent(updatedProfile);
             toast({ title: 'Payment Recorded', description: `Payment of ${formatCurrency(paymentAmount)} recorded for ${updatedProfile.student.first_name}.` });
             addAuditLog({
@@ -166,7 +170,7 @@ export function FeeCollection() {
                 details: `Recorded payment of ${formatCurrency(paymentAmount)} for student ${updatedProfile.student.student_no}`
             });
             
-            generateReceipt(updatedProfile, paymentDetails);
+            generateReceipt(updatedProfile, paymentDetails, latestTermPayment);
 
             setIsPaymentDialogOpen(false);
             setPaymentAmount('');
@@ -330,6 +334,7 @@ export function FeeCollection() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Term</TableHead>
+                                                    <TableHead>Bill Number</TableHead>
                                                     <TableHead>Total Billed</TableHead>
                                                     <TableHead>Amount Paid</TableHead>
                                                     <TableHead>Outstanding</TableHead>
@@ -340,6 +345,7 @@ export function FeeCollection() {
                                                 {selectedStudent.financialDetails.payment_history.map((rec, i) => (
                                                     <TableRow key={i}>
                                                         <TableCell className="font-medium">{rec.term}</TableCell>
+                                                        <TableCell>{rec.bill_number}</TableCell>
                                                         <TableCell>{formatCurrency(rec.total_fees)}</TableCell>
                                                         <TableCell className="text-green-600">{formatCurrency(rec.amount_paid)}</TableCell>
                                                         <TableCell className="text-red-600">{formatCurrency(rec.outstanding)}</TableCell>

@@ -1,6 +1,5 @@
 
 
-
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -301,7 +300,7 @@ export type FeeItem = {
 };
 
 export type TermlyBill = {
-    id: string;
+    bill_number: string;
     term: string;
     total_amount: number;
     items: FeeItem[];
@@ -466,5 +465,3 @@ export interface TeacherSubject {
     staff_id: string;
     subject_id: string;
 }
-
-    

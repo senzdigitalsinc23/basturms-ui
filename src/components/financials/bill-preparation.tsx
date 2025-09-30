@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Trash2, ArrowRight, Loader2, Users, User, Check, ChevronsUpDown, MoreHorizontal, Pencil } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowRight, Loader2, Users, User, Check, ChevronsUpDown, MoreHorizontal, Pencil, Plus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { cn } from '@/lib/utils';
@@ -18,10 +18,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { format } from 'date-fns';
+import { Separator } from '../ui/separator';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
-function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<TermlyBill, 'id' | 'created_by' | 'created_at'>) => void, existingBill?: TermlyBill | null }) {
+function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at'>) => void, existingBill?: TermlyBill | null }) {
     const [step, setStep] = useState(1);
     const [feeStructures, setFeeStructures] = useState<FeeStructureItem[]>([]);
     const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => ({...i, id: i.description, name: i.description, amount: i.amount })) || []);
@@ -34,6 +35,11 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [selectedClasses, setSelectedClasses] = useState<string[]>(existingBill?.assigned_classes || []);
     const [selectedStudents, setSelectedStudents] = useState<string[]>(existingBill?.assigned_students || []);
+
+    // State for miscellaneous item
+    const [miscItemName, setMiscItemName] = useState('');
+    const [miscItemAmount, setMiscItemAmount] = useState<number | ''>('');
+
 
     useEffect(() => {
         setFeeStructures(getFeeStructures());
@@ -54,6 +60,15 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     const addBillItem = (item: FeeStructureItem) => {
         if (!billItems.some(bi => bi.id === item.id)) {
             setBillItems([...billItems, { ...item, amount: '' }]);
+        }
+    };
+    
+    const addMiscItem = () => {
+        if (miscItemName.trim() && miscItemAmount !== '') {
+            const miscId = `misc_${Date.now()}`;
+            addBillItem({ id: miscId, name: miscItemName, amount: Number(miscItemAmount) });
+            setMiscItemName('');
+            setMiscItemAmount('');
         }
     };
 
@@ -154,21 +169,33 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                 </div>
             </div>
             {step === 1 && (
-                <div className="space-y-2 p-4 border rounded-md">
-                    <h3 className="font-semibold">Available Fee Items</h3>
-                    <p className="text-sm text-muted-foreground">Click to add items to the current bill.</p>
-                    <div className="space-y-2">
-                        {feeStructures.map(item => (
-                            <Button
-                                key={item.id}
-                                variant="outline"
-                                className="w-full justify-start"
-                                onClick={() => addBillItem(item)}
-                                disabled={billItems.some(bi => bi.id === item.id)}
-                            >
-                                <PlusCircle className="mr-2 h-4 w-4" /> {item.name}
+                 <div className="space-y-4">
+                    <div className="p-4 border rounded-md">
+                        <h3 className="font-semibold mb-2">Add Miscellaneous Item</h3>
+                        <div className="space-y-2">
+                             <Input placeholder="Item Name" value={miscItemName} onChange={e => setMiscItemName(e.target.value)} />
+                             <Input type="number" placeholder="Amount" value={miscItemAmount} onChange={e => setMiscItemAmount(e.target.value === '' ? '' : Number(e.target.value))} />
+                             <Button onClick={addMiscItem} size="sm" className="w-full">
+                                <Plus className="mr-2 h-4 w-4"/> Add Misc. Item
                             </Button>
-                        ))}
+                        </div>
+                    </div>
+                    <div className="p-4 border rounded-md">
+                        <h3 className="font-semibold">Available Fee Items</h3>
+                        <p className="text-sm text-muted-foreground">Click to add items to the current bill.</p>
+                        <div className="space-y-2 mt-2">
+                            {feeStructures.map(item => (
+                                <Button
+                                    key={item.id}
+                                    variant="outline"
+                                    className="w-full justify-start"
+                                    onClick={() => addBillItem(item)}
+                                    disabled={billItems.some(bi => bi.id === item.id)}
+                                >
+                                    <PlusCircle className="mr-2 h-4 w-4" /> {item.name}
+                                </Button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
@@ -193,7 +220,7 @@ export function TermlyBillManagement() {
         fetchBills();
     }, []);
 
-    const handleSave = (billData: Omit<TermlyBill, 'id' | 'created_by' | 'created_at'>) => {
+    const handleSave = (billData: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at'>) => {
         if (!user) return;
         setIsLoading(true);
 
@@ -203,11 +230,11 @@ export function TermlyBillManagement() {
         
         if (editingBill) { // Update existing
             action = 'updated';
-            newBills = allBills.map(b => b.id === editingBill.id ? { ...editingBill, ...billData } : b);
+            newBills = allBills.map(b => b.bill_number === editingBill.bill_number ? { ...editingBill, ...billData } : b);
         } else { // Create new
             const newBill: TermlyBill = {
                 ...billData,
-                id: `BILL-${Date.now()}`,
+                bill_number: `BILL-${Date.now()}`,
                 created_at: new Date().toISOString(),
                 created_by: user.id
             }
@@ -215,7 +242,7 @@ export function TermlyBillManagement() {
         }
 
         saveTermlyBills(newBills);
-        prepareBills(billData.billed_student_ids, { term: billData.term, items: billData.items }, user.id);
+        prepareBills(billData.billed_student_ids, { term: billData.term, items: billData.items, bill_number: editingBill?.bill_number || `BILL-${Date.now()}` }, user.id);
         
         setTimeout(() => {
             setIsLoading(false);
@@ -230,9 +257,9 @@ export function TermlyBillManagement() {
         }, 1000);
     }
     
-    const handleDelete = (billId: string) => {
+    const handleDelete = (billNumber: string) => {
         if (!user) return;
-        deleteTermlyBill(billId, user.id);
+        deleteTermlyBill(billNumber, user.id);
         fetchBills();
         toast({ title: "Bill Deleted", description: "The termly bill and associated student records have been removed." });
     }
@@ -240,9 +267,12 @@ export function TermlyBillManagement() {
     return (
         <div className="space-y-6">
             <div className="flex justify-end">
-                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
+                    if (!isOpen) setEditingBill(null);
+                    setIsFormOpen(isOpen);
+                }}>
                     <DialogTrigger asChild>
-                        <Button size="sm" onClick={() => setEditingBill(null)}>
+                        <Button size="sm">
                             <PlusCircle className="mr-2 h-4 w-4"/> Prepare New Bill
                         </Button>
                     </DialogTrigger>
@@ -268,7 +298,7 @@ export function TermlyBillManagement() {
                     </TableHeader>
                     <TableBody>
                         {bills.map(bill => (
-                            <TableRow key={bill.id}>
+                            <TableRow key={bill.bill_number}>
                                 <TableCell className="font-medium">{bill.term}</TableCell>
                                 <TableCell>{formatCurrency(bill.total_amount)}</TableCell>
                                 <TableCell>{bill.billed_student_ids.length}</TableCell>
@@ -288,7 +318,7 @@ export function TermlyBillManagement() {
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(bill.id)}>Delete</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => handleDelete(bill.bill_number)}>Delete</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
