@@ -74,6 +74,7 @@ export function StudentFinancials() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Term</TableHead>
+                                        <TableHead>Bill Number</TableHead>
                                         <TableHead>Total Billed</TableHead>
                                         <TableHead>Amount Paid</TableHead>
                                         <TableHead>Outstanding</TableHead>
@@ -84,6 +85,7 @@ export function StudentFinancials() {
                                     {financialDetails.payment_history.map((rec, i) => (
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{rec.term}</TableCell>
+                                            <TableCell className="font-mono">{rec.bill_number}</TableCell>
                                             <TableCell>{formatCurrency(rec.total_fees)}</TableCell>
                                             <TableCell className="text-green-600">{formatCurrency(rec.amount_paid)}</TableCell>
                                             <TableCell className="text-red-600">{formatCurrency(rec.outstanding)}</TableCell>
@@ -105,4 +107,3 @@ export function StudentFinancials() {
         </Card>
     );
 }
-

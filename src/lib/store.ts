@@ -495,28 +495,40 @@ export const deleteTermlyBill = (billNumber: string, editorId: string): void => 
     const bills = getTermlyBills();
     const billToDelete = bills.find(b => b.bill_number === billNumber);
     if (!billToDelete) return;
+    
+    // Find all students affected and reverse the financial impact
+    const profiles = getStudentProfiles();
+    const updatedProfiles = profiles.map(profile => {
+        if (profile.financialDetails?.payment_history) {
+            const billIndex = profile.financialDetails.payment_history.findIndex(p => p.bill_number === billNumber);
+            if (billIndex > -1) {
+                const billRecord = profile.financialDetails.payment_history[billIndex];
+                // Add back the outstanding amount to the account balance
+                profile.financialDetails.account_balance += billRecord.outstanding;
+                // Remove the term payment from history
+                profile.financialDetails.payment_history.splice(billIndex, 1);
+            }
+        }
+        return profile;
+    });
 
-    // This logic is complex. Reversing financial impact might not be what's needed.
-    // For now, we will just delete the bill itself and log it.
-    // A more robust system would handle reversals, credit notes, etc.
+    saveToStorage(STUDENTS_KEY, updatedProfiles);
 
     const updatedBills = bills.filter(b => b.bill_number !== billNumber);
     saveTermlyBills(updatedBills);
 
-    // Audit Log
-    const editor = getUserById(editorId);
     addAuditLog({
-        user: editor?.email || 'Unknown',
-        name: editor?.name || 'Unknown User',
+        user: getUserById(editorId)?.email || 'Unknown',
+        name: getUserById(editorId)?.name || 'Unknown',
         action: 'Delete Termly Bill',
-        details: `Deleted bill ${billNumber} for term "${billToDelete.term}".`
+        details: `Deleted bill ${billNumber} for term "${billToDelete.term}" and reversed charges for ${billToDelete.billed_student_ids.length} students.`
     });
 };
 
 export const prepareBills = (
     assigned_classes: string[], 
     assigned_students: string[], 
-    billItems: FeeStructureItem[], 
+    billItems: (FeeStructureItem & { amount: number })[], 
     term: string, 
     editorId: string, 
     billNumber: string
@@ -539,7 +551,7 @@ export const prepareBills = (
             
             const studentBillItems = billItems.map(item => ({
                 description: item.name,
-                amount: item.isMiscellaneous ? Number(item.levelAmounts['Pre-School' as keyof typeof item.levelAmounts]) : (schoolLevel ? (item.levelAmounts[schoolLevel] || 0) : 0),
+                amount: item.amount,
             }));
             
             const totalBillAmount = studentBillItems.reduce((acc, item) => acc + item.amount, 0);
@@ -561,7 +573,9 @@ export const prepareBills = (
 
             const existingBillIndex = profile.financialDetails.payment_history.findIndex(p => p.term === term);
             if (existingBillIndex > -1) {
-                profile.financialDetails.account_balance += profile.financialDetails.payment_history[existingBillIndex].outstanding;
+                // If a bill for the same term already exists, reverse its impact before adding the new one
+                const oldBill = profile.financialDetails.payment_history[existingBillIndex];
+                profile.financialDetails.account_balance += oldBill.outstanding; // Add back old debt
                 profile.financialDetails.payment_history.splice(existingBillIndex, 1);
             }
 
@@ -571,7 +585,6 @@ export const prepareBills = (
         return profile;
     });
     
-    // Update the bill in the termly_bills store with the list of students who were billed.
     const bills = getTermlyBills();
     const billIndex = bills.findIndex(b => b.bill_number === billNumber);
     if(billIndex !== -1) {
@@ -586,11 +599,15 @@ export const recordPayment = (studentId: string, paymentDetails: {amount: number
     const profiles = getStudentProfiles();
     const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
 
-    if (profileIndex === -1 || !profiles[profileIndex].financialDetails) {
+    if (profileIndex === -1) {
         return null;
     }
 
     const profile = profiles[profileIndex];
+     if (!profile.financialDetails) {
+        profile.financialDetails = { account_balance: 0, payment_history: [] };
+    }
+
     const financialDetails = profile.financialDetails!;
     
     let amountToApply = paymentDetails.amount;
@@ -641,7 +658,7 @@ export const deleteAllFinancialRecords = (editorId: string) => {
     const editor = getUserById(editorId);
     addAuditLog({
         user: editor?.email || 'Unknown',
-        name: editor?.name || 'Unknown User',
+        name: editor?.name || 'Unknown',
         action: 'Delete All Financial Records',
         details: 'Permanently deleted all financial records for all students.'
     });
@@ -1620,5 +1637,6 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 

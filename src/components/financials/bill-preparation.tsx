@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill, getClassSchoolLevel } from '@/lib/store';
-import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term, TermlyBill, SchoolLevel } from '@/lib/types';
+import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term, TermlyBill, SchoolLevel, ALL_SCHOOL_LEVELS } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [selectedClasses, setSelectedClasses] = useState<string[]>(existingBill?.assigned_classes || []);
     const [selectedStudents, setSelectedStudents] = useState<string[]>(existingBill?.assigned_students || []);
+    const [selectedLevel, setSelectedLevel] = useState<SchoolLevel | undefined>();
 
     const [miscItemName, setMiscItemName] = useState('');
     const [miscItemAmount, setMiscItemAmount] = useState<number | ''>('');
@@ -56,6 +57,20 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
         );
         setAllTerms(terms);
     }, []);
+
+    useEffect(() => {
+        if (selectedLevel) {
+            const standardItems = feeStructures.filter(item => !item.isMiscellaneous);
+            const itemsForLevel = standardItems.map(item => ({
+                ...item,
+                amount: item.levelAmounts[selectedLevel] || 0
+            }));
+            setBillItems(itemsForLevel);
+        } else {
+            // If no level is selected, clear the standard items
+            setBillItems(billItems.filter(item => item.isMiscellaneous));
+        }
+    }, [selectedLevel, feeStructures]);
 
     const addBillItem = (item: FeeStructureItem) => {
         if (!billItems.some(bi => bi.id === item.id)) {
@@ -88,10 +103,16 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
         if (!studentProfile) return 0;
         const classId = studentProfile.admissionDetails.class_assigned;
         const schoolLevel = getClassSchoolLevel(classId);
-        if (!schoolLevel) return 0;
-
+        
         return billItems.reduce((acc, item) => {
-            const amount = item.isMiscellaneous ? Number(item.amount) : (item.levelAmounts[schoolLevel] || 0);
+            let amount = 0;
+            if (item.isMiscellaneous) {
+                amount = Number(item.amount) || 0;
+            } else if (schoolLevel) {
+                // If a level is selected for the bill, use the amount defined for that item
+                // otherwise it should already be in the item.amount
+                 amount = item.amount || item.levelAmounts[schoolLevel] || 0;
+            }
             return acc + amount;
         }, 0);
     }
@@ -115,10 +136,9 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
         : 0;
 
     const handlePrepareBill = () => {
-        // The logic in the store will now need to handle per-student bill calculation
         const billDataForStore = {
             term: termName,
-            items: billItems.map(item => ({...item, amount: 0})), // Store the structure, amount will be calculated per student
+            items: billItems.map(item => ({...item, amount: item.amount || 0})),
             assigned_classes: selectedClasses,
             assigned_students: selectedStudents,
         };
@@ -134,26 +154,42 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                 <div className="p-4 border rounded-md">
                     <h3 className="font-semibold mb-2">Step {step} of 2: {step === 1 ? 'Define bill items and amounts.' : 'Assign bill to students.'}</h3>
                     <Separator />
-                    {step === 1 && (
-                        <div className="space-y-4 mt-4">
-                            <div>
-                                <Label htmlFor="term-name">Term Name *</Label>
-                                <Select value={termName} onValueChange={setTermName}>
-                                    <SelectTrigger id="term-name">
-                                        <SelectValue placeholder="Select a term..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {allTerms.map(term => (
-                                            <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                {billItems.map(item => (
-                                    <div key={item.id} className="flex items-center gap-2 p-2 border rounded-md">
-                                        <div className="flex-1 font-medium">{item.name}</div>
-                                        {item.isMiscellaneous ? (
+                    <div className="max-h-[60vh] overflow-y-auto p-1">
+                        {step === 1 && (
+                            <div className="space-y-4 mt-4">
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="term-name">Term Name *</Label>
+                                        <Select value={termName} onValueChange={setTermName}>
+                                            <SelectTrigger id="term-name">
+                                                <SelectValue placeholder="Select a term..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {allTerms.map(term => (
+                                                    <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="school-level">Target School Level (Optional)</Label>
+                                        <Select value={selectedLevel} onValueChange={(val: SchoolLevel) => setSelectedLevel(val)}>
+                                            <SelectTrigger id="school-level">
+                                                <SelectValue placeholder="Select level to auto-fill amounts" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {ALL_SCHOOL_LEVELS.map(level => (
+                                                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Bill Items</Label>
+                                    {billItems.map((item, index) => (
+                                        <div key={item.id} className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
+                                            <div className="flex-1 font-medium">{item.name}</div>
                                              <Input
                                                 type="number"
                                                 className="w-32"
@@ -161,50 +197,48 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                                                 value={item.amount}
                                                 onChange={(e) => setBillItems(billItems.map(bi => bi.id === item.id ? { ...bi, amount: Number(e.target.value) } : bi))}
                                             />
-                                        ) : (
-                                            <Badge variant="outline">Per-level pricing</Badge>
-                                        )}
-                                        <Button variant="ghost" size="icon" onClick={() => removeBillItem(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                    </div>
-                                ))}
+                                            <Button variant="ghost" size="icon" onClick={() => removeBillItem(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex justify-end items-center font-semibold text-lg">
+                                    <Button onClick={() => setStep(2)} disabled={billItems.length === 0 || !termName.trim()}>
+                                        Next: Assign Students <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="flex justify-end items-center font-semibold text-lg">
-                                <Button onClick={() => setStep(2)} disabled={billItems.length === 0 || !termName.trim()}>
-                                    Next: Assign Students <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
+                        )}
+                        {step === 2 && (
+                            <div className="space-y-4 mt-4">
+                            <Accordion type="single" collapsible defaultValue="classes">
+                                    <AccordionItem value="classes">
+                                        <AccordionTrigger><div className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Assign by Class</div></AccordionTrigger>
+                                        <AccordionContent>
+                                            <MultiSelectPopover title="Classes" options={classes} selectedValues={selectedClasses} onSelect={setSelectedClasses} />
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                    <AccordionItem value="students">
+                                        <AccordionTrigger><div className="flex items-center gap-2"><User className="h-5 w-5 text-primary"/> Assign by Student</div></AccordionTrigger>
+                                        <AccordionContent>
+                                            <MultiSelectPopover title="Students" options={students.map(s => ({id: s.student.student_no, name: `${s.student.first_name} ${s.student.last_name}`}))} selectedValues={selectedStudents} onSelect={setSelectedStudents} />
+                                        </AccordionContent>
+                                    </AccordionItem>
+                            </Accordion>
+                                <div className="pt-4">
+                                    <h3 className="font-semibold">Summary</h3>
+                                    <p className="text-sm text-muted-foreground">A total of <span className="font-bold">{studentIdsToBill.length}</span> student(s) will be billed. Average bill amount is <span className="font-bold">{formatCurrency(averageBillAmount)}</span>.</p>
+                                </div>
+                            <div className="flex justify-between">
+                                    <Button variant="outline" onClick={() => setStep(1)}>Previous</Button>
+                                    <Button onClick={handlePrepareBill}>Save Bill</Button>
+                                </div>
                             </div>
-                        </div>
-                    )}
-                     {step === 2 && (
-                        <div className="space-y-4 mt-4">
-                           <Accordion type="single" collapsible defaultValue="classes">
-                                <AccordionItem value="classes">
-                                    <AccordionTrigger><div className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Assign by Class</div></AccordionTrigger>
-                                    <AccordionContent>
-                                        <MultiSelectPopover title="Classes" options={classes} selectedValues={selectedClasses} onSelect={setSelectedClasses} />
-                                    </AccordionContent>
-                                </AccordionItem>
-                                <AccordionItem value="students">
-                                    <AccordionTrigger><div className="flex items-center gap-2"><User className="h-5 w-5 text-primary"/> Assign by Student</div></AccordionTrigger>
-                                    <AccordionContent>
-                                        <MultiSelectPopover title="Students" options={students.map(s => ({id: s.student.student_no, name: `${s.student.first_name} ${s.student.last_name}`}))} selectedValues={selectedStudents} onSelect={setSelectedStudents} />
-                                    </AccordionContent>
-                                </AccordionItem>
-                           </Accordion>
-                            <div className="pt-4">
-                                <h3 className="font-semibold">Summary</h3>
-                                <p className="text-sm text-muted-foreground">A total of <span className="font-bold">{studentIdsToBill.length}</span> student(s) will be billed. Average bill amount is <span className="font-bold">{formatCurrency(averageBillAmount)}</span>.</p>
-                            </div>
-                           <div className="flex justify-between">
-                                <Button variant="outline" onClick={() => setStep(1)}>Previous</Button>
-                                <Button onClick={handlePrepareBill}>Save Bill</Button>
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
             {step === 1 && (
-                 <div className="space-y-4">
+                 <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1">
                      <div className="p-4 border rounded-md">
                         <h3 className="font-semibold mb-2">Add One-Off Item</h3>
                         <div className="space-y-2">
@@ -294,7 +328,7 @@ export function TermlyBillManagement() {
                 created_by: user.id,
                 billed_student_ids: [], // This will be populated by prepareBills
                 total_amount: 0, // This is now per-student
-                items: billData.items.map(i => ({ description: i.name, amount: 0}))
+                items: billData.items.map(i => ({ description: i.name, amount: i.amount || 0 }))
             }
             const newBills = [...allBills, newBill];
             saveTermlyBills(newBills);
@@ -346,6 +380,7 @@ export function TermlyBillManagement() {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead>Bill Number</TableHead>
                             <TableHead>Term</TableHead>
                             <TableHead>Students Billed</TableHead>
                             <TableHead>Date Created</TableHead>
@@ -355,6 +390,7 @@ export function TermlyBillManagement() {
                     <TableBody>
                         {bills.map(bill => (
                             <TableRow key={bill.bill_number}>
+                                <TableCell className="font-mono">{bill.bill_number}</TableCell>
                                 <TableCell className="font-medium">{bill.term}</TableCell>
                                 <TableCell>{bill.billed_student_ids.length}</TableCell>
                                 <TableCell>{format(new Date(bill.created_at), 'PPP')}</TableCell>
