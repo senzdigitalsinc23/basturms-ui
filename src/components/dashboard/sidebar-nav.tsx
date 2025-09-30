@@ -134,7 +134,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/financials/fee-setup', label: 'Fee Setup' },
         { href: '/financials/bill-preparation', label: 'Bill Preparation' },
         { href: '/financials/fee-collection', label: 'Collections' },
-        { href: '/#', label: 'Reports' },
+        { href: '/financials/reports', label: 'Reports' },
       ],
     },
     { href: '/notifications', label: 'Notifications', icon: Bell },
