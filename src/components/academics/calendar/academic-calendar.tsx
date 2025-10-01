@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { startOfMonth, format, isSameDay } from 'date-fns';
+import { startOfMonth, format, isSameDay, isSameMonth } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { DayContent, DayProps } from 'react-day-picker';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Modifier = {
     [key: string]: Date | Date[] | { from: Date; to: Date } | ((date: Date) => boolean);
@@ -97,11 +98,12 @@ export function AcademicCalendar() {
         const years = getAcademicYears();
         setAcademicYears(years);
         const activeYear = years.find(y => y.status === 'Active') || years[0];
-        if (activeYear) {
-            setSelectedYear(year => year || activeYear); // Only set if not already set
+        if (activeYear && !selectedYear) {
+            setSelectedYear(activeYear);
+            setCurrentMonth(startOfMonth(new Date(activeYear.terms[0].startDate)));
         }
         setEvents(getCalendarEvents());
-    }, []);
+    }, [selectedYear]);
 
     useEffect(() => {
         fetchData();
@@ -139,18 +141,29 @@ export function AcademicCalendar() {
                 };
             });
             
+            events.forEach(event => {
+                const eventDate = new Date(event.date);
+                if (isSameMonth(eventDate, currentMonth)) {
+                    const eventKey = `event-${event.id}`;
+                    newModifiers[eventKey] = eventDate;
+                    newModifierStyles[eventKey] = {
+                        textDecoration: 'underline',
+                        textDecorationColor: eventCategoryColors[event.category],
+                    };
+                }
+            });
+
             setModifiers(newModifiers);
             setModifierStyles(newModifierStyles);
-            
-            if(yearDateRange?.from && !selectedYear) { // Only set month if year changes
-                setCurrentMonth(startOfMonth(yearDateRange.from));
-            }
         }
-    }, [selectedYear, yearDateRange, termColorMap]);
+    }, [selectedYear, yearDateRange, termColorMap, events, currentMonth]);
 
     const handleYearChange = (yearValue: string) => {
         const year = academicYears.find(y => y.year === yearValue);
         setSelectedYear(year);
+        if (year?.terms?.length) {
+            setCurrentMonth(startOfMonth(new Date(year.terms[0].startDate)));
+        }
     };
 
     const handleAddEvent = (event: Omit<CalendarEvent, 'id'>) => {
@@ -177,7 +190,7 @@ export function AcademicCalendar() {
             return (
                 <Tooltip>
                     <TooltipTrigger asChild className="w-full h-full flex items-center justify-center relative">
-                         <div className="relative w-full h-full flex items-center justify-center">
+                         <div>
                             <span>{format(props.date, 'd')}</span>
                             <Dot className="absolute bottom-0 text-primary h-6 w-6 -mb-2" />
                         </div>
@@ -198,6 +211,11 @@ export function AcademicCalendar() {
         return <span>{format(props.date, 'd')}</span>;
     }, [events]);
 
+    const monthlyEvents = useMemo(() => {
+        return events
+            .filter(event => isSameMonth(new Date(event.date), currentMonth))
+            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }, [events, currentMonth]);
     
     if (!selectedYear) {
         return <div>Loading academic calendar...</div>;
@@ -209,7 +227,7 @@ export function AcademicCalendar() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle>Academic Calendar for {selectedYear.year}</CardTitle>
-                        <CardDescription>Visual representation of the school's academic terms and events. Click a date to add an event.</CardDescription>
+                        <CardDescription>Click a date to add an event.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                         <Select onValueChange={handleYearChange} value={selectedYear.year}>
@@ -226,38 +244,60 @@ export function AcademicCalendar() {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="flex flex-col items-center">
-                <TooltipProvider>
-                    <Calendar
-                        month={currentMonth}
-                        onMonthChange={setCurrentMonth}
-                        modifiers={modifiers}
-                        modifiersStyles={modifierStyles}
-                        numberOfMonths={3}
-                        pagedNavigation
-                        fromMonth={yearDateRange?.from}
-                        toMonth={yearDateRange?.to}
-                        disabled={!yearDateRange || { before: yearDateRange.from, after: yearDateRange.to }}
-                        className="w-full"
-                        onDayClick={handleDayClick}
-                        components={{
-                            DayContent: DayContentWithEvents,
-                        }}
-                    />
-                </TooltipProvider>
-                <div className="flex flex-wrap gap-4 mt-4">
-                    {selectedYear.terms.map((term) => (
-                        <div key={term.name} className="flex items-center gap-2 text-sm">
-                            <span className="h-4 w-4 rounded-sm" style={{ backgroundColor: termColorMap.get(term.name) }}></span>
-                            <span>{term.name}</span>
+            <CardContent className="grid lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                    <TooltipProvider>
+                        <Calendar
+                            month={currentMonth}
+                            onMonthChange={setCurrentMonth}
+                            modifiers={modifiers}
+                            modifiersStyles={modifierStyles}
+                            numberOfMonths={1}
+                            fromMonth={yearDateRange?.from}
+                            toMonth={yearDateRange?.to}
+                            disabled={!yearDateRange || { before: yearDateRange.from, after: yearDateRange.to }}
+                            className="p-0"
+                            onDayClick={handleDayClick}
+                            components={{
+                                DayContent: DayContentWithEvents,
+                            }}
+                        />
+                    </TooltipProvider>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4">
+                        {selectedYear.terms.map((term) => (
+                            <div key={term.name} className="flex items-center gap-2 text-sm">
+                                <span className="h-4 w-4 rounded-sm" style={{ backgroundColor: termColorMap.get(term.name) }}></span>
+                                <span>{term.name}</span>
+                            </div>
+                        ))}
+                        {Object.entries(eventCategoryColors).map(([category, color]) => (
+                            <div key={category} className="flex items-center gap-2 text-sm">
+                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></div>
+                                <span>{category}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="lg:col-span-1">
+                    <h3 className="text-lg font-semibold mb-4">Events in {format(currentMonth, 'MMMM yyyy')}</h3>
+                     <ScrollArea className="h-96">
+                        <div className="space-y-4 pr-4">
+                            {monthlyEvents.length > 0 ? monthlyEvents.map(event => (
+                                <div key={event.id} className="flex items-start gap-3">
+                                    <div className="flex flex-col items-center">
+                                        <div className="font-bold text-lg">{format(new Date(event.date), 'dd')}</div>
+                                        <div className="text-xs text-muted-foreground -mt-1">{format(new Date(event.date), 'MMM')}</div>
+                                    </div>
+                                    <div className="flex-1 border-l-2 pl-3" style={{borderColor: eventCategoryColors[event.category]}}>
+                                        <p className="font-medium">{event.title}</p>
+                                        <p className="text-sm text-muted-foreground">{event.category}</p>
+                                    </div>
+                                </div>
+                            )) : (
+                                <p className="text-sm text-muted-foreground">No events for this month.</p>
+                            )}
                         </div>
-                    ))}
-                    {Object.entries(eventCategoryColors).map(([category, color]) => (
-                        <div key={category} className="flex items-center gap-2 text-sm">
-                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></div>
-                            <span>{category}</span>
-                        </div>
-                    ))}
+                    </ScrollArea>
                 </div>
             </CardContent>
             <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
