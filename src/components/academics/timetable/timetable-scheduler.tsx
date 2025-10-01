@@ -190,7 +190,6 @@ export function TimetableScheduler() {
                                                                 <SelectValue placeholder="Subject" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="">None</SelectItem>
                                                                 {classSubjects.map(sub => <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>)}
                                                             </SelectContent>
                                                         </Select>
@@ -203,7 +202,6 @@ export function TimetableScheduler() {
                                                                 <SelectValue placeholder="Teacher" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                 <SelectItem value="">None</SelectItem>
                                                                 {availableTeachers.map(t => <SelectItem key={t.staff_id} value={t.staff_id}>{t.first_name} {t.last_name}</SelectItem>)}
                                                             </SelectContent>
                                                         </Select>
