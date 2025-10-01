@@ -275,8 +275,8 @@ export function AcademicCalendar() {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="grid lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
+            <CardContent className="grid lg:grid-cols-5 gap-8">
+                <div className="lg:col-span-3">
                     <TooltipProvider>
                         <Calendar
                             month={currentMonth}
@@ -309,7 +309,7 @@ export function AcademicCalendar() {
                         ))}
                     </div>
                 </div>
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-2">
                     <h3 className="text-lg font-semibold mb-4">Events in {format(currentMonth, 'MMMM yyyy')}</h3>
                      <ScrollArea className="h-96">
                         <div className="space-y-4 pr-4">
