@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getAcademicYears, getCalendarEvents, addCalendarEvent, CalendarEvent } from '@/lib/store';
 import { AcademicYear, Term, CalendarEventCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,11 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, PlusCircle, Dot, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Dot } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
+import { DayContent, DayProps } from 'react-day-picker';
 
 type Modifier = {
     [key: string]: Date | Date[] | { from: Date; to: Date } | ((date: Date) => boolean);
@@ -30,10 +31,14 @@ const eventCategoryColors: Record<CalendarEventCategory, string> = {
     'Other': 'hsl(var(--chart-5))',
 };
 
-function AddEventForm({ onSave }: { onSave: (event: Omit<CalendarEvent, 'id'>) => void }) {
+function AddEventForm({ onSave, selectedDate }: { onSave: (event: Omit<CalendarEvent, 'id'>) => void, selectedDate?: Date }) {
     const [title, setTitle] = useState('');
-    const [date, setDate] = useState<Date | undefined>();
+    const [date, setDate] = useState<Date | undefined>(selectedDate);
     const [category, setCategory] = useState<CalendarEventCategory>('School Event');
+
+    useEffect(() => {
+        setDate(selectedDate);
+    }, [selectedDate]);
     
     const handleSave = () => {
         if (title && date) {
@@ -84,22 +89,23 @@ export function AcademicCalendar() {
     const [modifierStyles, setModifierStyles] = useState({});
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+    const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState<Date | undefined>();
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const fetchData = () => {
+    const fetchData = useCallback(() => {
         const years = getAcademicYears();
         setAcademicYears(years);
         const activeYear = years.find(y => y.status === 'Active') || years[0];
         if (activeYear) {
-            setSelectedYear(activeYear);
+            setSelectedYear(year => year || activeYear); // Only set if not already set
         }
         setEvents(getCalendarEvents());
-    };
+    }, []);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const { yearDateRange, termColorMap } = useMemo(() => {
         if (!selectedYear?.terms?.length) {
@@ -136,7 +142,7 @@ export function AcademicCalendar() {
             setModifiers(newModifiers);
             setModifierStyles(newModifierStyles);
             
-            if(yearDateRange?.from) {
+            if(yearDateRange?.from && !selectedYear) { // Only set month if year changes
                 setCurrentMonth(startOfMonth(yearDateRange.from));
             }
         }
@@ -158,9 +164,40 @@ export function AcademicCalendar() {
         });
     };
 
-    const eventsByDay = (day: Date) => {
-        return events.filter(event => isSameDay(new Date(event.date), day));
+    const handleDayClick = (day: Date, modifiers: { disabled?: boolean }) => {
+        if (modifiers.disabled) return;
+        setSelectedDateForNewEvent(day);
+        setIsAddEventOpen(true);
     };
+
+    const DayContentWithEvents = useCallback((props: DayProps) => {
+        const dailyEvents = events.filter(event => isSameDay(new Date(event.date), props.date));
+        
+        if (dailyEvents.length > 0) {
+            return (
+                <Tooltip>
+                    <TooltipTrigger className="w-full h-full flex items-center justify-center relative">
+                         <div className="relative w-full h-full flex items-center justify-center">
+                            <span>{format(props.date, 'd')}</span>
+                            <Dot className="absolute bottom-0 text-primary h-6 w-6 -mb-2" />
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <div className="space-y-1">
+                            {dailyEvents.map(event => (
+                                <div key={event.id} className="flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: eventCategoryColors[event.category] }} />
+                                    <p>{event.title}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </TooltipContent>
+                </Tooltip>
+            );
+        }
+        return <span>{format(props.date, 'd')}</span>;
+    }, [events]);
+
     
     if (!selectedYear) {
         return <div>Loading academic calendar...</div>;
@@ -172,7 +209,7 @@ export function AcademicCalendar() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle>Academic Calendar for {selectedYear.year}</CardTitle>
-                        <CardDescription>Visual representation of the school's academic terms and events.</CardDescription>
+                        <CardDescription>Visual representation of the school's academic terms and events. Click a date to add an event.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                         <Select onValueChange={handleYearChange} value={selectedYear.year}>
@@ -185,17 +222,7 @@ export function AcademicCalendar() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="sm"><PlusCircle className="mr-2"/> Add Event</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add New Calendar Event</DialogTitle>
-                                </DialogHeader>
-                                <AddEventForm onSave={handleAddEvent} />
-                            </DialogContent>
-                        </Dialog>
+                        <Button size="sm" onClick={() => { setSelectedDateForNewEvent(undefined); setIsAddEventOpen(true); }}><PlusCircle className="mr-2"/> Add Event</Button>
                     </div>
                 </div>
             </CardHeader>
@@ -212,33 +239,9 @@ export function AcademicCalendar() {
                         toMonth={yearDateRange?.to}
                         disabled={!yearDateRange || { before: yearDateRange.from, after: yearDateRange.to }}
                         className="w-full"
+                        onDayClick={handleDayClick}
                         components={{
-                            DayContent: ({ date, ...props }) => {
-                                const dailyEvents = eventsByDay(date);
-                                if (dailyEvents.length > 0) {
-                                    return (
-                                        <Tooltip>
-                                            <TooltipTrigger className="w-full h-full flex items-center justify-center relative">
-                                                <div {...props.props} className="relative w-full h-full flex items-center justify-center">
-                                                    <span>{format(date, 'd')}</span>
-                                                    <Dot className="absolute bottom-0 text-primary h-6 w-6" />
-                                                </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <div className="space-y-1">
-                                                    {dailyEvents.map(event => (
-                                                        <div key={event.id} className="flex items-center gap-2">
-                                                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: eventCategoryColors[event.category] }} />
-                                                            <p>{event.title}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    );
-                                }
-                                return <div {...props.props}>{format(date, 'd')}</div>
-                            }
+                            DayContent: DayContentWithEvents,
                         }}
                     />
                 </TooltipProvider>
@@ -257,6 +260,15 @@ export function AcademicCalendar() {
                     ))}
                 </div>
             </CardContent>
+            <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Calendar Event</DialogTitle>
+                        {selectedDateForNewEvent && <DialogDescription>Adding event for {format(selectedDateForNewEvent, 'PPP')}.</DialogDescription>}
+                    </DialogHeader>
+                    <AddEventForm onSave={handleAddEvent} selectedDate={selectedDateForNewEvent}/>
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 }
