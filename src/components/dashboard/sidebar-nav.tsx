@@ -101,7 +101,6 @@ const menuItems: Record<Role, NavItem[]> = {
       items: [
         { href: '/academics/calendar', label: 'Academic Calendar' },
         { href: '/academics/classes', label: 'Class Subjects' },
-        { href: '/academics/assignments', label: 'Assignments' },
         { href: '/academics/grading', label: 'Score Entry' },
         { href: '/academics/settings', label: 'Academic Settings' },
         { href: '/academics/timetable', label: 'Timetable' },
