@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import {
@@ -50,6 +48,7 @@ import {
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
 import { SchoolProfileData } from '@/components/settings/school-profile-settings';
+import { FullSchedule } from '@/components/academics/timetable/timetable-scheduler';
 
 
 const USERS_KEY = 'campusconnect_users';
@@ -62,6 +61,7 @@ const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 const SCHOOL_KEY = 'campusconnect_school';
 const FEE_STRUCTURES_KEY = 'campusconnect_fee_structures';
 const TERMLY_BILLS_KEY = 'campusconnect_termly_bills';
+const TIMETABLE_KEY = 'campusconnect_timetable';
 
 // Settings Keys
 const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
@@ -407,7 +407,10 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(TERMLY_BILLS_KEY)) {
         saveToStorage(TERMLY_BILLS_KEY, []);
     }
-    // Initialize settings
+    if (!window.localStorage.getItem(TIMETABLE_KEY)) {
+        saveToStorage(TIMETABLE_KEY, {});
+    }
+    // Settings Keys
     if (!window.localStorage.getItem(ACADEMIC_YEARS_KEY)) {
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
     }
@@ -463,6 +466,10 @@ export const initializeStore = () => {
     }
   }
 };
+
+// Timetable functions
+export const getTimetable = (): FullSchedule => getFromStorage<FullSchedule>(TIMETABLE_KEY, {});
+export const saveTimetable = (schedule: FullSchedule): void => saveToStorage(TIMETABLE_KEY, schedule);
 
 // School Profile Functions
 export const getSchoolProfile = (): SchoolProfileData | null => {
@@ -1707,6 +1714,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 
