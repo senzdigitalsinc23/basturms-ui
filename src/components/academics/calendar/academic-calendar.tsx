@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, PlusCircle, Dot, Edit, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Dot, Edit, Trash2, Bell } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -254,7 +255,7 @@ export function AcademicCalendar() {
 
     return (
         <Card>
-            <CardHeader>
+            <CardHeader className="print:hidden">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle>Academic Calendar for {selectedYear.year}</CardTitle>
@@ -351,6 +352,15 @@ export function AcademicCalendar() {
                             )}
                         </div>
                     </ScrollArea>
+                    <Card className="mt-4 bg-amber-50 border-amber-200">
+                        <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2">
+                           <Bell className="h-5 w-5 text-amber-600" />
+                           <CardTitle className="text-base text-amber-800">Upcoming Reminders</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-amber-700">Alert: 'End of Term Exams' with Admin User is scheduled in 10 minutes.</p>
+                        </CardContent>
+                    </Card>
                 </div>
             </CardContent>
             <Dialog open={isEventFormOpen} onOpenChange={setIsEventFormOpen}>

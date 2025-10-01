@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getSubjects, addClassSubject, getStaff, getStaffAppointmentHistory, saveTimetable, getTimetable } from '@/lib/store';
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
+import { Save, Printer } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const TIME_SLOTS = [
@@ -78,15 +79,18 @@ export function TimetableScheduler() {
             if (!entry) {
                 entry = { subjectId: '', teacherId: '' };
             }
-
-            // If subject is changed, reset teacher
-            if (field === 'subjectId' && entry.subjectId !== value) {
-                entry.teacherId = '';
-            }
             
-            entry[field] = value;
+            const isClearing = value === 'none';
 
-            newSchedule[selectedClass][day][timeSlot] = entry;
+            if (isClearing) {
+                 newSchedule[selectedClass][day][timeSlot] = null;
+            } else {
+                 if (field === 'subjectId' && entry.subjectId !== value) {
+                    entry.teacherId = '';
+                }
+                entry[field] = value;
+                newSchedule[selectedClass][day][timeSlot] = entry;
+            }
 
             return newSchedule;
         });
@@ -131,10 +135,14 @@ export function TimetableScheduler() {
             description: "The school timetable has been successfully updated."
         });
     };
+    
+    const handlePrint = () => {
+        window.print();
+    };
 
     return (
-        <Card>
-            <CardHeader>
+        <Card className="print:shadow-none print:border-none">
+            <CardHeader className="print:hidden">
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle>Class Timetable</CardTitle>
@@ -149,6 +157,9 @@ export function TimetableScheduler() {
                                 {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                        <Button onClick={handlePrint} variant="outline">
+                            <Printer className="mr-2" /> Print
+                        </Button>
                         <Button onClick={handleSave}>
                             <Save className="mr-2" />
                             Save Timetable
@@ -158,62 +169,73 @@ export function TimetableScheduler() {
             </CardHeader>
             <CardContent>
                 {selectedClass ? (
-                    <div className="rounded-md border overflow-x-auto">
-                        <Table className="min-w-full">
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[150px]">Time Slot</TableHead>
-                                    {DAYS.map(day => <TableHead key={day}>{day}</TableHead>)}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {TIME_SLOTS.map((slot, index) => (
-                                    <TableRow key={slot} className={index === 3 || index === 7 ? 'bg-muted/50' : ''}>
-                                        <TableCell className="font-medium">{slot}</TableCell>
-                                        {DAYS.map(day => {
-                                            if (index === 3) return index === 3 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold">Short Break</TableCell> : null
-                                            if (index === 7) return index === 7 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold">Lunch Break</TableCell> : null
-                                            
-                                            if (index === 3 || index === 7) return null;
-
-                                            const currentEntry = fullSchedule[selectedClass]?.[day]?.[slot];
-                                            const availableTeachers = getAvailableTeachers(day, slot, currentEntry?.subjectId);
-
-                                            return (
-                                                <TableCell key={day} className="p-1">
-                                                    <div className="space-y-1">
-                                                        <Select
-                                                            value={currentEntry?.subjectId || ''}
-                                                            onValueChange={(value) => handleScheduleChange(day, slot, 'subjectId', value)}
-                                                        >
-                                                            <SelectTrigger className="h-8 text-xs">
-                                                                <SelectValue placeholder="Subject" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {classSubjects.map(sub => <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>)}
-                                                            </SelectContent>
-                                                        </Select>
-                                                         <Select
-                                                            value={currentEntry?.teacherId || ''}
-                                                            onValueChange={(value) => handleScheduleChange(day, slot, 'teacherId', value)}
-                                                            disabled={!currentEntry?.subjectId}
-                                                        >
-                                                            <SelectTrigger className="h-8 text-xs">
-                                                                <SelectValue placeholder="Teacher" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {availableTeachers.map(t => <SelectItem key={t.staff_id} value={t.staff_id}>{t.first_name} {t.last_name}</SelectItem>)}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </TableCell>
-                                            )
-                                        })}
+                    <>
+                        <div className="text-center mb-4 hidden print:block">
+                            <h1 className="text-2xl font-bold">{classes.find(c => c.id === selectedClass)?.name} - Weekly Timetable</h1>
+                        </div>
+                        <div className="rounded-md border overflow-x-auto">
+                            <Table className="min-w-full">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[150px] font-bold text-black">Time Slot</TableHead>
+                                        {DAYS.map(day => <TableHead key={day} className="font-bold text-black">{day}</TableHead>)}
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                </TableHeader>
+                                <TableBody>
+                                    {TIME_SLOTS.map((slot, index) => (
+                                        <TableRow key={slot} className={index === 3 || index === 7 ? 'bg-muted/50 print:bg-gray-200' : ''}>
+                                            <TableCell className="font-medium">{slot}</TableCell>
+                                            {DAYS.map(day => {
+                                                if (index === 3) return index === 3 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold">Short Break</TableCell> : null
+                                                if (index === 7) return index === 7 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold">Lunch Break</TableCell> : null
+                                                
+                                                if (index === 3 || index === 7) return null;
+
+                                                const currentEntry = fullSchedule[selectedClass]?.[day]?.[slot];
+                                                const availableTeachers = getAvailableTeachers(day, slot, currentEntry?.subjectId);
+
+                                                return (
+                                                    <TableCell key={day} className="p-1 align-top print:p-2">
+                                                        <div className="space-y-1 hidden print:block">
+                                                            <p className="font-semibold text-sm">{subjects.find(s => s.id === currentEntry?.subjectId)?.name || '---'}</p>
+                                                            <p className="text-xs text-gray-600">{teachers.find(t => t.staff_id === currentEntry?.teacherId)?.first_name || '---'}</p>
+                                                        </div>
+                                                        <div className="space-y-1 print:hidden">
+                                                            <Select
+                                                                value={currentEntry?.subjectId || ''}
+                                                                onValueChange={(value) => handleScheduleChange(day, slot, 'subjectId', value)}
+                                                            >
+                                                                <SelectTrigger className="h-8 text-xs">
+                                                                    <SelectValue placeholder="Subject" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="none">None</SelectItem>
+                                                                    {classSubjects.map(sub => <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <Select
+                                                                value={currentEntry?.teacherId || ''}
+                                                                onValueChange={(value) => handleScheduleChange(day, slot, 'teacherId', value)}
+                                                                disabled={!currentEntry?.subjectId}
+                                                            >
+                                                                <SelectTrigger className="h-8 text-xs">
+                                                                    <SelectValue placeholder="Teacher" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="none">None</SelectItem>
+                                                                    {availableTeachers.map(t => <SelectItem key={t.staff_id} value={t.staff_id}>{t.first_name} {t.last_name}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </TableCell>
+                                                )
+                                            })}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </>
                 ) : (
                     <div className="flex items-center justify-center h-48 text-muted-foreground">
                         <p>Please select a class to start building the timetable.</p>

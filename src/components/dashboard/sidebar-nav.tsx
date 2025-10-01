@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -296,7 +297,7 @@ export function SidebarNav() {
     <Sidebar
       collapsible="icon"
       variant="sidebar"
-      className="border-r"
+      className="border-r print:hidden"
     >
         <SidebarHeader>
             <Link href="/dashboard" className="flex items-center gap-3 font-bold text-lg">
