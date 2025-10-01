@@ -56,7 +56,7 @@ function AddEventForm({ onSave }: { onSave: (event: Omit<CalendarEvent, 'id'>) =
                             {date ? format(date, 'PPP') : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 5} initialFocus /></PopoverContent>
                 </Popover>
             </div>
             <div className="space-y-2">
