@@ -27,6 +27,7 @@ import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
 import { addStaffAppointmentHistory } from '@/lib/store';
+import { Checkbox } from '../ui/checkbox';
 
 const MAX_STEPS = 6;
 
@@ -72,6 +73,7 @@ const formSchema = z.object({
   // Appointment History
   appointment_date: z.date({ required_error: 'Appointment date is required.' }),
   roles: z.array(z.string()).min(1, 'At least one role is required.'),
+  is_class_teacher_for_class_id: z.string().optional(),
   class_assigned: z.array(z.string()).optional(),
   subjects_assigned: z.array(z.string()).optional(),
   appointment_status: z.enum(ALL_APPOINTMENT_STATUSES, { required_error: 'Appointment status is required.' }),
@@ -218,6 +220,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
         appointment_status: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.appointment_status || 'Appointed',
         class_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.class_assigned,
         subjects_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.subjects_assigned,
+        is_class_teacher_for_class_id: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.is_class_teacher_for_class_id,
         academic_history: storeGetStaffAcademicHistory().filter(h => h.staff_id === defaultValues.staff_id),
         documents: getStaffDocuments().filter(d => d.staff_id === defaultValues.staff_id).map(d => ({name: d.document_name, file: d.file})),
     } : {
@@ -247,10 +250,11 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     }
   });
 
-  const { handleSubmit, trigger, watch } = methods;
+  const { handleSubmit, trigger, watch, control } = methods;
   const appointmentDate = watch('appointment_date');
   const roles = watch('roles');
   const isTeacher = roles?.includes('Teacher');
+  const assignedClasses = watch('class_assigned');
 
   useEffect(() => {
     setClasses(getClasses());
@@ -317,30 +321,39 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
         address: data.address,
     };
     
-    onSubmit({staffData, academic_history: data.academic_history, documents: data.documents, appointment_history: {
-        staff_id: isEditMode && defaultValues ? defaultValues.staff_id : generatedStaffId,
-        appointment_date: data.appointment_date.toISOString(),
-        roles: data.roles as Role[],
-        class_assigned: data.class_assigned,
-        subjects_assigned: data.subjects_assigned,
-        appointment_status: data.appointment_status,
-    }});
+    try {
+        onSubmit({staffData, academic_history: data.academic_history, documents: data.documents, appointment_history: {
+            staff_id: isEditMode && defaultValues ? defaultValues.staff_id : generatedStaffId,
+            appointment_date: data.appointment_date.toISOString(),
+            roles: data.roles as Role[],
+            class_assigned: data.class_assigned,
+            subjects_assigned: data.subjects_assigned,
+            is_class_teacher_for_class_id: data.is_class_teacher_for_class_id,
+            appointment_status: data.appointment_status,
+        }});
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsLoading(false);
-    
-    const message = data.appointment_status === 'Declined'
-      ? `${data.first_name} ${data.last_name}'s appointment has been declined and their record stored.`
-      : `${data.first_name} ${data.last_name} has been ${isEditMode ? 'updated' : 'added'}.`;
-      
-    toast({
-        title: isEditMode ? 'Staff Member Updated' : 'Staff Member Processed',
-        description: message,
-    });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const message = data.appointment_status === 'Declined'
+          ? `${data.first_name} ${data.last_name}'s appointment has been declined and their record stored.`
+          : `${data.first_name} ${data.last_name} has been ${isEditMode ? 'updated' : 'added'}.`;
+          
+        toast({
+            title: isEditMode ? 'Staff Member Updated' : 'Staff Member Processed',
+            description: message,
+        });
 
-    if (!isEditMode) {
-      router.push(`/staff-management`);
+        if (!isEditMode) {
+          router.push(`/staff-management`);
+        }
+    } catch (e: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Error creating staff',
+            description: e.message || 'An unexpected error occurred.',
+        });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -515,8 +528,8 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                                 )}
                             />
                         </div>
-                        {isTeacher && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
+                        {isTeacher && <div className="space-y-4">
+                             <FormField
                                 control={methods.control}
                                 name="class_assigned"
                                 render={({ field }) => (
@@ -573,6 +586,27 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                                     </FormItem>
                                 )}
                             />
+                            {assignedClasses && assignedClasses.length > 0 && (
+                                <FormField
+                                    control={control}
+                                    name="is_class_teacher_for_class_id"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Set as Class Teacher for</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a class to be the class teacher for..." /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="">None</SelectItem>
+                                                    {classes.filter(c => assignedClasses.includes(c.id)).map(c => (
+                                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
                             <FormField
                                 control={methods.control}
                                 name="subjects_assigned"
@@ -682,6 +716,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                             {isTeacher && <>
                                 <PreviewItem label="Classes Assigned" value={<div className="flex flex-wrap gap-1">{watch('class_assigned')?.map(cId => <Badge key={cId} variant="outline">{classes.find(c => c.id === cId)?.name}</Badge>)}</div>} />
                                 <PreviewItem label="Subjects Assigned" value={<div className="flex flex-wrap gap-1">{watch('subjects_assigned')?.map(sId => <Badge key={sId} variant="outline">{subjects.find(s => s.id === sId)?.name}</Badge>)}</div>} />
+                                <PreviewItem label="Class Teacher For" value={classes.find(c => c.id === watch('is_class_teacher_for_class_id'))?.name} />
                             </>}
                         </div>
                         {watch('academic_history') && watch('academic_history')!.length > 0 && <>

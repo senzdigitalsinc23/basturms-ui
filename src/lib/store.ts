@@ -1468,16 +1468,19 @@ export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFr
 export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: Omit<StaffAppointmentHistory, 'staff_id'>, creatorId: string): Staff | null => {
     const staffList = getStaff();
     const declinedStaffList = getFromStorage<Staff[]>(DECLINED_STAFF_KEY, []);
+    const allStaff = [...staffList, ...declinedStaffList];
 
-    const existingStaff = staffList.find(s => s.email === staffData.email || s.staff_id === staffData.staff_id);
-    if (existingStaff) {
-        console.error("Staff with this email or ID already exists in the active list.");
-        return null;
+    if (allStaff.some(s => s.email === staffData.email)) {
+        throw new Error("A staff member with this email already exists.");
     }
-    const existingDeclinedStaff = declinedStaffList.find(s => s.email === staffData.email || s.staff_id === staffData.staff_id);
-    if (existingDeclinedStaff) {
-        console.error("Staff with this email or ID already exists in the declined list.");
-        return null;
+    if (allStaff.some(s => s.phone === staffData.phone)) {
+        throw new Error("A staff member with this phone number already exists.");
+    }
+    if (staffData.id_no && allStaff.some(s => s.id_no === staffData.id_no)) {
+        throw new Error("A staff member with this ID number already exists.");
+    }
+    if (staffData.snnit_no && allStaff.some(s => s.snnit_no === staffData.snnit_no)) {
+        throw new Error("A staff member with this SSNIT number already exists.");
     }
 
     if (appointmentHistory.appointment_status === 'Declined') {
@@ -1489,7 +1492,7 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: 
             action: 'Decline Staff Appointment',
             details: `Appointment for ${declinedStaff.first_name} ${declinedStaff.last_name} was declined.`
         });
-        return null; // Return null as they are not an active staff member
+        return null;
     }
 
     const userToCreate = {
@@ -1497,7 +1500,7 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: 
         email: staffData.email,
         username: staffData.email,
         password: `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`,
-        role: staffData.roles[0], // Use the first role for user creation
+        role: staffData.roles[0],
         status: 'active' as 'active' | 'frozen',
     };
     const newUser = addUser(userToCreate);
@@ -1714,6 +1717,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 

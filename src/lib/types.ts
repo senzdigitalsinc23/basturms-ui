@@ -414,6 +414,7 @@ export interface StaffAppointmentHistory {
     roles: Role[];
     class_assigned?: string[]; // Class ID
     subjects_assigned?: string[];
+    is_class_teacher_for_class_id?: string;
     appointment_status: AppointmentStatus;
 }
 

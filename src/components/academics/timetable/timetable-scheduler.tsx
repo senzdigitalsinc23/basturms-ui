@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Printer } from 'lucide-react';
+import { Save, Printer, RefreshCw } from 'lucide-react';
+import { getRandomElement } from '@/lib/utils';
+
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const TIME_SLOTS = [
@@ -62,8 +64,50 @@ export function TimetableScheduler() {
 
     }, []);
 
-    const handleClassChange = (classId: string) => {
+    const autoFillSchedule = (classId: string) => {
+        const classSubjects = getClassSubjects(classId);
+        if (classSubjects.length === 0) return;
+
+        let newScheduleForClass: Record<string, Record<string, ScheduleEntry | null>> = {};
+
+        DAYS.forEach(day => {
+            newScheduleForClass[day] = {};
+            TIME_SLOTS.forEach((slot, index) => {
+                if (index === 3 || index === 7) return; // Skip breaks
+
+                // Find a random subject for the class
+                const randomSubject = getRandomElement(classSubjects);
+                if (randomSubject) {
+                    // Find teachers for this subject who are available at this time
+                    const availableTeachers = getAvailableTeachers(day, slot, randomSubject.id, classId);
+                    const randomTeacher = getRandomElement(availableTeachers);
+
+                    if (randomTeacher) {
+                        newScheduleForClass[day][slot] = {
+                            subjectId: randomSubject.id,
+                            teacherId: randomTeacher.staff_id,
+                        };
+                    } else {
+                         newScheduleForClass[day][slot] = null;
+                    }
+                } else {
+                    newScheduleForClass[day][slot] = null;
+                }
+            });
+        });
+
+        setFullSchedule(prev => ({
+            ...prev,
+            [classId]: newScheduleForClass,
+        }));
+    };
+    
+     const handleClassChange = (classId: string) => {
         setSelectedClass(classId);
+        // Only autofill if there's no schedule for this class yet
+        if (!fullSchedule[classId]) {
+            autoFillSchedule(classId);
+        }
     };
 
     const handleScheduleChange = (day: string, timeSlot: string, field: 'subjectId' | 'teacherId', value: string) => {
@@ -103,12 +147,12 @@ export function TimetableScheduler() {
         return subjects.filter(s => subjectIds.includes(s.id));
     };
     
-    const getAvailableTeachers = (day: string, timeSlot: string, subjectId: string | undefined): Staff[] => {
+    const getAvailableTeachers = (day: string, timeSlot: string, subjectId: string | undefined, currentClassId: string): Staff[] => {
         const bookedTeacherIds = new Set<string>();
         
         // Find all teachers booked at this exact time slot in other classes
         for (const classId in fullSchedule) {
-            if (classId !== selectedClass) {
+            if (classId !== currentClassId) {
                 const entry = fullSchedule[classId]?.[day]?.[timeSlot];
                 if (entry && entry.teacherId) {
                     bookedTeacherIds.add(entry.teacherId);
@@ -157,6 +201,11 @@ export function TimetableScheduler() {
                                 {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                         {selectedClass && (
+                            <Button onClick={() => autoFillSchedule(selectedClass)} variant="outline" size="sm">
+                                <RefreshCw className="mr-2"/> Autofill
+                            </Button>
+                         )}
                         <Button onClick={handlePrint} variant="outline">
                             <Printer className="mr-2" /> Print
                         </Button>
@@ -192,7 +241,7 @@ export function TimetableScheduler() {
                                                 if (index === 3 || index === 7) return null;
 
                                                 const currentEntry = fullSchedule[selectedClass]?.[day]?.[slot];
-                                                const availableTeachers = getAvailableTeachers(day, slot, currentEntry?.subjectId);
+                                                const availableTeachers = getAvailableTeachers(day, slot, currentEntry?.subjectId, selectedClass);
 
                                                 return (
                                                     <TableCell key={day} className="p-1 align-top print:p-2">
