@@ -176,7 +176,7 @@ export function AcademicCalendar() {
         if (dailyEvents.length > 0) {
             return (
                 <Tooltip>
-                    <TooltipTrigger className="w-full h-full flex items-center justify-center relative">
+                    <TooltipTrigger asChild className="w-full h-full flex items-center justify-center relative">
                          <div className="relative w-full h-full flex items-center justify-center">
                             <span>{format(props.date, 'd')}</span>
                             <Dot className="absolute bottom-0 text-primary h-6 w-6 -mb-2" />
