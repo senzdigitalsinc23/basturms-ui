@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getAcademicYears, getCalendarEvents, addCalendarEvent, CalendarEvent } from '@/lib/store';
 import { AcademicYear, Term, CalendarEventCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, PlusCircle, Dot } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Dot, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -101,32 +101,46 @@ export function AcademicCalendar() {
         fetchData();
     }, []);
 
+    const { yearDateRange, termColorMap } = useMemo(() => {
+        if (!selectedYear?.terms?.length) {
+            return { yearDateRange: undefined, termColorMap: new Map() };
+        }
+
+        const dates = selectedYear.terms.flatMap(term => [new Date(term.startDate), new Date(term.endDate)]);
+        const from = dates.reduce((a, b) => (a < b ? a : b));
+        const to = dates.reduce((a, b) => (a > b ? a : b));
+        
+        const termColors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
+        const colorMap = new Map(selectedYear.terms.map((term, index) => [term.name, termColors[index % termColors.length]]));
+
+        return { yearDateRange: { from, to }, termColorMap: colorMap };
+    }, [selectedYear]);
+
     useEffect(() => {
         if (selectedYear) {
             const newModifiers: Modifier = {};
             const newModifierStyles: Record<string, React.CSSProperties> = {};
-            const termColors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
-
-            selectedYear.terms.forEach((term, index) => {
-                const termKey = `term-${index}`;
+            
+            selectedYear.terms.forEach((term) => {
+                const termKey = `term-${term.name.replace(/\s/g, '-')}`;
                 newModifiers[termKey] = {
                     from: new Date(term.startDate),
                     to: new Date(term.endDate)
                 };
                 newModifierStyles[termKey] = {
                     color: 'white',
-                    backgroundColor: termColors[index % termColors.length],
+                    backgroundColor: termColorMap.get(term.name),
                 };
             });
             
             setModifiers(newModifiers);
             setModifierStyles(newModifierStyles);
             
-            if(selectedYear.terms.length > 0) {
-                setCurrentMonth(startOfMonth(new Date(selectedYear.terms[0].startDate)));
+            if(yearDateRange?.from) {
+                setCurrentMonth(startOfMonth(yearDateRange.from));
             }
         }
-    }, [selectedYear]);
+    }, [selectedYear, yearDateRange, termColorMap]);
 
     const handleYearChange = (yearValue: string) => {
         const year = academicYears.find(y => y.year === yearValue);
@@ -157,7 +171,7 @@ export function AcademicCalendar() {
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <CardTitle>Academic Calendar</CardTitle>
+                        <CardTitle>Academic Calendar for {selectedYear.year}</CardTitle>
                         <CardDescription>Visual representation of the school's academic terms and events.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
@@ -194,6 +208,9 @@ export function AcademicCalendar() {
                         modifiersStyles={modifierStyles}
                         numberOfMonths={3}
                         pagedNavigation
+                        fromMonth={yearDateRange?.from}
+                        toMonth={yearDateRange?.to}
+                        disabled={!yearDateRange || { before: yearDateRange.from, after: yearDateRange.to }}
                         className="w-full"
                         components={{
                             DayContent: ({ date, ...props }) => {
@@ -226,16 +243,12 @@ export function AcademicCalendar() {
                     />
                 </TooltipProvider>
                 <div className="flex flex-wrap gap-4 mt-4">
-                    {selectedYear.terms.map((term, index) => {
-                         const termKey = `term-${index}`;
-                         const style = (modifierStyles as any)[termKey] || {};
-                        return (
-                            <div key={term.name} className="flex items-center gap-2 text-sm">
-                                <span className="h-4 w-4 rounded-sm" style={{ backgroundColor: style.backgroundColor }}></span>
-                                <span>{term.name}</span>
-                            </div>
-                        )
-                    })}
+                    {selectedYear.terms.map((term) => (
+                        <div key={term.name} className="flex items-center gap-2 text-sm">
+                            <span className="h-4 w-4 rounded-sm" style={{ backgroundColor: termColorMap.get(term.name) }}></span>
+                            <span>{term.name}</span>
+                        </div>
+                    ))}
                     {Object.entries(eventCategoryColors).map(([category, color]) => (
                         <div key={category} className="flex items-center gap-2 text-sm">
                             <div className="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></div>

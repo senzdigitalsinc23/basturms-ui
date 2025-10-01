@@ -12,7 +12,9 @@ export default function CalendarPage() {
             View the school's official calendar for all academic terms.
           </p>
         </div>
-        <AcademicCalendar />
+        <div className="w-full">
+            <AcademicCalendar />
+        </div>
       </div>
     </ProtectedRoute>
   );

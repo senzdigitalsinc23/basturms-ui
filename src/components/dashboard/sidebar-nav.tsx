@@ -127,6 +127,11 @@ const menuItems: Record<Role, NavItem[]> = {
       ]
     },
     {
+        href: '/parent-management',
+        label: 'Parent Management',
+        icon: Users,
+    },
+    {
       label: 'Financial Management',
       icon: Landmark,
       items: [
