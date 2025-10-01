@@ -38,6 +38,8 @@ export default function AddStaffPage() {
           }
       }
       
+      // The appointment history is now saved within addStaff, so this might be redundant,
+      // but let's ensure it's here for explicit clarity.
       addStaffAppointmentHistory({...data.appointment_history, staff_id: newStaff.staff_id});
     }
     

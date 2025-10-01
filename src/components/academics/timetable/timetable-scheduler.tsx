@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import { getRandomElement } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -21,6 +22,7 @@ const TIME_SLOTS = [
   '12:20 - 13:20', // Lunch Break
   '13:20 - 14:00', '14:00 - 14:40'
 ];
+const LOWER_PRIMARY_IDS = ['nur1', 'nur2', 'kg1', 'kg2', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
 
 export type ScheduleEntry = {
     subjectId: string;
@@ -33,6 +35,7 @@ export function TimetableScheduler() {
     const [classes, setClasses] = useState<Class[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [teachers, setTeachers] = useState<Staff[]>([]);
+    const [appointments, setAppointments] = useState<StaffAppointmentHistory[]>([]);
     const [teacherSubjectMap, setTeacherSubjectMap] = useState<Record<string, string[]>>({});
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
     const [fullSchedule, setFullSchedule] = useState<FullSchedule>({});
@@ -42,15 +45,16 @@ export function TimetableScheduler() {
         const classData = getClasses();
         const subjectData = getSubjects();
         const staffData = getStaff().filter(s => s.roles.includes('Teacher'));
-        const appointments = getStaffAppointmentHistory();
+        const appointmentData = getStaffAppointmentHistory();
 
         setClasses(classData);
         setSubjects(subjectData);
         setTeachers(staffData);
+        setAppointments(appointmentData);
 
         const newTeacherSubjectMap: Record<string, string[]> = {};
         staffData.forEach(teacher => {
-            const latestAppointment = appointments
+            const latestAppointment = appointmentData
                 .filter(a => a.staff_id === teacher.staff_id)
                 .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
             if (latestAppointment && latestAppointment.subjects_assigned) {
@@ -70,23 +74,34 @@ export function TimetableScheduler() {
         if (classSubjects.length === 0) return;
 
         let newScheduleForClass: Record<string, Record<string, ScheduleEntry | null>> = {};
+        
+        const isLowerPrimary = LOWER_PRIMARY_IDS.includes(classId);
+        let classTeacherId: string | undefined;
+
+        if (isLowerPrimary) {
+             const classTeacherAppointment = appointments.find(a => a.is_class_teacher_for_class_id === classId);
+             classTeacherId = classTeacherAppointment?.staff_id;
+        }
 
         DAYS.forEach(day => {
             newScheduleForClass[day] = {};
             TIME_SLOTS.forEach((slot, index) => {
                 if (index === 3 || index === 7) return; // Skip breaks
 
-                // Find a random subject for the class
                 const randomSubject = getRandomElement(classSubjects);
                 if (randomSubject) {
-                    // Find teachers for this subject who are available at this time
-                    const availableTeachers = getAvailableTeachers(day, slot, randomSubject.id, classId);
-                    const randomTeacher = getRandomElement(availableTeachers);
-
-                    if (randomTeacher) {
-                        newScheduleForClass[day][slot] = {
+                    let teacherToAssignId: string | undefined = classTeacherId;
+                    
+                    if (!isLowerPrimary) {
+                        const availableTeachers = getAvailableTeachers(day, slot, randomSubject.id, classId);
+                        const randomTeacher = getRandomElement(availableTeachers);
+                        teacherToAssignId = randomTeacher?.staff_id;
+                    }
+                    
+                    if (teacherToAssignId) {
+                         newScheduleForClass[day][slot] = {
                             subjectId: randomSubject.id,
-                            teacherId: randomTeacher.staff_id,
+                            teacherId: teacherToAssignId,
                         };
                     } else {
                          newScheduleForClass[day][slot] = null;
@@ -105,7 +120,6 @@ export function TimetableScheduler() {
     
      const handleClassChange = (classId: string) => {
         setSelectedClass(classId);
-        // Only autofill if there's no schedule for this class yet
         if (!fullSchedule[classId]) {
             autoFillSchedule(classId);
         }
@@ -128,7 +142,7 @@ export function TimetableScheduler() {
         if (!selectedClass) return;
 
         setFullSchedule(prev => {
-            const newSchedule = JSON.parse(JSON.stringify(prev)); // Deep copy
+            const newSchedule = JSON.parse(JSON.stringify(prev));
 
             if (!newSchedule[selectedClass]) newSchedule[selectedClass] = {};
             if (!newSchedule[selectedClass][day]) newSchedule[selectedClass][day] = {};
@@ -164,7 +178,6 @@ export function TimetableScheduler() {
     const getAvailableTeachers = (day: string, timeSlot: string, subjectId: string | undefined, currentClassId: string): Staff[] => {
         const bookedTeacherIds = new Set<string>();
         
-        // Find all teachers booked at this exact time slot in other classes
         for (const classId in fullSchedule) {
             if (classId !== currentClassId) {
                 const entry = fullSchedule[classId]?.[day]?.[timeSlot];
@@ -176,7 +189,6 @@ export function TimetableScheduler() {
 
         let availableTeachers = teachers.filter(t => !bookedTeacherIds.has(t.staff_id));
 
-        // If a subject is selected, further filter by teachers who teach that subject
         if (subjectId) {
             availableTeachers = availableTeachers.filter(t => teacherSubjectMap[t.staff_id]?.includes(subjectId));
         }
@@ -185,6 +197,10 @@ export function TimetableScheduler() {
     }
 
     const classSubjects = getClassSubjects(selectedClass);
+    const isLowerPrimary = selectedClass ? LOWER_PRIMARY_IDS.includes(selectedClass) : false;
+    const classTeacher = isLowerPrimary ? appointments.find(a => a.is_class_teacher_for_class_id === selectedClass) : null;
+    const classTeacherInfo = classTeacher ? teachers.find(t => t.staff_id === classTeacher.staff_id) : null;
+
 
     const handleSave = () => {
         saveTimetable(fullSchedule);
@@ -220,9 +236,21 @@ export function TimetableScheduler() {
                                 <Button onClick={() => autoFillSchedule(selectedClass)} variant="outline" size="sm">
                                     <RefreshCw className="mr-2"/> Autofill
                                 </Button>
-                                <Button onClick={handleClearSchedule} variant="destructive" size="sm">
-                                    <Trash2 className="mr-2"/> Clear
-                                </Button>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm"><Trash2 className="mr-2"/> Clear</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will clear the entire timetable for this class. You can use "Autofill" to generate a new one.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleClearSchedule}>Clear Timetable</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </>
                          )}
                         <Button onClick={handlePrint} variant="outline">
@@ -284,14 +312,20 @@ export function TimetableScheduler() {
                                                             <Select
                                                                 value={currentEntry?.teacherId || ''}
                                                                 onValueChange={(value) => handleScheduleChange(day, slot, 'teacherId', value)}
-                                                                disabled={!currentEntry?.subjectId}
+                                                                disabled={!currentEntry?.subjectId || (isLowerPrimary && !!classTeacher)}
                                                             >
                                                                 <SelectTrigger className="h-8 text-xs">
                                                                     <SelectValue placeholder="Teacher" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="none">None</SelectItem>
-                                                                    {availableTeachers.map(t => <SelectItem key={t.staff_id} value={t.staff_id}>{t.first_name} {t.last_name}</SelectItem>)}
+                                                                    {isLowerPrimary && classTeacherInfo ? (
+                                                                        <SelectItem value={classTeacherInfo.staff_id}>{classTeacherInfo.first_name} {classTeacherInfo.last_name}</SelectItem>
+                                                                    ) : (
+                                                                        <>
+                                                                            <SelectItem value="none">None</SelectItem>
+                                                                            {availableTeachers.map(t => <SelectItem key={t.staff_id} value={t.staff_id}>{t.first_name} {t.last_name}</SelectItem>)}
+                                                                        </>
+                                                                    )}
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>

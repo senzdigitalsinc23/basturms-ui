@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -1470,16 +1471,16 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: 
     const declinedStaffList = getFromStorage<Staff[]>(DECLINED_STAFF_KEY, []);
     const allStaff = [...staffList, ...declinedStaffList];
 
-    if (allStaff.some(s => s.email === staffData.email)) {
+    if (staffData.email && allStaff.some(s => s.email === staffData.email)) {
         throw new Error("A staff member with this email already exists.");
     }
-    if (allStaff.some(s => s.phone === staffData.phone)) {
+    if (staffData.phone && allStaff.some(s => s.phone === staffData.phone)) {
         throw new Error("A staff member with this phone number already exists.");
     }
-    if (staffData.id_no && allStaff.some(s => s.id_no === staffData.id_no)) {
+    if (staffData.id_no && allStaff.some(s => s.id_no && s.id_no === staffData.id_no)) {
         throw new Error("A staff member with this ID number already exists.");
     }
-    if (staffData.snnit_no && allStaff.some(s => s.snnit_no === staffData.snnit_no)) {
+    if (staffData.snnit_no && allStaff.some(s => s.snnit_no && s.snnit_no === staffData.snnit_no)) {
         throw new Error("A staff member with this SSNIT number already exists.");
     }
 
@@ -1717,6 +1718,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 
