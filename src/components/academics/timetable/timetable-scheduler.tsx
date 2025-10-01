@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getSubjects, addClassSubject, getStaff, getStaffAppointmentHistory, saveTimetable, getTimetable } from '@/lib/store';
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Printer, RefreshCw } from 'lucide-react';
+import { Save, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import { getRandomElement } from '@/lib/utils';
 
 
@@ -109,6 +110,19 @@ export function TimetableScheduler() {
             autoFillSchedule(classId);
         }
     };
+    
+    const handleClearSchedule = () => {
+        if (!selectedClass) return;
+        
+        const newSchedule = { ...fullSchedule };
+        delete newSchedule[selectedClass];
+        setFullSchedule(newSchedule);
+
+        toast({
+            title: "Schedule Cleared",
+            description: `The timetable for ${classes.find(c => c.id === selectedClass)?.name} has been cleared.`
+        });
+    }
 
     const handleScheduleChange = (day: string, timeSlot: string, field: 'subjectId' | 'teacherId', value: string) => {
         if (!selectedClass) return;
@@ -202,9 +216,14 @@ export function TimetableScheduler() {
                             </SelectContent>
                         </Select>
                          {selectedClass && (
-                            <Button onClick={() => autoFillSchedule(selectedClass)} variant="outline" size="sm">
-                                <RefreshCw className="mr-2"/> Autofill
-                            </Button>
+                            <>
+                                <Button onClick={() => autoFillSchedule(selectedClass)} variant="outline" size="sm">
+                                    <RefreshCw className="mr-2"/> Autofill
+                                </Button>
+                                <Button onClick={handleClearSchedule} variant="destructive" size="sm">
+                                    <Trash2 className="mr-2"/> Clear
+                                </Button>
+                            </>
                          )}
                         <Button onClick={handlePrint} variant="outline">
                             <Printer className="mr-2" /> Print
