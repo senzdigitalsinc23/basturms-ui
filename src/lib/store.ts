@@ -31,6 +31,7 @@ import {
   StudentAttendanceRecord,
   StaffAttendanceRecord,
   AcademicYear,
+  CalendarEvent,
   GradeSetting,
   Term,
   RolePermissions,
@@ -64,6 +65,7 @@ const TERMLY_BILLS_KEY = 'campusconnect_termly_bills';
 
 // Settings Keys
 const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
+const CALENDAR_EVENTS_KEY = 'campusconnect_calendar_events';
 const GRADING_SCHEME_KEY = 'campusconnect_grading_scheme';
 const ROLE_PERMISSIONS_KEY = 'campusconnect_role_permissions';
 const BACKUP_SETTINGS_KEY = 'campusconnect_backup_settings';
@@ -277,6 +279,14 @@ const getInitialAcademicYears = (): AcademicYear[] => {
     ];
 };
 
+const getInitialCalendarEvents = (): CalendarEvent[] => {
+    return [
+        { id: '1', date: new Date(2024, 4, 1).toISOString(), title: "May Day", category: 'Holiday' },
+        { id: '2', date: new Date(2024, 2, 6).toISOString(), title: "Independence Day", category: 'Holiday' },
+        { id: '3', date: new Date(2024, 6, 10).toISOString(), title: "End of Term Exams Start", category: 'Exam' },
+    ];
+};
+
 const getInitialGradingScheme = (): GradeSetting[] => {
     return [
         { grade: "A+", range: "90-100", remarks: "Excellent" },
@@ -400,6 +410,9 @@ export const initializeStore = () => {
     // Initialize settings
     if (!window.localStorage.getItem(ACADEMIC_YEARS_KEY)) {
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
+    }
+    if (!window.localStorage.getItem(CALENDAR_EVENTS_KEY)) {
+        saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
     }
     if (!window.localStorage.getItem(GRADING_SCHEME_KEY)) {
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
@@ -669,6 +682,25 @@ export const deleteAllFinancialRecords = (editorId: string) => {
 // Settings Functions
 export const getAcademicYears = (): AcademicYear[] => getFromStorage<AcademicYear[]>(ACADEMIC_YEARS_KEY, []);
 export const saveAcademicYears = (years: AcademicYear[]): void => saveToStorage(ACADEMIC_YEARS_KEY, years);
+
+export const getCalendarEvents = (): CalendarEvent[] => getFromStorage<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
+export const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>, editorId: string): CalendarEvent => {
+    const events = getCalendarEvents();
+    const newEvent: CalendarEvent = {
+        ...event,
+        id: `event-${Date.now()}`
+    };
+    saveToStorage(CALENDAR_EVENTS_KEY, [...events, newEvent]);
+    const editor = getUserById(editorId);
+    addAuditLog({
+        user: editor?.email || 'Unknown',
+        name: editor?.name || 'Unknown',
+        action: 'Create Calendar Event',
+        details: `Created event: "${newEvent.title}" on ${format(new Date(newEvent.date), 'PPP')}`
+    });
+    return newEvent;
+};
+
 export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSetting[]>(GRADING_SCHEME_KEY, []);
 export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
 export const getRolePermissions = (): RolePermissions => getFromStorage<RolePermissions>(ROLE_PERMISSIONS_KEY, {});
@@ -1637,6 +1669,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 

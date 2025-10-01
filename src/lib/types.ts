@@ -138,6 +138,16 @@ export interface AcademicYear {
     status: AcademicYearStatus;
 }
 
+export type CalendarEventCategory = 'Holiday' | 'Exam' | 'School Event' | 'Other';
+
+export interface CalendarEvent {
+    id: string;
+    date: string; // ISO string
+    title: string;
+    category: CalendarEventCategory;
+    description?: string;
+}
+
 
 export interface GradeSetting {
     grade: string;

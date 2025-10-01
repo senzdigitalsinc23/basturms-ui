@@ -1,17 +1,80 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAcademicYears } from '@/lib/store';
-import { AcademicYear, Term } from '@/lib/types';
+import { getAcademicYears, getCalendarEvents, addCalendarEvent, CalendarEvent } from '@/lib/store';
+import { AcademicYear, Term, CalendarEventCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { eachDayOfInterval, startOfMonth } from 'date-fns';
+import { startOfMonth, format, isSameDay } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon, PlusCircle, Dot } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils';
 
 type Modifier = {
     [key: string]: Date | Date[] | { from: Date; to: Date } | ((date: Date) => boolean);
 };
+
+const eventCategoryColors: Record<CalendarEventCategory, string> = {
+    'Holiday': 'hsl(var(--destructive))',
+    'Exam': 'hsl(var(--primary))',
+    'School Event': 'hsl(var(--chart-4))',
+    'Other': 'hsl(var(--chart-5))',
+};
+
+function AddEventForm({ onSave }: { onSave: (event: Omit<CalendarEvent, 'id'>) => void }) {
+    const [title, setTitle] = useState('');
+    const [date, setDate] = useState<Date | undefined>();
+    const [category, setCategory] = useState<CalendarEventCategory>('School Event');
+    
+    const handleSave = () => {
+        if (title && date) {
+            onSave({ title, date: date.toISOString(), category });
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="title">Event Title</Label>
+                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="date">Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {date ? format(date, 'PPP') : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
+                </Popover>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select value={category} onValueChange={(value: CalendarEventCategory) => setCategory(value)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        {Object.keys(eventCategoryColors).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+            <DialogFooter>
+                <Button onClick={handleSave} disabled={!title || !date}>Save Event</Button>
+            </DialogFooter>
+        </div>
+    );
+}
+
 
 export function AcademicCalendar() {
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -19,14 +82,23 @@ export function AcademicCalendar() {
     const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()));
     const [modifiers, setModifiers] = useState<Modifier>({});
     const [modifierStyles, setModifierStyles] = useState({});
-
-    useEffect(() => {
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+    const { toast } = useToast();
+    const { user } = useAuth();
+    
+    const fetchData = () => {
         const years = getAcademicYears();
         setAcademicYears(years);
         const activeYear = years.find(y => y.status === 'Active') || years[0];
         if (activeYear) {
             setSelectedYear(activeYear);
         }
+        setEvents(getCalendarEvents());
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
 
     useEffect(() => {
@@ -36,7 +108,7 @@ export function AcademicCalendar() {
             const termColors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
 
             selectedYear.terms.forEach((term, index) => {
-                const termKey = term.name.replace(/\s+/g, '-').toLowerCase();
+                const termKey = `term-${index}`;
                 newModifiers[termKey] = {
                     from: new Date(term.startDate),
                     to: new Date(term.endDate)
@@ -50,7 +122,6 @@ export function AcademicCalendar() {
             setModifiers(newModifiers);
             setModifierStyles(newModifierStyles);
             
-            // Set initial month to the start of the first term of the selected year
             if(selectedYear.terms.length > 0) {
                 setCurrentMonth(startOfMonth(new Date(selectedYear.terms[0].startDate)));
             }
@@ -60,7 +131,22 @@ export function AcademicCalendar() {
     const handleYearChange = (yearValue: string) => {
         const year = academicYears.find(y => y.year === yearValue);
         setSelectedYear(year);
-    }
+    };
+
+    const handleAddEvent = (event: Omit<CalendarEvent, 'id'>) => {
+        if (!user) return;
+        addCalendarEvent(event, user.id);
+        fetchData(); // Refetch all data
+        setIsAddEventOpen(false);
+        toast({
+            title: "Event Added",
+            description: `"${event.title}" has been added to the calendar.`
+        });
+    };
+
+    const eventsByDay = (day: Date) => {
+        return events.filter(event => isSameDay(new Date(event.date), day));
+    };
     
     if (!selectedYear) {
         return <div>Loading academic calendar...</div>;
@@ -72,7 +158,7 @@ export function AcademicCalendar() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle>Academic Calendar</CardTitle>
-                        <CardDescription>Visual representation of the school's academic terms.</CardDescription>
+                        <CardDescription>Visual representation of the school's academic terms and events.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                         <Select onValueChange={handleYearChange} value={selectedYear.year}>
@@ -85,31 +171,77 @@ export function AcademicCalendar() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" onClick={() => setCurrentMonth(startOfMonth(new Date()))}>Today</Button>
+                        <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm"><PlusCircle className="mr-2"/> Add Event</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Add New Calendar Event</DialogTitle>
+                                </DialogHeader>
+                                <AddEventForm onSave={handleAddEvent} />
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
-                <Calendar
-                    month={currentMonth}
-                    onMonthChange={setCurrentMonth}
-                    modifiers={modifiers}
-                    modifiersStyles={modifierStyles}
-                    numberOfMonths={3}
-                    pagedNavigation
-                    className="w-full"
-                />
+                <TooltipProvider>
+                    <Calendar
+                        month={currentMonth}
+                        onMonthChange={setCurrentMonth}
+                        modifiers={modifiers}
+                        modifiersStyles={modifierStyles}
+                        numberOfMonths={3}
+                        pagedNavigation
+                        className="w-full"
+                        components={{
+                            DayContent: ({ date, ...props }) => {
+                                const dailyEvents = eventsByDay(date);
+                                if (dailyEvents.length > 0) {
+                                    return (
+                                        <Tooltip>
+                                            <TooltipTrigger className="w-full h-full flex items-center justify-center relative">
+                                                <div {...props.props} className="relative w-full h-full flex items-center justify-center">
+                                                    <span>{format(date, 'd')}</span>
+                                                    <Dot className="absolute bottom-0 text-primary h-6 w-6" />
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <div className="space-y-1">
+                                                    {dailyEvents.map(event => (
+                                                        <div key={event.id} className="flex items-center gap-2">
+                                                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: eventCategoryColors[event.category] }} />
+                                                            <p>{event.title}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    );
+                                }
+                                return <div {...props.props}>{format(date, 'd')}</div>
+                            }
+                        }}
+                    />
+                </TooltipProvider>
                 <div className="flex flex-wrap gap-4 mt-4">
                     {selectedYear.terms.map((term, index) => {
-                         const termKey = term.name.replace(/\s+/g, '-').toLowerCase();
+                         const termKey = `term-${index}`;
                          const style = (modifierStyles as any)[termKey] || {};
                         return (
                             <div key={term.name} className="flex items-center gap-2 text-sm">
-                                <span className="h-4 w-4 rounded-full" style={{ backgroundColor: style.backgroundColor }}></span>
+                                <span className="h-4 w-4 rounded-sm" style={{ backgroundColor: style.backgroundColor }}></span>
                                 <span>{term.name}</span>
                             </div>
                         )
                     })}
+                    {Object.entries(eventCategoryColors).map(([category, color]) => (
+                        <div key={category} className="flex items-center gap-2 text-sm">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></div>
+                            <span>{category}</span>
+                        </div>
+                    ))}
                 </div>
             </CardContent>
         </Card>
