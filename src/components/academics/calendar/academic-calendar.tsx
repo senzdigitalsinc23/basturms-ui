@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getAcademicYears, getCalendarEvents, addCalendarEvent, CalendarEvent } from '@/lib/store';
+import { getAcademicYears, getCalendarEvents, addCalendarEvent, CalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/store';
 import { AcademicYear, Term, CalendarEventCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,13 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, PlusCircle, Dot } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Dot, Edit, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
-import { DayContent, DayProps } from 'react-day-picker';
+import { DayProps } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 type Modifier = {
     [key: string]: Date | Date[] | { from: Date; to: Date } | ((date: Date) => boolean);
@@ -32,18 +34,26 @@ const eventCategoryColors: Record<CalendarEventCategory, string> = {
     'Other': 'hsl(var(--chart-5))',
 };
 
-function AddEventForm({ onSave, selectedDate }: { onSave: (event: Omit<CalendarEvent, 'id'>) => void, selectedDate?: Date }) {
-    const [title, setTitle] = useState('');
-    const [date, setDate] = useState<Date | undefined>(selectedDate);
-    const [category, setCategory] = useState<CalendarEventCategory>('School Event');
+function EventForm({ onSave, selectedDate, existingEvent }: { onSave: (event: Omit<CalendarEvent, 'id'>, id?: string) => void, selectedDate?: Date, existingEvent?: CalendarEvent | null }) {
+    const [title, setTitle] = useState(existingEvent?.title || '');
+    const [date, setDate] = useState<Date | undefined>(existingEvent ? new Date(existingEvent.date) : selectedDate);
+    const [category, setCategory] = useState<CalendarEventCategory>(existingEvent?.category || 'School Event');
 
     useEffect(() => {
-        setDate(selectedDate);
-    }, [selectedDate]);
+        if (existingEvent) {
+            setTitle(existingEvent.title);
+            setDate(new Date(existingEvent.date));
+            setCategory(existingEvent.category);
+        } else if (selectedDate) {
+            setDate(selectedDate);
+            setTitle('');
+            setCategory('School Event');
+        }
+    }, [selectedDate, existingEvent]);
     
     const handleSave = () => {
         if (title && date) {
-            onSave({ title, date: date.toISOString(), category });
+            onSave({ title, date: date.toISOString(), category }, existingEvent?.id);
         }
     };
 
@@ -89,8 +99,10 @@ export function AcademicCalendar() {
     const [modifiers, setModifiers] = useState<Modifier>({});
     const [modifierStyles, setModifierStyles] = useState({});
     const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+    const [isEventFormOpen, setIsEventFormOpen] = useState(false);
     const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState<Date | undefined>();
+    const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
     const { toast } = useToast();
     const { user } = useAuth();
     
@@ -100,7 +112,9 @@ export function AcademicCalendar() {
         const activeYear = years.find(y => y.status === 'Active') || years[0];
         if (activeYear && !selectedYear) {
             setSelectedYear(activeYear);
-            setCurrentMonth(startOfMonth(new Date(activeYear.terms[0].startDate)));
+            if (activeYear.terms.length > 0) {
+              setCurrentMonth(startOfMonth(new Date(activeYear.terms[0].startDate)));
+            }
         }
         setEvents(getCalendarEvents());
     }, [selectedYear]);
@@ -166,22 +180,39 @@ export function AcademicCalendar() {
         }
     };
 
-    const handleAddEvent = (event: Omit<CalendarEvent, 'id'>) => {
+    const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>, id?: string) => {
         if (!user) return;
-        addCalendarEvent(event, user.id);
-        fetchData(); // Refetch all data
-        setIsAddEventOpen(false);
-        toast({
-            title: "Event Added",
-            description: `"${event.title}" has been added to the calendar.`
-        });
+        if (id) { // Editing existing event
+            updateCalendarEvent(id, eventData, user.id);
+            toast({ title: "Event Updated", description: `"${eventData.title}" has been updated.` });
+        } else { // Adding new event
+            addCalendarEvent(eventData, user.id);
+            toast({ title: "Event Added", description: `"${eventData.title}" has been added to the calendar.` });
+        }
+        fetchData();
+        setIsEventFormOpen(false);
+        setEditingEvent(null);
     };
+
+    const handleDeleteEvent = (eventId: string) => {
+        if (!user) return;
+        deleteCalendarEvent(eventId, user.id);
+        fetchData();
+        toast({ title: "Event Deleted", description: "The event has been removed from the calendar." });
+    }
 
     const handleDayClick = (day: Date, modifiers: { disabled?: boolean }) => {
         if (modifiers.disabled) return;
         setSelectedDateForNewEvent(day);
-        setIsAddEventOpen(true);
+        setEditingEvent(null);
+        setIsEventFormOpen(true);
     };
+    
+    const handleEditClick = (event: CalendarEvent) => {
+        setEditingEvent(event);
+        setSelectedDateForNewEvent(undefined);
+        setIsEventFormOpen(true);
+    }
 
     const DayContentWithEvents = useCallback((props: DayProps) => {
         const dailyEvents = events.filter(event => isSameDay(new Date(event.date), props.date));
@@ -227,7 +258,7 @@ export function AcademicCalendar() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle>Academic Calendar for {selectedYear.year}</CardTitle>
-                        <CardDescription>Click a date to add an event.</CardDescription>
+                        <CardDescription>Click a date to add an event, or manage events on the right.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                         <Select onValueChange={handleYearChange} value={selectedYear.year}>
@@ -240,7 +271,7 @@ export function AcademicCalendar() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button size="sm" onClick={() => { setSelectedDateForNewEvent(undefined); setIsAddEventOpen(true); }}><PlusCircle className="mr-2"/> Add Event</Button>
+                        <Button size="sm" onClick={() => { setSelectedDateForNewEvent(new Date()); setEditingEvent(null); setIsEventFormOpen(true); }}><PlusCircle className="mr-2"/> Add Event</Button>
                     </div>
                 </div>
             </CardHeader>
@@ -283,7 +314,7 @@ export function AcademicCalendar() {
                      <ScrollArea className="h-96">
                         <div className="space-y-4 pr-4">
                             {monthlyEvents.length > 0 ? monthlyEvents.map(event => (
-                                <div key={event.id} className="flex items-start gap-3">
+                                <div key={event.id} className="flex items-start gap-3 group">
                                     <div className="flex flex-col items-center">
                                         <div className="font-bold text-lg">{format(new Date(event.date), 'dd')}</div>
                                         <div className="text-xs text-muted-foreground -mt-1">{format(new Date(event.date), 'MMM')}</div>
@@ -291,6 +322,28 @@ export function AcademicCalendar() {
                                     <div className="flex-1 border-l-2 pl-3" style={{borderColor: eventCategoryColors[event.category]}}>
                                         <p className="font-medium">{event.title}</p>
                                         <p className="text-sm text-muted-foreground">{event.category}</p>
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(event)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the event "{event.title}".</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteEvent(event.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
                                 </div>
                             )) : (
@@ -300,13 +353,13 @@ export function AcademicCalendar() {
                     </ScrollArea>
                 </div>
             </CardContent>
-            <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+            <Dialog open={isEventFormOpen} onOpenChange={setIsEventFormOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add New Calendar Event</DialogTitle>
-                        {selectedDateForNewEvent && <DialogDescription>Adding event for {format(selectedDateForNewEvent, 'PPP')}.</DialogDescription>}
+                        <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Calendar Event'}</DialogTitle>
+                        {(selectedDateForNewEvent && !editingEvent) && <DialogDescription>Adding event for {format(selectedDateForNewEvent, 'PPP')}.</DialogDescription>}
                     </DialogHeader>
-                    <AddEventForm onSave={handleAddEvent} selectedDate={selectedDateForNewEvent}/>
+                    <EventForm onSave={handleSaveEvent} selectedDate={selectedDateForNewEvent} existingEvent={editingEvent} />
                 </DialogContent>
             </Dialog>
         </Card>

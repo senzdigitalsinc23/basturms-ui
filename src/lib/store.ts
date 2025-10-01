@@ -684,6 +684,7 @@ export const getAcademicYears = (): AcademicYear[] => getFromStorage<AcademicYea
 export const saveAcademicYears = (years: AcademicYear[]): void => saveToStorage(ACADEMIC_YEARS_KEY, years);
 
 export const getCalendarEvents = (): CalendarEvent[] => getFromStorage<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
+
 export const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>, editorId: string): CalendarEvent => {
     const events = getCalendarEvents();
     const newEvent: CalendarEvent = {
@@ -700,6 +701,43 @@ export const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>, editorId: str
     });
     return newEvent;
 };
+
+export const updateCalendarEvent = (eventId: string, updatedData: Partial<Omit<CalendarEvent, 'id'>>, editorId: string): CalendarEvent | null => {
+    const events = getCalendarEvents();
+    const eventIndex = events.findIndex(e => e.id === eventId);
+    if (eventIndex !== -1) {
+        const updatedEvent = { ...events[eventIndex], ...updatedData };
+        events[eventIndex] = updatedEvent;
+        saveToStorage(CALENDAR_EVENTS_KEY, events);
+        const editor = getUserById(editorId);
+        addAuditLog({
+            user: editor?.email || 'Unknown',
+            name: editor?.name || 'Unknown',
+            action: 'Update Calendar Event',
+            details: `Updated event: "${updatedEvent.title}"`
+        });
+        return updatedEvent;
+    }
+    return null;
+}
+
+export const deleteCalendarEvent = (eventId: string, editorId: string): boolean => {
+    const events = getCalendarEvents();
+    const eventToDelete = events.find(e => e.id === eventId);
+    if (!eventToDelete) return false;
+
+    const newEvents = events.filter(e => e.id !== eventId);
+    saveToStorage(CALENDAR_EVENTS_KEY, newEvents);
+    const editor = getUserById(editorId);
+    addAuditLog({
+        user: editor?.email || 'Unknown',
+        name: editor?.name || 'Unknown',
+        action: 'Delete Calendar Event',
+        details: `Deleted event: "${eventToDelete.title}"`
+    });
+    return true;
+}
+
 
 export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSetting[]>(GRADING_SCHEME_KEY, []);
 export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
@@ -1669,6 +1707,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 
