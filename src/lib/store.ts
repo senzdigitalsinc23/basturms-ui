@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -1493,59 +1494,27 @@ export const storeGetStaffAcademicHistory = (): StaffAcademicHistory[] => getFro
 export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
-export const addStaff = (staffData: Omit<Staff, 'user_id'>, appointmentHistory: Omit<StaffAppointmentHistory, 'staff_id'>, creatorId: string): Staff | null => {
+export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): Staff => {
     const staffList = getStaff();
-    const declinedStaffList = getFromStorage<Staff[]>(DECLINED_STAFF_KEY, []);
-    const allStaff = [...staffList, ...declinedStaffList];
+    const allStaff = [...staffList, ...getFromStorage<Staff[]>(DECLINED_STAFF_KEY, [])];
 
-    if (staffData.email && allStaff.some(s => s.email === staffData.email)) {
-        throw new Error("A staff member with this email already exists.");
-    }
-    if (staffData.phone && allStaff.some(s => s.phone === staffData.phone)) {
-        throw new Error("A staff member with this phone number already exists.");
-    }
-    if (staffData.id_no && allStaff.some(s => s.id_no && s.id_no === staffData.id_no)) {
-        throw new Error("A staff member with this ID number already exists.");
-    }
-    if (staffData.snnit_no && allStaff.some(s => s.snnit_no && s.snnit_no === staffData.snnit_no)) {
-        throw new Error("A staff member with this SSNIT number already exists.");
-    }
-
-    if (appointmentHistory.appointment_status === 'Declined') {
-        const declinedStaff = { ...staffData, user_id: '' };
-        saveToStorage(DECLINED_STAFF_KEY, [...declinedStaffList, declinedStaff]);
-        addAuditLog({
-            user: getUserById(creatorId)?.email || 'Unknown',
-            name: getUserById(creatorId)?.name || 'Unknown',
-            action: 'Decline Staff Appointment',
-            details: `Appointment for ${declinedStaff.first_name} ${declinedStaff.last_name} was declined.`
-        });
-        return null;
-    }
-
-    const userToCreate = {
-        name: `${staffData.first_name} ${staffData.last_name}`,
-        email: staffData.email,
-        username: staffData.email,
-        password: `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`,
-        role: staffData.roles[0],
-        status: 'active' as 'active' | 'frozen',
-    };
-    const newUser = addUser(userToCreate);
-
-    const newStaff = { ...staffData, user_id: newUser.id }; 
+    if (staffData.email && allStaff.some(s => s.email === staffData.email)) throw new Error("A staff member with this email already exists.");
+    if (allStaff.some(s => s.phone === staffData.phone)) throw new Error("A staff member with this phone number already exists.");
+    if (staffData.id_no && allStaff.some(s => s.id_no && s.id_no === staffData.id_no)) throw new Error("A staff member with this ID number already exists.");
+    if (staffData.snnit_no && allStaff.some(s => s.snnit_no && s.snnit_no === staffData.snnit_no)) throw new Error("A staff member with this SSNIT number already exists.");
+    
+    // User creation should be handled separately now, this function just adds the staff record
+    // We assume a user will be created and the user_id will be linked later if needed.
+    // For now, we can create staff without a user_id. The form logic will handle creating the user first.
+    const newStaff: Staff = { ...staffData, user_id: '' };
+    
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
-
     addAuditLog({
-        user: getUserById(creatorId)?.email || 'Unknown',
-        name: getUserById(creatorId)?.name || 'Unknown',
-        action: 'Create Staff',
-        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} and linked user account.`
+        user: getUserById(creatorId)?.email || 'Unknown', name: getUserById(creatorId)?.name || 'Unknown',
+        action: 'Create Staff', details: `Created staff member ${newStaff.first_name} ${newStaff.last_name}`
     });
-
     return newStaff;
 };
-
 
 export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editorId: string): Staff | null => {
     const staffList = getStaff();
@@ -1745,6 +1714,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 
