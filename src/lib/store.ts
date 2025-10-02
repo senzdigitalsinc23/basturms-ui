@@ -1503,10 +1503,20 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): 
     if (staffData.id_no && allStaff.some(s => s.id_no && s.id_no === staffData.id_no)) throw new Error("A staff member with this ID number already exists.");
     if (staffData.snnit_no && allStaff.some(s => s.snnit_no && s.snnit_no === staffData.snnit_no)) throw new Error("A staff member with this SSNIT number already exists.");
     
-    // User creation should be handled separately now, this function just adds the staff record
-    // We assume a user will be created and the user_id will be linked later if needed.
-    // For now, we can create staff without a user_id. The form logic will handle creating the user first.
-    const newStaff: Staff = { ...staffData, user_id: '' };
+    // Create user account first
+    const userToCreate = {
+        name: `${staffData.first_name} ${staffData.last_name}`,
+        email: staffData.email,
+        username: staffData.email,
+        password: `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`,
+        role: staffData.roles[0] as Role, // Assuming the first role is the primary one
+        status: 'active' as 'active' | 'frozen',
+        entityId: staffData.staff_id,
+    };
+
+    const newUser = addUser(userToCreate);
+
+    const newStaff: Staff = { ...staffData, user_id: newUser.id };
     
     saveToStorage(STAFF_KEY, [...staffList, newStaff]);
     addAuditLog({
@@ -1714,6 +1724,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 

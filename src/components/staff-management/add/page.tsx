@@ -3,7 +3,7 @@
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
 import { AddStaffForm } from '@/components/staff-management/add-staff-form';
-import { addStaff as storeAddStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, addUser } from '@/lib/store';
+import { addStaff as storeAddStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument } from '@/lib/store';
 import { Staff, StaffAcademicHistory, StaffAppointmentHistory, StaffDocument, Role } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -22,20 +22,7 @@ export default function AddStaffPage() {
         return;
     }
 
-    const userToCreate = {
-        name: `${data.staffData.first_name} ${data.staffData.last_name}`,
-        email: data.staffData.email,
-        username: data.staffData.email,
-        password: `${data.staffData.last_name.toLowerCase()}${data.staffData.staff_id.slice(-3)}`,
-        role: data.staffData.roles[0] as Role, // Assuming the first role is the primary one
-        status: 'active' as 'active' | 'frozen',
-        entityId: data.staffData.staff_id,
-    };
-    const newUser = addUser(userToCreate);
-    
-    const staffWithUser = { ...data.staffData, user_id: newUser.id };
-
-    const newStaff = storeAddStaff(staffWithUser, user.id);
+    const newStaff = storeAddStaff(data.staffData, user.id);
 
     if (data.academic_history) {
         data.academic_history.forEach(history => {

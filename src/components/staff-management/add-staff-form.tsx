@@ -322,16 +322,45 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     };
     
     try {
-        onSubmit({staffData, academic_history: data.academic_history, documents: data.documents, appointment_history: {
-            staff_id: isEditMode && defaultValues ? defaultValues.staff_id : generatedStaffId,
-            appointment_date: data.appointment_date.toISOString(),
-            roles: data.roles as Role[],
-            class_assigned: data.class_assigned,
-            subjects_assigned: data.subjects_assigned,
-            is_class_teacher_for_class_id: data.is_class_teacher_for_class_id,
-            appointment_status: data.appointment_status,
-        }});
-    
+        const finalData = {
+            staffData, 
+            academic_history: data.academic_history, 
+            documents: data.documents, 
+            appointment_history: {
+                staff_id: isEditMode && defaultValues ? defaultValues.staff_id : generatedStaffId,
+                appointment_date: data.appointment_date.toISOString(),
+                roles: data.roles as Role[],
+                class_assigned: data.class_assigned,
+                subjects_assigned: data.subjects_assigned,
+                is_class_teacher_for_class_id: data.is_class_teacher_for_class_id,
+                appointment_status: data.appointment_status,
+            }
+        };
+
+        const newStaff = addStaff(finalData.staffData, user.id);
+        
+        if (finalData.academic_history) {
+            finalData.academic_history.forEach(history => {
+                addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
+            });
+        }
+
+        if (finalData.documents) {
+            for (const doc of finalData.documents) {
+                const fileReader = new FileReader();
+                fileReader.readAsDataURL(doc.file);
+                fileReader.onload = () => {
+                    addStaffDocument({
+                        staff_id: newStaff.staff_id,
+                        document_name: doc.name,
+                        file: fileReader.result as string
+                    });
+                };
+            }
+        }
+        
+        addStaffAppointmentHistory({...finalData.appointment_history, staff_id: newStaff.staff_id});
+
         await new Promise(resolve => setTimeout(resolve, 500));
         
         const message = data.appointment_status === 'Declined'
