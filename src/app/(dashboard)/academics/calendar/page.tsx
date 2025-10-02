@@ -4,7 +4,7 @@ import { AcademicCalendar } from '@/components/academics/calendar/academic-calen
 
 export default function CalendarPage() {
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Student', 'Parent']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Student', 'Parent', 'Headmaster']}>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">Academic Calendar</h1>

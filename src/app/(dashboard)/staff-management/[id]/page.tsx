@@ -1,5 +1,3 @@
-
-
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -35,7 +33,7 @@ function InfoItem({ label, value }: { label: string; value?: React.ReactNode }) 
 
 export default function StaffProfilePage() {
     const params = useParams();
-    const staffId = params.id as string;
+    let staffId = params.id as string;
     const router = useRouter();
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
@@ -54,18 +52,29 @@ export default function StaffProfilePage() {
 
 
     const fetchStaffData = () => {
-        const staffData = getStaffByStaffId(staffId);
+        let currentStaffId = staffId;
+        if (staffId === 'me' && currentUser) {
+            const currentStaff = getStaff().find(s => s.user_id === currentUser.id);
+            if (currentStaff) {
+                currentStaffId = currentStaff.staff_id;
+            } else {
+                 router.push('/dashboard'); // Or a "profile not found" page
+                return;
+            }
+        }
+
+        const staffData = getStaffByStaffId(currentStaffId);
         if (staffData) {
             setStaff(staffData);
             setClasses(getClasses());
             setSubjects(getSubjects());
             const userData = getUserById(staffData.user_id);
             setUser(userData || null);
-            const staffDocuments = getStaffDocumentsByStaffId(staffId);
+            const staffDocuments = getStaffDocumentsByStaffId(currentStaffId);
             setDocuments(staffDocuments);
             const staffAppointments = getStaffAppointmentHistory();
             const latestAppointment = staffAppointments
-                .filter(a => a.staff_id === staffId)
+                .filter(a => a.staff_id === currentStaffId)
                 .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
             setAppointmentHistory(latestAppointment || null);
             setSchoolProfile(getSchoolProfile());
@@ -75,8 +84,10 @@ export default function StaffProfilePage() {
     }
 
     useEffect(() => {
-        fetchStaffData();
-    }, [staffId]);
+        if(currentUser) {
+            fetchStaffData();
+        }
+    }, [staffId, currentUser]);
 
     const handleUpdate = (data: {staffData: Omit<Staff, 'user_id'>, academic_history: any[], documents: any[], appointment_history: any}) => {
         if (!currentUser || !staff) return;
@@ -156,6 +167,8 @@ export default function StaffProfilePage() {
         }
     };
 
+    const isOwnProfile = staffId === 'me' || currentUser?.id === staff?.user_id;
+
 
     if (!staff) {
         return <div className="flex items-center justify-center h-full">Loading...</div>;
@@ -176,11 +189,14 @@ export default function StaffProfilePage() {
                     <h1 className="text-3xl font-bold font-headline">Staff Profile</h1>
                     <p className="text-muted-foreground">Details for {staff.first_name} {staff.last_name}</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href="/staff-management"><ArrowLeft className="mr-2" /> Back to List</Link>
-                    </Button>
-                    <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                 <div className="flex gap-2">
+                    {(currentUser?.role === 'Admin' || currentUser?.role === 'Headmaster') && !isOwnProfile && (
+                         <Button variant="outline" size="sm" asChild>
+                            <Link href="/staff-management"><ArrowLeft className="mr-2" /> Back to List</Link>
+                        </Button>
+                    )}
+                   {(currentUser?.role === 'Admin' || currentUser?.role === 'Headmaster') && (
+                     <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                         <DialogTrigger asChild>
                             <Button size="sm">
                                 <Edit className="mr-2" /> Edit Staff
@@ -196,6 +212,7 @@ export default function StaffProfilePage() {
                             </div>
                         </DialogContent>
                     </Dialog>
+                   )}
                 </div>
             </div>
 
@@ -211,7 +228,7 @@ export default function StaffProfilePage() {
                         <div className="flex gap-2 mt-2">
                             {(staff.roles || []).map(role => <Badge key={role} variant="outline">{role}</Badge>)}
                             {user ? (
-                                <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status === 'active' ? 'Active' : 'Inactive'}</Badge>
+                                <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>{user.status === 'active' ? 'Active' : 'Frozen'}</Badge>
                             ) : (
                                 <Badge variant="destructive">No User Account</Badge>
                             )}
@@ -238,17 +255,19 @@ export default function StaffProfilePage() {
                             <CardDescription>CV, letters, and other personal files.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex justify-end items-center mb-4">
-                                <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
-                                        <StaffDocumentUploadForm onSubmit={handleUploadDocument} />
-                                    </DialogContent>
-                                </Dialog>
-                            </div>
+                             {(currentUser?.role === 'Admin' || currentUser?.role === 'Headmaster') && (
+                                <div className="flex justify-end items-center mb-4">
+                                    <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+                                            <StaffDocumentUploadForm onSubmit={handleUploadDocument} />
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                             )}
                             <ul className="space-y-3">
                             {documents.map((doc) => (
                                     <li key={doc.document_name} className="flex items-center justify-between p-3 rounded-md border">
@@ -262,23 +281,25 @@ export default function StaffProfilePage() {
                                             <Button variant="ghost" size="icon" onClick={() => handleDownload(doc.file, doc.document_name)}>
                                                 <Download className="h-4 w-4" />
                                             </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>This will permanently delete the document {doc.document_name}.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteDocument(doc.document_name)}>Delete</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
+                                             {(currentUser?.role === 'Admin' || currentUser?.role === 'Headmaster') && (
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>This will permanently delete the document {doc.document_name}.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteDocument(doc.document_name)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                             )}
                                         </div>
                                     </li>
                             ))}

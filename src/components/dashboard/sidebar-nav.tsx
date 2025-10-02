@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -177,10 +176,13 @@ const menuItems: Record<Role, NavItem[]> = {
   ],
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/attendance/my-classes', label: 'Student Attendance', icon: CalendarCheck },
+    { href: '/attendance/history', label: 'Attendance History', icon: History },
     { href: '/academics/grading', label: 'Grading & Scores', icon: PenSquare },
     { href: '/my-classes', label: 'My Classes & Students', icon: Users },
     { href: '/academics/lesson-notes', label: 'Lesson Notes', icon: Clipboard },
+    { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
   Student: [
     { href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard },
@@ -188,14 +190,17 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/#', label: 'My Grades', icon: GraduationCap },
     { href: '/financials/history', label: 'My Financials', icon: Landmark },
     { href: '/#', label: 'Assignments', icon: PenSquare },
+    { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
   Parent: [
     { href: '/dashboard/parent', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/financials/history', label: 'Child Financials', icon: Landmark },
     { href: '/#', label: 'Child Grades', icon: GraduationCap },
+     { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
   Headmaster: [
     { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
      {
       label: 'Staff Management',
       icon: BookUser,
@@ -208,14 +213,17 @@ const menuItems: Record<Role, NavItem[]> = {
       ]
     },
     { href: '/#', label: 'Curriculum', icon: BookUser },
+    { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
   Librarian: [
     { href: '/dashboard/librarian', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'Book Catalogue', icon: Book },
     { href: '/#', label: 'Checkouts', icon: History },
   ],
   Security: [
     { href: '/dashboard/security', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'Campus Alerts', icon: Shield },
     { href: '/#', label: 'Visitor Logs', icon: BookUser },
   ],
@@ -225,6 +233,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Dashboard',
       icon: LayoutDashboard,
     },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'Purchase Orders', icon: Truck },
     { href: '/#', label: 'Suppliers', icon: Building },
   ],
@@ -234,26 +243,31 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Dashboard',
       icon: LayoutDashboard,
     },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'Inventory', icon: Warehouse },
     { href: '/#', label: 'Requisitions', icon: History },
   ],
   Proprietor: [
     { href: '/dashboard/proprietor', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'Financials', icon: Briefcase },
     { href: '/#', label: 'School Analytics', icon: History },
   ],
   'I.T Manager': [
     { href: '/dashboard/i.t-manager', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'System Status', icon: Laptop },
     { href: '/#', label: 'User Support', icon: Users },
   ],
   'I.T Support': [
     { href: '/dashboard/i.t-support', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'Open Tickets', icon: Laptop },
     { href: '/#', label: 'Knowledge Base', icon: Book },
   ],
    Accountant: [
     { href: '/dashboard/accountant', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
   ]
 };
 

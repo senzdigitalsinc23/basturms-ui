@@ -1,5 +1,3 @@
-
-
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, addAttendanceRecord, getStudentProfileById, addAuditLog, getStaff, getStaffAppointmentHistory } from '@/lib/store';
@@ -45,13 +43,14 @@ export function ClassAttendanceTracker() {
             const currentTeacher = staffList.find(s => s.user_id === user.id);
             if (currentTeacher) {
                 const appointments = getStaffAppointmentHistory();
-                const teacherAppointments = appointments
+                const latestAppointment = appointments
                     .filter(a => a.staff_id === currentTeacher.staff_id)
-                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
-                const latestAppointment = teacherAppointments[0];
-                if (latestAppointment && latestAppointment.class_assigned) {
-                    const assignedClasses = classes.filter(c => latestAppointment.class_assigned?.includes(c.id));
+                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+                if (latestAppointment?.is_class_teacher_for_class_id) {
+                    const assignedClasses = classes.filter(c => c.id === latestAppointment.is_class_teacher_for_class_id);
                     setTeacherClasses(assignedClasses);
+                } else {
+                     setTeacherClasses([]);
                 }
             }
         }

@@ -1,8 +1,6 @@
-
-
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords, getRoles } from '@/lib/store';
+import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords, getRoles, getStaffAppointmentHistory } from '@/lib/store';
 import { Class, StudentProfile, Staff, StaffAttendanceRecord, StudentAttendanceRecord, Role } from '@/lib/types';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { DateRange } from 'react-day-picker';
+import { useAuth } from '@/hooks/use-auth';
 
 type StudentAttendanceHistory = {
     id: string;
@@ -33,7 +32,9 @@ type StaffAttendanceHistory = {
 }
 
 export default function AttendanceHistoryPage() {
-    const [classes, setClasses] = useState<Class[]>([]);
+    const { user } = useAuth();
+    const [allClasses, setAllClasses] = useState<Class[]>([]);
+    const [teacherClasses, setTeacherClasses] = useState<Class[]>([]);
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: startOfMonth(new Date()),
@@ -48,10 +49,27 @@ export default function AttendanceHistoryPage() {
     const [allStaffRoles, setAllStaffRoles] = useState<string[]>([]);
     
     useEffect(() => {
-        setClasses(getClasses());
+        const classesData = getClasses();
+        setAllClasses(classesData);
+        if (user?.role === 'Admin' || user?.role === 'Headmaster') {
+            setTeacherClasses(classesData);
+        } else if (user?.role === 'Teacher') {
+            const staffList = getStaff();
+            const currentTeacher = staffList.find(s => s.user_id === user.id);
+            if (currentTeacher) {
+                const appointments = getStaffAppointmentHistory();
+                const latestAppointment = appointments
+                    .filter(a => a.staff_id === currentTeacher.staff_id)
+                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+                if (latestAppointment?.class_assigned) {
+                    const assignedClasses = classesData.filter(c => latestAppointment.class_assigned?.includes(c.id));
+                    setTeacherClasses(assignedClasses);
+                }
+            }
+        }
         const roles = getRoles().map(r => r.name).filter(r => r !== 'Student' && r !== 'Parent');
         setAllStaffRoles(roles);
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (selectedClass && dateRange?.from) {
@@ -121,7 +139,7 @@ export default function AttendanceHistoryPage() {
 
 
     return (
-        <ProtectedRoute allowedRoles={['Admin', 'Headmaster']}>
+        <ProtectedRoute allowedRoles={['Admin', 'Headmaster', 'Teacher']}>
              <div className="space-y-6">
                 <div>
                     <h1 className="text-3xl font-bold font-headline">Attendance History</h1>
@@ -189,7 +207,7 @@ export default function AttendanceHistoryPage() {
                                             <SelectValue placeholder="Select Class" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                            {teacherClasses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                      <div className="relative flex-1">
@@ -252,7 +270,7 @@ export default function AttendanceHistoryPage() {
                                             onChange={(e) => setStaffSearch(e.target.value)}
                                         />
                                     </div>
-                                    <Select value={selectedRole} onValueChange={setSelectedRole}>
+                                    <Select value={selectedRole} onValueChange={setSelectedRole} disabled={user?.role === 'Teacher'}>
                                         <SelectTrigger className="w-full md:w-[200px]">
                                             <SelectValue placeholder="Filter by Role" />
                                         </SelectTrigger>
