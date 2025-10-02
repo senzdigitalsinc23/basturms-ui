@@ -596,7 +596,6 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a class to be the class teacher for..." /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="">None</SelectItem>
                                                     {classes.filter(c => assignedClasses.includes(c.id)).map(c => (
                                                         <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                                     ))}
