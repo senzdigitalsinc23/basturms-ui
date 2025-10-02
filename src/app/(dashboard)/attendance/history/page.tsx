@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords, getRoles, getStaffAppointmentHistory } from '@/lib/store';
@@ -58,12 +59,21 @@ export default function AttendanceHistoryPage() {
             const currentTeacher = staffList.find(s => s.user_id === user.id);
             if (currentTeacher) {
                 const appointments = getStaffAppointmentHistory();
-                const latestAppointment = appointments
+                const teacherAppointments = appointments
                     .filter(a => a.staff_id === currentTeacher.staff_id)
-                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
-                if (latestAppointment?.class_assigned) {
-                    const assignedClasses = classesData.filter(c => latestAppointment.class_assigned?.includes(c.id));
+                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
+                
+                const allAssignedClasses = new Set<string>();
+                teacherAppointments.forEach(app => {
+                    app.class_assigned?.forEach(classId => allAssignedClasses.add(classId));
+                });
+
+                if (allAssignedClasses.size > 0) {
+                    const assignedClasses = classesData.filter(c => allAssignedClasses.has(c.id));
                     setTeacherClasses(assignedClasses);
+                    if (assignedClasses.length > 0) {
+                        setSelectedClass(assignedClasses[0].id);
+                    }
                 }
             }
         }

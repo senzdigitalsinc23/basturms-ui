@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -182,7 +181,7 @@ export function AcademicCalendar() {
     };
 
     const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>, id?: string) => {
-        if (!user) return;
+        if (!user || user.role !== 'Admin') return;
         if (id) { // Editing existing event
             updateCalendarEvent(id, eventData, user.id);
             toast({ title: "Event Updated", description: `"${eventData.title}" has been updated.` });
@@ -196,20 +195,21 @@ export function AcademicCalendar() {
     };
 
     const handleDeleteEvent = (eventId: string) => {
-        if (!user) return;
+        if (!user || user.role !== 'Admin') return;
         deleteCalendarEvent(eventId, user.id);
         fetchData();
         toast({ title: "Event Deleted", description: "The event has been removed from the calendar." });
     }
 
     const handleDayClick = (day: Date, modifiers: { disabled?: boolean }) => {
-        if (modifiers.disabled) return;
+        if (modifiers.disabled || user?.role !== 'Admin') return;
         setSelectedDateForNewEvent(day);
         setEditingEvent(null);
         setIsEventFormOpen(true);
     };
     
     const handleEditClick = (event: CalendarEvent) => {
+        if (user?.role !== 'Admin') return;
         setEditingEvent(event);
         setSelectedDateForNewEvent(undefined);
         setIsEventFormOpen(true);
@@ -272,7 +272,9 @@ export function AcademicCalendar() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button size="sm" onClick={() => { setSelectedDateForNewEvent(new Date()); setEditingEvent(null); setIsEventFormOpen(true); }}><PlusCircle className="mr-2"/> Add Event</Button>
+                        {user?.role === 'Admin' && (
+                            <Button size="sm" onClick={() => { setSelectedDateForNewEvent(new Date()); setEditingEvent(null); setIsEventFormOpen(true); }}><PlusCircle className="mr-2"/> Add Event</Button>
+                        )}
                     </div>
                 </div>
             </CardHeader>
@@ -324,28 +326,30 @@ export function AcademicCalendar() {
                                         <p className="font-medium">{event.title}</p>
                                         <p className="text-sm text-muted-foreground">{event.category}</p>
                                     </div>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(event)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                         <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>This will permanently delete the event "{event.title}".</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteEvent(event.id)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
+                                    {user?.role === 'Admin' && (
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(event)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>This will permanently delete the event "{event.title}".</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteEvent(event.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    )}
                                 </div>
                             )) : (
                                 <p className="text-sm text-muted-foreground">No events for this month.</p>
@@ -363,15 +367,17 @@ export function AcademicCalendar() {
                     </Card>
                 </div>
             </CardContent>
-            <Dialog open={isEventFormOpen} onOpenChange={setIsEventFormOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Calendar Event'}</DialogTitle>
-                        {(selectedDateForNewEvent && !editingEvent) && <DialogDescription>Adding event for {format(selectedDateForNewEvent, 'PPP')}.</DialogDescription>}
-                    </DialogHeader>
-                    <EventForm onSave={handleSaveEvent} selectedDate={selectedDateForNewEvent} existingEvent={editingEvent} />
-                </DialogContent>
-            </Dialog>
+            {user?.role === 'Admin' && (
+                <Dialog open={isEventFormOpen} onOpenChange={setIsEventFormOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Calendar Event'}</DialogTitle>
+                            {(selectedDateForNewEvent && !editingEvent) && <DialogDescription>Adding event for {format(selectedDateForNewEvent, 'PPP')}.</DialogDescription>}
+                        </DialogHeader>
+                        <EventForm onSave={handleSaveEvent} selectedDate={selectedDateForNewEvent} existingEvent={editingEvent} />
+                    </DialogContent>
+                </Dialog>
+            )}
         </Card>
     );
 }

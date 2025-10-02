@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 type LessonNote = {
     id: string;
@@ -43,7 +43,7 @@ const saveLessonNotes = (notes: LessonNote[]) => {
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
-  file: z.any().refine(file => file instanceof File, 'File is required.'),
+  file: z.any().refine(file => file?.[0], 'File is required.'),
 });
 
 export default function LessonNotesPage() {
@@ -52,6 +52,10 @@ export default function LessonNotesPage() {
   const [lessonNotes, setLessonNotes] = useState<LessonNote[]>([]);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+    },
   });
 
   const fetchNotes = () => {
@@ -69,16 +73,17 @@ export default function LessonNotesPage() {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!user) return;
+    const file = values.file[0];
     const reader = new FileReader();
-    reader.readAsDataURL(values.file);
+    reader.readAsDataURL(file);
     reader.onload = () => {
       const newNote: LessonNote = {
         id: `note_${Date.now()}`,
         title: values.title,
         description: values.description || '',
         file: reader.result as string,
-        fileName: values.file.name,
-        fileType: values.file.type,
+        fileName: file.name,
+        fileType: file.type,
         uploadedAt: new Date().toISOString(),
         authorId: user.id,
         authorName: user.name,
@@ -89,7 +94,7 @@ export default function LessonNotesPage() {
       fetchNotes();
 
       toast({ title: 'Lesson Note Uploaded', description: `"${values.title}" has been saved.` });
-      form.reset({title: '', description: '', file: undefined});
+      form.reset();
     };
   };
   
