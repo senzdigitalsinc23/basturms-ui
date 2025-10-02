@@ -87,26 +87,33 @@ export function TimetableScheduler() {
             newScheduleForClass[day] = {};
             TIME_SLOTS.forEach((slot, index) => {
                 if (index === 3 || index === 7) return; // Skip breaks
+                
+                let assigned = false;
+                let subjectsToTry = [...classSubjects];
 
-                const randomSubject = getRandomElement(classSubjects);
-                if (randomSubject) {
+                while (subjectsToTry.length > 0 && !assigned) {
+                    const randomSubjectIndex = Math.floor(Math.random() * subjectsToTry.length);
+                    const randomSubject = subjectsToTry[randomSubjectIndex];
+                    subjectsToTry.splice(randomSubjectIndex, 1); // Remove from list to avoid retrying
+
                     let teacherToAssignId: string | undefined = classTeacherId;
-                    
-                    if (!isLowerPrimary) {
+
+                    if (!isLowerPrimary || !teacherToAssignId) {
                         const availableTeachers = getAvailableTeachers(day, slot, randomSubject.id, classId);
                         const randomTeacher = getRandomElement(availableTeachers);
                         teacherToAssignId = randomTeacher?.staff_id;
                     }
-                    
+
                     if (teacherToAssignId) {
                          newScheduleForClass[day][slot] = {
                             subjectId: randomSubject.id,
                             teacherId: teacherToAssignId,
                         };
-                    } else {
-                         newScheduleForClass[day][slot] = null;
+                        assigned = true;
                     }
-                } else {
+                }
+                
+                if (!assigned) {
                     newScheduleForClass[day][slot] = null;
                 }
             });
@@ -305,7 +312,6 @@ export function TimetableScheduler() {
                                                                     <SelectValue placeholder="Subject" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="none">None</SelectItem>
                                                                     {classSubjects.map(sub => <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>)}
                                                                 </SelectContent>
                                                             </Select>
@@ -322,7 +328,6 @@ export function TimetableScheduler() {
                                                                         <SelectItem value={classTeacherInfo.staff_id}>{classTeacherInfo.first_name} {classTeacherInfo.last_name}</SelectItem>
                                                                     ) : (
                                                                         <>
-                                                                            <SelectItem value="none">None</SelectItem>
                                                                             {availableTeachers.map(t => <SelectItem key={t.staff_id} value={t.staff_id}>{t.first_name} {t.last_name}</SelectItem>)}
                                                                         </>
                                                                     )}
