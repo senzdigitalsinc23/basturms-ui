@@ -1,5 +1,4 @@
 
-
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getSubjects, addClassSubject, getStaff, getStaffAppointmentHistory, saveTimetable, getTimetable } from '@/lib/store';
@@ -89,12 +88,11 @@ export function TimetableScheduler() {
                 if (index === 3 || index === 7) return; // Skip breaks
                 
                 let assigned = false;
-                let subjectsToTry = [...classSubjects];
+                let subjectsToTry = [...classSubjects].sort(() => Math.random() - 0.5);
 
                 while (subjectsToTry.length > 0 && !assigned) {
-                    const randomSubjectIndex = Math.floor(Math.random() * subjectsToTry.length);
-                    const randomSubject = subjectsToTry[randomSubjectIndex];
-                    subjectsToTry.splice(randomSubjectIndex, 1); // Remove from list to avoid retrying
+                    const randomSubject = subjectsToTry.pop();
+                    if (!randomSubject) continue;
 
                     let teacherToAssignId: string | undefined = classTeacherId;
 
@@ -280,17 +278,17 @@ export function TimetableScheduler() {
                             <Table className="min-w-full">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[150px] font-bold text-black">Time Slot</TableHead>
-                                        {DAYS.map(day => <TableHead key={day} className="font-bold text-black">{day}</TableHead>)}
+                                        <TableHead className="w-[150px] font-bold text-black print:text-sm">Time Slot</TableHead>
+                                        {DAYS.map(day => <TableHead key={day} className="font-bold text-black print:text-sm">{day}</TableHead>)}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {TIME_SLOTS.map((slot, index) => (
                                         <TableRow key={slot} className={index === 3 || index === 7 ? 'bg-muted/50 print:bg-gray-200' : ''}>
-                                            <TableCell className="font-medium">{slot}</TableCell>
+                                            <TableCell className="font-medium print:text-xs">{slot}</TableCell>
                                             {DAYS.map(day => {
-                                                if (index === 3) return index === 3 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold">Short Break</TableCell> : null
-                                                if (index === 7) return index === 7 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold">Lunch Break</TableCell> : null
+                                                if (index === 3) return index === 3 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold print:text-sm">Short Break</TableCell> : null
+                                                if (index === 7) return index === 7 && day === 'Monday' ? <TableCell key={day} rowSpan={1} colSpan={5} className="text-center font-semibold print:text-sm">Lunch Break</TableCell> : null
                                                 
                                                 if (index === 3 || index === 7) return null;
 
@@ -298,7 +296,7 @@ export function TimetableScheduler() {
                                                 const availableTeachers = getAvailableTeachers(day, slot, currentEntry?.subjectId, selectedClass);
 
                                                 return (
-                                                    <TableCell key={day} className="p-1 align-top print:p-2">
+                                                    <TableCell key={day} className="p-1 align-top print:p-1">
                                                         <div className="space-y-1 hidden print:block">
                                                             <p className="font-semibold text-sm">{subjects.find(s => s.id === currentEntry?.subjectId)?.name || '---'}</p>
                                                             <p className="text-xs text-gray-600">{teachers.find(t => t.staff_id === currentEntry?.teacherId)?.first_name || '---'}</p>
