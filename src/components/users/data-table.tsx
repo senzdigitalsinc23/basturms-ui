@@ -35,7 +35,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { UserForm } from './user-form';
-import { User, ALL_ROLES } from '@/lib/types';
+import { User, ALL_ROLES, Staff } from '@/lib/types';
 import { ChevronLeft, ChevronRight, PlusCircle, X, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { DataTableFacetedFilter } from './data-table-faceted-filter';
 import { useAuth } from '@/hooks/use-auth';
@@ -45,7 +45,8 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 interface UserDataTableProps {
   columns: ColumnDef<User>[];
   data: User[];
-  onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string }) => void;
+  staff: Staff[];
+  onAdd: (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, entityId?: string }) => void;
   onBulkDelete: (userIds: string[]) => void;
 }
 
@@ -60,7 +61,7 @@ const roleOptions = ALL_ROLES.map(role => ({
 }));
 
 
-export function UserDataTable({ columns, data, onAdd, onBulkDelete }: UserDataTableProps) {
+export function UserDataTable({ columns, data, staff, onAdd, onBulkDelete }: UserDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -181,6 +182,7 @@ export function UserDataTable({ columns, data, onAdd, onBulkDelete }: UserDataTa
                 </DialogDescription>
                 </DialogHeader>
                 <UserForm
+                staffList={staff}
                 onSubmit={(values) => {
                     onAdd(values);
                     setIsFormOpen(false);

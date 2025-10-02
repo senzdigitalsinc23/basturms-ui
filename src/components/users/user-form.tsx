@@ -24,7 +24,7 @@ import { ALL_ROLES, Role, Staff, StudentProfile, User } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUsers, getStudentProfiles, getStaff } from '@/lib/store';
+import { getUsers, getStudentProfiles } from '@/lib/store';
 
 const createSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -44,12 +44,14 @@ type UserFormProps = {
   isEditMode?: boolean;
   defaultValues?: User;
   onSubmit: (values: any) => void;
+  staffList: Staff[];
 };
 
 export function UserForm({
   isEditMode = false,
   defaultValues,
   onSubmit,
+  staffList = [],
 }: UserFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -92,15 +94,14 @@ export function UserForm({
       setUnlinkedStudents(availableStudents);
       setUnlinkedStaff([]);
     } else if (isStaffRole) {
-        const allStaff = getStaff();
-        const availableStaff = allStaff.filter(staffMember => !staffMember.user_id);
+        const availableStaff = staffList.filter(staffMember => !staffMember.user_id);
         setUnlinkedStaff(availableStaff);
         setUnlinkedStudents([]);
     } else {
       setUnlinkedStudents([]);
       setUnlinkedStaff([]);
     }
-  }, [selectedRole, isEditMode, isStaffRole]);
+  }, [selectedRole, isEditMode, isStaffRole, staffList]);
 
 
   const handleFormSubmit = async (values: z.infer<typeof createSchema | typeof editSchema>) => {
