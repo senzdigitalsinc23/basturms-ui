@@ -93,9 +93,7 @@ export function UserForm({
       setUnlinkedStaff([]);
     } else if (isStaffRole) {
         const allStaff = getStaff();
-        const availableStaff = allStaff.filter(staffMember => {
-            return staffMember.roles.includes(selectedRole!) && !staffMember.user_id;
-        });
+        const availableStaff = allStaff.filter(staffMember => !staffMember.user_id);
         setUnlinkedStaff(availableStaff);
         setUnlinkedStudents([]);
     } else {
@@ -195,7 +193,7 @@ export function UserForm({
                                     <SelectItem key={staff.staff_id} value={staff.staff_id}>
                                         {`${staff.first_name} ${staff.last_name} (${staff.staff_id})`}
                                     </SelectItem>
-                                )) : <p className="p-2 text-sm text-muted-foreground">No unlinked staff with role '{selectedRole}' found.</p>
+                                )) : <p className="p-2 text-sm text-muted-foreground">No unlinked staff found.</p>
                             )}
                         </SelectContent>
                     </Select>
@@ -212,7 +210,7 @@ export function UserForm({
             <FormItem>
             <FormLabel>Full Name</FormLabel>
             <FormControl>
-                <Input placeholder="Select an entity to auto-fill" {...field} readOnly={!isEditMode} disabled={!isEditMode && isEntitySelectionRole} />
+                <Input placeholder="Select an entity to auto-fill" {...field} readOnly={!isEditMode && isEntitySelectionRole} />
             </FormControl>
             <FormMessage />
             </FormItem>
@@ -225,7 +223,7 @@ export function UserForm({
             <FormItem>
             <FormLabel>Email</FormLabel>
             <FormControl>
-                <Input placeholder="Select an entity to auto-fill" {...field} readOnly={!isEditMode} disabled={!isEditMode && isEntitySelectionRole} />
+                <Input placeholder="Select an entity to auto-fill" {...field} readOnly={!isEditMode && isEntitySelectionRole} />
             </FormControl>
             <FormMessage />
             </FormItem>
