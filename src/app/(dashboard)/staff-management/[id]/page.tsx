@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects, addStaffAcademicHistory, addStaffAppointmentHistory, storeGetStaffAcademicHistory, getSchoolProfile } from '@/lib/store';
+import { getStaff, getStaffByStaffId, getStaffDocumentsByStaffId, getUserById, deleteStaffDocument, addAuditLog, getStaffAppointmentHistory, addStaffDocument as storeAddStaffDocument, updateStaff, getClasses, getSubjects, addStaffAcademicHistory, addStaffAppointmentHistory, storeGetStaffAcademicHistory, getSchoolProfile } from '@/lib/store';
 import { Staff, User, StaffDocument, StaffAppointmentHistory, Role, Class, Subject, SchoolProfileData } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
