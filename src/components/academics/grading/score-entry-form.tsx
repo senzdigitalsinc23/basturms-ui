@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities } from '@/lib/store';
+import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities, getStaff, getStaffAppointmentHistory } from '@/lib/store';
 import { Class, StudentProfile, Subject, ClassSubject, AssignmentScore, AssignmentActivity } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,8 @@ type StudentForGrading = {
 };
 
 export function ScoreEntryForm() {
-    const [classes, setClasses] = useState<Class[]>([]);
+    const [allClasses, setAllClasses] = useState<Class[]>([]);
+    const [teacherClasses, setTeacherClasses] = useState<Class[]>([]);
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
     const [classSubjects, setClassSubjects] = useState<Subject[]>([]);
     const [students, setStudents] = useState<StudentForGrading[]>([]);
@@ -28,8 +29,26 @@ export function ScoreEntryForm() {
     const { user } = useAuth();
 
     useEffect(() => {
-        setClasses(getClasses());
-    }, []);
+        const classes = getClasses();
+        setAllClasses(classes);
+        if (user?.role === 'Admin') {
+            setTeacherClasses(classes);
+        } else if (user?.role === 'Teacher') {
+            const staffList = getStaff();
+            const currentTeacher = staffList.find(s => s.user_id === user.id);
+            if (currentTeacher) {
+                const appointments = getStaffAppointmentHistory();
+                const teacherAppointments = appointments
+                    .filter(a => a.staff_id === currentTeacher.staff_id)
+                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
+                const latestAppointment = teacherAppointments[0];
+                if (latestAppointment && latestAppointment.class_assigned) {
+                    const assignedClasses = classes.filter(c => latestAppointment.class_assigned?.includes(c.id));
+                    setTeacherClasses(assignedClasses);
+                }
+            }
+        }
+    }, [user]);
 
     // Effect for when the class changes
     useEffect(() => {
@@ -159,7 +178,7 @@ export function ScoreEntryForm() {
                         <SelectValue placeholder="Select a class..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        {teacherClasses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                 </Select>
                 {selectedClass && (
