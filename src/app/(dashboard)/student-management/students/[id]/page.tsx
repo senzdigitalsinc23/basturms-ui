@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -32,6 +33,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ProtectedRoute } from '@/components/protected-route';
 
 
 const statusColors: Record<string, string> = {
@@ -327,502 +329,504 @@ export default function StudentProfilePage() {
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>{/* This empty div helps with flex layout */}</div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href="/student-management/students">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to List
-                        </Link>
-                    </Button>
-                    <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
-                        <DialogTrigger asChild>
-                             <Button variant="outline" size="sm">
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Log Communication
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Add Communication Log</DialogTitle>
-                                <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
-                            </DialogHeader>
-                            <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
-                        </DialogContent>
-                    </Dialog>
-                    <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-                        <DialogTrigger asChild>
-                             <Button size="sm">
-                                <Edit className="mr-2 h-4 w-4" /> Edit Student
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl">
-                            <DialogHeader>
-                                <DialogTitle>Edit Student Profile</DialogTitle>
-                                <DialogDescription>
-                                    Update the details for {fullName}.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <EditStudentForm
-                                defaultValues={profile}
-                                classes={classes}
-                                onSubmit={handleUpdateProfile}
-                            />
-                        </DialogContent>
-                    </Dialog>
-                </div>
-            </div>
-            <Card>
-                <CardHeader className="flex flex-row items-center gap-6 space-y-0">
-                    <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                        <AvatarImage src={student.avatarUrl} alt={fullName} />
-                        <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                        <h1 className="text-3xl font-bold font-headline">{fullName}</h1>
-                        <p className="text-muted-foreground">Student ID: {student.student_no}</p>
-                        <p className="text-muted-foreground">Class: {className}</p>
-                    </div>
-                </CardHeader>
-            </Card>
-
-            <div className="grid md:grid-cols-3 gap-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base font-medium text-muted-foreground">Admission Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Badge className={`text-sm ${statusColors[admissionDetails.admission_status]}`}>{admissionDetails.admission_status}</Badge>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base font-medium text-muted-foreground">Date of Birth</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="font-semibold text-lg">{format(new Date(student.dob), 'do MMMM, yyyy')}</p>
-                         {age !== null && <p className="text-sm text-muted-foreground">{age} years old</p>}
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base font-medium text-muted-foreground">Gender</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="font-semibold text-lg">{student.gender}</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Tabs defaultValue="contact">
-                <TabsList className="grid w-full grid-cols-7">
-                    <TabsTrigger value="contact">Contact & Guardian</TabsTrigger>
-                    <TabsTrigger value="academic">Academic</TabsTrigger>
-                    <TabsTrigger value="financials">Financials</TabsTrigger>
-                    <TabsTrigger value="health">Health</TabsTrigger>
-                    <TabsTrigger value="conduct">Conduct</TabsTrigger>
-                    <TabsTrigger value="attendance">Attendance</TabsTrigger>
-                    <TabsTrigger value="documents">Documents</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="contact" asChild>
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="grid md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <h3 className="font-semibold text-lg flex items-center"><User className="mr-2 h-5 w-5 text-primary" /> Student's Contact</h3>
-                                    <Separator />
-                                     <DetailItem icon={Mail} label="Email" value={contactDetails.email} />
-                                     <DetailItem icon={Phone} label="Phone Number" value={contactDetails.phone} />
-                                     <DetailItem icon={Building} label="Current Residence" value={contactDetails.residence} />
-                                </div>
-                                <div className="space-y-4">
-                                     <h3 className="font-semibold text-lg flex items-center"><Shield className="mr-2 h-5 w-5 text-primary" /> Guardian's Contact</h3>
-                                     <Separator />
-                                     <DetailItem icon={User} label="Name" value={guardianInfo.guardian_name} />
-                                     <DetailItem icon={Phone} label="Phone Number" value={guardianInfo.guardian_phone} />
-                                     <DetailItem icon={Mail} label="Email" value={guardianInfo.guardian_email} />
-                                     <DetailItem icon={Users} label="Relationship" value={guardianInfo.guardian_relationship} />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="academic" className="space-y-6">
-                    <RecordCard<AssignmentScore>
-                        title="Assignment Scores"
-                        description="Detailed scores from classwork, homework, and exams."
-                        icon={FileText}
-                        records={assignmentScores}
-                        columns={['Assignment', 'Subject', 'Score', 'Actions']}
-                        renderRow={(rec, i) => (
-                             <TableRow key={i}>
-                                <TableCell>{rec.assignment_name}</TableCell>
-                                <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
-                                <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action will permanently delete the score for {rec.assignment_name} in {subjects.find(s => s.id === rec.subject_id)?.name}.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteScore(rec)}>Delete Score</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        emptyMessage="No individual assignment scores have been recorded yet."
-                    />
-                    <RecordCard<AcademicRecord>
-                        title="Academic Performance"
-                        description="Review final grades and remarks for each term."
-                        icon={GraduationCap}
-                        records={academicRecords}
-                        columns={['Term', 'Subject', 'Grade', 'Teacher Remarks']}
-                        renderRow={(rec, i) => (
-                            <TableRow key={i}>
-                                <TableCell>{rec.term}</TableCell>
-                                <TableCell>{rec.subject}</TableCell>
-                                <TableCell><Badge variant="secondary">{rec.grade}</Badge></TableCell>
-                                <TableCell className="max-w-xs truncate">{rec.teacher_remarks}</TableCell>
-                            </TableRow>
-                        )}
-                        addRecordButton={
-                            <Dialog open={isAcademicFormOpen} onOpenChange={setIsAcademicFormOpen}>
-                                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
-                                <DialogContent><DialogHeader><DialogTitle>Add Academic Record</DialogTitle></DialogHeader>
-                                    <AcademicRecordForm onSubmit={values => handleAddRecord(addAcademicRecord, values, "Add Academic Record", `Added grade for ${values.subject}`, "Record Added", "Academic record added successfully.", () => setIsAcademicFormOpen(false))} />
-                                </DialogContent>
-                            </Dialog>
-                        }
-                    />
-                </TabsContent>
-                <TabsContent value="financials">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <Landmark className="h-6 w-6 text-primary" />
-                                <div>
-                                    <CardTitle>Financials</CardTitle>
-                                    <CardDescription>Overview of the student's financial account.</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {financialDetails ? (
-                                <>
-                                    <div className="grid md:grid-cols-3 gap-4 text-center">
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="text-sm font-medium text-muted-foreground">Current Term Fees</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <p className="text-2xl font-bold">{formatCurrency(currentTermPayment?.total_fees || 0)}</p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="text-sm font-medium text-muted-foreground">Amount Paid</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <p className="text-2xl font-bold text-green-600">{formatCurrency(currentTermPayment?.amount_paid || 0)}</p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <p className="text-2xl font-bold text-red-600">{formatCurrency(currentTermPayment?.outstanding || 0)}</p>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-                                    
-                                     <Card className="bg-muted/50">
-                                        <CardContent className="p-4 flex items-center justify-between">
-                                            <p className="font-medium">Total Account Balance</p>
-                                            <p className={`text-xl font-bold ${financialDetails.account_balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                {formatCurrency(Math.abs(financialDetails.account_balance))}
-                                                <span className="text-sm font-normal ml-2">{financialDetails.account_balance < 0 ? 'Debit' : 'Credit'}</span>
-                                            </p>
-                                        </CardContent>
-                                    </Card>
-
-                                    <div>
-                                        <h4 className="font-semibold mb-2">Payment History</h4>
-                                        <RecordCard<TermPayment>
-                                            title=""
-                                            description=""
-                                            icon={() => null}
-                                            records={financialDetails.payment_history}
-                                            columns={['Term', 'Total Billed', 'Amount Paid', 'Outstanding', 'Status']}
-                                            renderRow={(rec, i) => (
-                                                <TableRow key={i}>
-                                                    <TableCell>{rec.term}</TableCell>
-                                                    <TableCell>{formatCurrency(rec.total_fees)}</TableCell>
-                                                    <TableCell>{formatCurrency(rec.amount_paid)}</TableCell>
-                                                    <TableCell>{formatCurrency(rec.outstanding)}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={rec.status === 'Paid' ? 'secondary' : (rec.status === 'Partially Paid' ? 'default' : 'destructive')}>
-                                                            {rec.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        />
-                                    </div>
-                                </>
-                            ) : (
-                                <p className="text-muted-foreground text-center py-8">No financial records found for this student.</p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                 <TabsContent value="health" asChild>
-                    <Card>
-                        <CardHeader className="flex flex-row justify-between items-start">
-                           <div className="flex items-center gap-4">
-                                <HeartPulse className="h-6 w-6 text-primary" />
-                                <div>
-                                    <CardTitle>Health Records</CardTitle>
-                                    <CardDescription>Allergies, vaccinations, and other medical information.</CardDescription>
-                                </div>
-                            </div>
-                             <Dialog open={isHealthFormOpen} onOpenChange={setIsHealthFormOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Health Records</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader><DialogTitle>Edit Health Records</DialogTitle></DialogHeader>
-                                    <HealthRecordsForm 
-                                        defaultValues={healthRecords}
-                                        onSubmit={handleUpdateHealthRecords}
-                                    />
-                                </DialogContent>
-                            </Dialog>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <h4 className="font-semibold mb-2 flex items-center"><Droplet className="mr-2 h-4 w-4 text-destructive" /> Blood Group</h4>
-                                    <p className="text-lg font-bold">{healthRecords?.blood_group || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <h4 className="font-semibold mb-2">Allergies</h4>
-                                    {healthRecords?.allergies?.length ? (
-                                        <div className="flex flex-wrap gap-2">
-                                            {healthRecords.allergies.map(allergy => <Badge key={allergy} variant="destructive">{allergy}</Badge>)}
-                                        </div>
-                                    ) : <p className="text-sm text-muted-foreground">No known allergies.</p>}
-                                </div>
-                            </div>
-                            <Separator />
-                            <div>
-                                <h4 className="font-semibold mb-2">Vaccinations</h4>
-                                {healthRecords?.vaccinations?.length ? (
-                                    <ul className="list-disc pl-5 text-sm space-y-1">
-                                        {healthRecords.vaccinations.map(vax => <li key={vax.name}>{vax.name} on {format(new Date(vax.date), 'do MMM, yyyy')}</li>)}
-                                    </ul>
-                                ) : <p className="text-sm text-muted-foreground">No vaccination records.</p>}
-                            </div>
-                             <Separator />
-                            <div>
-                                <h4 className="font-semibold mb-2">Medical Notes</h4>
-                                <p className="text-sm text-muted-foreground">{healthRecords?.medical_notes || 'No additional medical notes.'}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="conduct" asChild>
-                     <RecordCard<DisciplinaryRecord>
-                        title="Student Conduct & Disciplinary Records"
-                        description="Log of all disciplinary incidents."
-                        icon={Scale}
-                        records={disciplinaryRecords}
-                        columns={['Date', 'Incident Reported', 'Action Taken', 'Reported By']}
-                        renderRow={(rec, i) => (
-                            <TableRow key={i}>
-                                <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
-                                <TableCell>{rec.incident}</TableCell>
-                                <TableCell>{rec.action_taken}</TableCell>
-                                <TableCell>{getUserName(rec.reported_by)}</TableCell>
-                            </TableRow>
-                        )}
-                        addRecordButton={
-                             <Dialog open={isDisciplinaryFormOpen} onOpenChange={setIsDisciplinaryFormOpen}>
-                                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
-                                <DialogContent><DialogHeader><DialogTitle>Add Disciplinary Record</DialogTitle></DialogHeader>
-                                    <DisciplinaryRecordForm users={users} onSubmit={values => handleAddRecord(addDisciplinaryRecord, values, "Add Disciplinary Record", `Logged incident: ${values.incident}`, "Record Added", "Disciplinary record added successfully.", () => setIsDisciplinaryFormOpen(false))} />
-                                </DialogContent>
-                            </Dialog>
-                        }
-                    />
-                </TabsContent>
-                <TabsContent value="attendance" asChild>
-                     <div className="grid gap-6">
-                        <RecordCard<StudentAttendanceRecord>
-                            title="Attendance Summary"
-                            description="Overview of student's attendance."
-                            icon={Activity}
-                            records={attendanceRecords}
-                            columns={['Date', 'Status']}
-                            renderRow={(rec, i) => (
-                                <TableRow key={i}>
-                                    <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
-                                    <TableCell><Badge variant={rec.status === 'Present' ? 'secondary' : 'destructive'}>{rec.status}</Badge></TableCell>
-                                </TableRow>
-                            )}
-                             addRecordButton={
-                                <Dialog open={isAttendanceFormOpen} onOpenChange={setIsAttendanceFormOpen}>
-                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
-                                    <DialogContent><DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
-                                        <AttendanceRecordForm onSubmit={values => handleAddRecord(addAttendanceRecord, {...values, student_id: studentId}, "Add Attendance Record", `Logged attendance for ${format(new Date(values.date), 'yyyy-MM-dd')}`, "Record Added", "Attendance record added successfully.", () => setIsAttendanceFormOpen(false))} />
-                                    </DialogContent>
-                                </Dialog>
-                            }
-                        />
-                         <RecordCard<CommunicationLog>
-                            title="Communication Log"
-                            description="Record of communications with parents/guardians."
-                            icon={MessageSquare}
-                            records={communicationLogs}
-                            columns={['Date', 'Type', 'With Whom', 'Notes']}
-                            renderRow={(rec, i) => (
-                                <TableRow key={i}>
-                                    <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
-                                    <TableCell>{rec.type}</TableCell>
-                                    <TableCell>{rec.with_whom}</TableCell>
-                                    <TableCell>{rec.notes}</TableCell>
-                                </TableRow>
-                            )}
-                             addRecordButton={
-                                <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
-                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
-                                    <DialogContent><DialogHeader><DialogTitle>Add Communication Log</DialogTitle></DialogHeader>
-                                        <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
-                                    </DialogContent>
-                                </Dialog>
-                            }
-                        />
-                    </div>
-                </TabsContent>
-                <TabsContent value="documents" className="space-y-6">
-                    <RecordCard<UploadedDocument>
-                        title="Uploaded Documents"
-                        description="Official student documents."
-                        icon={FileText}
-                        records={uploadedDocuments}
-                        columns={['Document Name', 'Type', 'Upload Date', 'Actions']}
-                        renderRow={(rec, i) => (
-                            <TableRow key={i}>
-                                <TableCell>{rec.name}</TableCell>
-                                <TableCell>{rec.type}</TableCell>
-                                <TableCell>{format(new Date(rec.uploaded_at), 'do MMM, yyyy')}</TableCell>
-                                <TableCell className="flex gap-2">
-                                    <Button variant="link" size="sm" asChild>
-                                        <Link href={rec.url} target="_blank" rel="noopener noreferrer" download={rec.name}>View</Link>
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" size="sm">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action cannot be undone. This will permanently delete the document.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteDocument(rec.uploaded_at)}>
-                                                    Delete
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        emptyMessage="No documents have been uploaded."
-                        addRecordButton={
-                             <Dialog open={isDocumentFormOpen} onOpenChange={setIsDocumentFormOpen}>
-                                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
-                                <DialogContent><DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
-                                    <DocumentUploadForm onSubmit={values => handleAddRecord(addUploadedDocument, values, "Upload Document", `Uploaded document: ${values.name}`, "Document Uploaded", "Document uploaded successfully.", () => setIsDocumentFormOpen(false))} />
-                                </DialogContent>
-                            </Dialog>
-                        }
-                    />
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>ID Card</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col items-center gap-4">
-                             <div ref={idCardRef}>
-                                <IDCardTemplate
-                                    cardData={{ type: 'student', data: profile }}
-                                    schoolProfile={schoolProfile}
+        <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>{/* This empty div helps with flex layout */}</div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href="/student-management/students">
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Back to List
+                            </Link>
+                        </Button>
+                        <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    Log Communication
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Add Communication Log</DialogTitle>
+                                    <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
+                                </DialogHeader>
+                                <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
+                            </DialogContent>
+                        </Dialog>
+                        <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm">
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Student
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>Edit Student Profile</DialogTitle>
+                                    <DialogDescription>
+                                        Update the details for {fullName}.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <EditStudentForm
+                                    defaultValues={profile}
                                     classes={classes}
+                                    onSubmit={handleUpdateProfile}
                                 />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button size="sm" variant="outline" onClick={() => handleDownloadID('pdf')}>
-                                    <FileText className="mr-2" /> PDF
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleDownloadID('png')}>
-                                    <ImageIcon className="mr-2" /> PNG
-                                </Button>
-                            </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                </div>
+                <Card>
+                    <CardHeader className="flex flex-row items-center gap-6 space-y-0">
+                        <Avatar className="h-24 w-24 border-4 border-background shadow-md">
+                            <AvatarImage src={student.avatarUrl} alt={fullName} />
+                            <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                            <h1 className="text-3xl font-bold font-headline">{fullName}</h1>
+                            <p className="text-muted-foreground">Student ID: {student.student_no}</p>
+                            <p className="text-muted-foreground">Class: {className}</p>
+                        </div>
+                    </CardHeader>
+                </Card>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base font-medium text-muted-foreground">Admission Status</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Badge className={`text-sm ${statusColors[admissionDetails.admission_status]}`}>{admissionDetails.admission_status}</Badge>
                         </CardContent>
                     </Card>
-                </TabsContent>
-            </Tabs>
-             <Dialog open={isEditScoreOpen} onOpenChange={setIsEditScoreOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit Score</DialogTitle>
-                        <DialogDescription>
-                            Update the score for {editingScore?.assignment_name} in {subjects.find(s => s.id === editingScore?.subject_id)?.name}.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="score" className="text-right">Score</Label>
-                            <Input
-                                id="score"
-                                type="number"
-                                value={newScoreValue}
-                                onChange={(e) => setNewScoreValue(e.target.value)}
-                                className="col-span-3"
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base font-medium text-muted-foreground">Date of Birth</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="font-semibold text-lg">{format(new Date(student.dob), 'do MMMM, yyyy')}</p>
+                            {age !== null && <p className="text-sm text-muted-foreground">{age} years old</p>}
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base font-medium text-muted-foreground">Gender</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="font-semibold text-lg">{student.gender}</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Tabs defaultValue="contact">
+                    <TabsList className="grid w-full grid-cols-7">
+                        <TabsTrigger value="contact">Contact & Guardian</TabsTrigger>
+                        <TabsTrigger value="academic">Academic</TabsTrigger>
+                        <TabsTrigger value="financials">Financials</TabsTrigger>
+                        <TabsTrigger value="health">Health</TabsTrigger>
+                        <TabsTrigger value="conduct">Conduct</TabsTrigger>
+                        <TabsTrigger value="attendance">Attendance</TabsTrigger>
+                        <TabsTrigger value="documents">Documents</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="contact" asChild>
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="grid md:grid-cols-2 gap-8">
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center"><User className="mr-2 h-5 w-5 text-primary" /> Student's Contact</h3>
+                                        <Separator />
+                                        <DetailItem icon={Mail} label="Email" value={contactDetails.email} />
+                                        <DetailItem icon={Phone} label="Phone Number" value={contactDetails.phone} />
+                                        <DetailItem icon={Building} label="Current Residence" value={contactDetails.residence} />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center"><Shield className="mr-2 h-5 w-5 text-primary" /> Guardian's Contact</h3>
+                                        <Separator />
+                                        <DetailItem icon={User} label="Name" value={guardianInfo.guardian_name} />
+                                        <DetailItem icon={Phone} label="Phone Number" value={guardianInfo.guardian_phone} />
+                                        <DetailItem icon={Mail} label="Email" value={guardianInfo.guardian_email} />
+                                        <DetailItem icon={Users} label="Relationship" value={guardianInfo.guardian_relationship} />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="academic" className="space-y-6">
+                        <RecordCard<AssignmentScore>
+                            title="Assignment Scores"
+                            description="Detailed scores from classwork, homework, and exams."
+                            icon={FileText}
+                            records={assignmentScores}
+                            columns={['Assignment', 'Subject', 'Score', 'Actions']}
+                            renderRow={(rec, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>{rec.assignment_name}</TableCell>
+                                    <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
+                                    <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will permanently delete the score for {rec.assignment_name} in {subjects.find(s => s.id === rec.subject_id)?.name}.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteScore(rec)}>Delete Score</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            emptyMessage="No individual assignment scores have been recorded yet."
+                        />
+                        <RecordCard<AcademicRecord>
+                            title="Academic Performance"
+                            description="Review final grades and remarks for each term."
+                            icon={GraduationCap}
+                            records={academicRecords}
+                            columns={['Term', 'Subject', 'Grade', 'Teacher Remarks']}
+                            renderRow={(rec, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>{rec.term}</TableCell>
+                                    <TableCell>{rec.subject}</TableCell>
+                                    <TableCell><Badge variant="secondary">{rec.grade}</Badge></TableCell>
+                                    <TableCell className="max-w-xs truncate">{rec.teacher_remarks}</TableCell>
+                                </TableRow>
+                            )}
+                            addRecordButton={
+                                <Dialog open={isAcademicFormOpen} onOpenChange={setIsAcademicFormOpen}>
+                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                    <DialogContent><DialogHeader><DialogTitle>Add Academic Record</DialogTitle></DialogHeader>
+                                        <AcademicRecordForm onSubmit={values => handleAddRecord(addAcademicRecord, values, "Add Academic Record", `Added grade for ${values.subject}`, "Record Added", "Academic record added successfully.", () => setIsAcademicFormOpen(false))} />
+                                    </DialogContent>
+                                </Dialog>
+                            }
+                        />
+                    </TabsContent>
+                    <TabsContent value="financials">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center gap-4">
+                                    <Landmark className="h-6 w-6 text-primary" />
+                                    <div>
+                                        <CardTitle>Financials</CardTitle>
+                                        <CardDescription>Overview of the student's financial account.</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {financialDetails ? (
+                                    <>
+                                        <div className="grid md:grid-cols-3 gap-4 text-center">
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle className="text-sm font-medium text-muted-foreground">Current Term Fees</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-2xl font-bold">{formatCurrency(currentTermPayment?.total_fees || 0)}</p>
+                                                </CardContent>
+                                            </Card>
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle className="text-sm font-medium text-muted-foreground">Amount Paid</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-2xl font-bold text-green-600">{formatCurrency(currentTermPayment?.amount_paid || 0)}</p>
+                                                </CardContent>
+                                            </Card>
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-2xl font-bold text-red-600">{formatCurrency(currentTermPayment?.outstanding || 0)}</p>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                        
+                                        <Card className="bg-muted/50">
+                                            <CardContent className="p-4 flex items-center justify-between">
+                                                <p className="font-medium">Total Account Balance</p>
+                                                <p className={`text-xl font-bold ${financialDetails.account_balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                    {formatCurrency(Math.abs(financialDetails.account_balance))}
+                                                    <span className="text-sm font-normal ml-2">{financialDetails.account_balance < 0 ? 'Debit' : 'Credit'}</span>
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Payment History</h4>
+                                            <RecordCard<TermPayment>
+                                                title=""
+                                                description=""
+                                                icon={() => null}
+                                                records={financialDetails.payment_history}
+                                                columns={['Term', 'Total Billed', 'Amount Paid', 'Outstanding', 'Status']}
+                                                renderRow={(rec, i) => (
+                                                    <TableRow key={i}>
+                                                        <TableCell>{rec.term}</TableCell>
+                                                        <TableCell>{formatCurrency(rec.total_fees)}</TableCell>
+                                                        <TableCell>{formatCurrency(rec.amount_paid)}</TableCell>
+                                                        <TableCell>{formatCurrency(rec.outstanding)}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={rec.status === 'Paid' ? 'secondary' : (rec.status === 'Partially Paid' ? 'default' : 'destructive')}>
+                                                                {rec.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="text-muted-foreground text-center py-8">No financial records found for this student.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="health" asChild>
+                        <Card>
+                            <CardHeader className="flex flex-row justify-between items-start">
+                            <div className="flex items-center gap-4">
+                                    <HeartPulse className="h-6 w-6 text-primary" />
+                                    <div>
+                                        <CardTitle>Health Records</CardTitle>
+                                        <CardDescription>Allergies, vaccinations, and other medical information.</CardDescription>
+                                    </div>
+                                </div>
+                                <Dialog open={isHealthFormOpen} onOpenChange={setIsHealthFormOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Health Records</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader><DialogTitle>Edit Health Records</DialogTitle></DialogHeader>
+                                        <HealthRecordsForm 
+                                            defaultValues={healthRecords}
+                                            onSubmit={handleUpdateHealthRecords}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <h4 className="font-semibold mb-2 flex items-center"><Droplet className="mr-2 h-4 w-4 text-destructive" /> Blood Group</h4>
+                                        <p className="text-lg font-bold">{healthRecords?.blood_group || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold mb-2">Allergies</h4>
+                                        {healthRecords?.allergies?.length ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {healthRecords.allergies.map(allergy => <Badge key={allergy} variant="destructive">{allergy}</Badge>)}
+                                            </div>
+                                        ) : <p className="text-sm text-muted-foreground">No known allergies.</p>}
+                                    </div>
+                                </div>
+                                <Separator />
+                                <div>
+                                    <h4 className="font-semibold mb-2">Vaccinations</h4>
+                                    {healthRecords?.vaccinations?.length ? (
+                                        <ul className="list-disc pl-5 text-sm space-y-1">
+                                            {healthRecords.vaccinations.map(vax => <li key={vax.name}>{vax.name} on {format(new Date(vax.date), 'do MMM, yyyy')}</li>)}
+                                        </ul>
+                                    ) : <p className="text-sm text-muted-foreground">No vaccination records.</p>}
+                                </div>
+                                <Separator />
+                                <div>
+                                    <h4 className="font-semibold mb-2">Medical Notes</h4>
+                                    <p className="text-sm text-muted-foreground">{healthRecords?.medical_notes || 'No additional medical notes.'}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="conduct" asChild>
+                        <RecordCard<DisciplinaryRecord>
+                            title="Student Conduct & Disciplinary Records"
+                            description="Log of all disciplinary incidents."
+                            icon={Scale}
+                            records={disciplinaryRecords}
+                            columns={['Date', 'Incident Reported', 'Action Taken', 'Reported By']}
+                            renderRow={(rec, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
+                                    <TableCell>{rec.incident}</TableCell>
+                                    <TableCell>{rec.action_taken}</TableCell>
+                                    <TableCell>{getUserName(rec.reported_by)}</TableCell>
+                                </TableRow>
+                            )}
+                            addRecordButton={
+                                <Dialog open={isDisciplinaryFormOpen} onOpenChange={setIsDisciplinaryFormOpen}>
+                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                    <DialogContent><DialogHeader><DialogTitle>Add Disciplinary Record</DialogTitle></DialogHeader>
+                                        <DisciplinaryRecordForm users={users} onSubmit={values => handleAddRecord(addDisciplinaryRecord, values, "Add Disciplinary Record", `Logged incident: ${values.incident}`, "Record Added", "Disciplinary record added successfully.", () => setIsDisciplinaryFormOpen(false))} />
+                                    </DialogContent>
+                                </Dialog>
+                            }
+                        />
+                    </TabsContent>
+                    <TabsContent value="attendance" asChild>
+                        <div className="grid gap-6">
+                            <RecordCard<StudentAttendanceRecord>
+                                title="Attendance Summary"
+                                description="Overview of student's attendance."
+                                icon={Activity}
+                                records={attendanceRecords}
+                                columns={['Date', 'Status']}
+                                renderRow={(rec, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
+                                        <TableCell><Badge variant={rec.status === 'Present' ? 'secondary' : 'destructive'}>{rec.status}</Badge></TableCell>
+                                    </TableRow>
+                                )}
+                                addRecordButton={
+                                    <Dialog open={isAttendanceFormOpen} onOpenChange={setIsAttendanceFormOpen}>
+                                        <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                        <DialogContent><DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
+                                            <AttendanceRecordForm onSubmit={values => handleAddRecord(addAttendanceRecord, {...values, student_id: studentId}, "Add Attendance Record", `Logged attendance for ${format(new Date(values.date), 'yyyy-MM-dd')}`, "Record Added", "Attendance record added successfully.", () => setIsAttendanceFormOpen(false))} />
+                                        </DialogContent>
+                                    </Dialog>
+                                }
+                            />
+                            <RecordCard<CommunicationLog>
+                                title="Communication Log"
+                                description="Record of communications with parents/guardians."
+                                icon={MessageSquare}
+                                records={communicationLogs}
+                                columns={['Date', 'Type', 'With Whom', 'Notes']}
+                                renderRow={(rec, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell>{format(new Date(rec.date), 'do MMM, yyyy')}</TableCell>
+                                        <TableCell>{rec.type}</TableCell>
+                                        <TableCell>{rec.with_whom}</TableCell>
+                                        <TableCell>{rec.notes}</TableCell>
+                                    </TableRow>
+                                )}
+                                addRecordButton={
+                                    <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
+                                        <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                        <DialogContent><DialogHeader><DialogTitle>Add Communication Log</DialogTitle></DialogHeader>
+                                            <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
+                                        </DialogContent>
+                                    </Dialog>
+                                }
                             />
                         </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsEditScoreOpen(false)}>Cancel</Button>
-                        <Button type="button" onClick={handleConfirmEditScore}>Save changes</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
+                    </TabsContent>
+                    <TabsContent value="documents" className="space-y-6">
+                        <RecordCard<UploadedDocument>
+                            title="Uploaded Documents"
+                            description="Official student documents."
+                            icon={FileText}
+                            records={uploadedDocuments}
+                            columns={['Document Name', 'Type', 'Upload Date', 'Actions']}
+                            renderRow={(rec, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>{rec.name}</TableCell>
+                                    <TableCell>{rec.type}</TableCell>
+                                    <TableCell>{format(new Date(rec.uploaded_at), 'do MMM, yyyy')}</TableCell>
+                                    <TableCell className="flex gap-2">
+                                        <Button variant="link" size="sm" asChild>
+                                            <Link href={rec.url} target="_blank" rel="noopener noreferrer" download={rec.name}>View</Link>
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="sm">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. This will permanently delete the document.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteDocument(rec.uploaded_at)}>
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            emptyMessage="No documents have been uploaded."
+                            addRecordButton={
+                                <Dialog open={isDocumentFormOpen} onOpenChange={setIsDocumentFormOpen}>
+                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
+                                    <DialogContent><DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+                                        <DocumentUploadForm onSubmit={values => handleAddRecord(addUploadedDocument, values, "Upload Document", `Uploaded document: ${values.name}`, "Document Uploaded", "Document uploaded successfully.", () => setIsDocumentFormOpen(false))} />
+                                    </DialogContent>
+                                </Dialog>
+                            }
+                        />
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>ID Card</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col items-center gap-4">
+                                <div ref={idCardRef}>
+                                    <IDCardTemplate
+                                        cardData={{ type: 'student', data: profile }}
+                                        schoolProfile={schoolProfile}
+                                        classes={classes}
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => handleDownloadID('pdf')}>
+                                        <FileText className="mr-2" /> PDF
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleDownloadID('png')}>
+                                        <ImageIcon className="mr-2" /> PNG
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+                <Dialog open={isEditScoreOpen} onOpenChange={setIsEditScoreOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Edit Score</DialogTitle>
+                            <DialogDescription>
+                                Update the score for {editingScore?.assignment_name} in {subjects.find(s => s.id === editingScore?.subject_id)?.name}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="score" className="text-right">Score</Label>
+                                <Input
+                                    id="score"
+                                    type="number"
+                                    value={newScoreValue}
+                                    onChange={(e) => setNewScoreValue(e.target.value)}
+                                    className="col-span-3"
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsEditScoreOpen(false)}>Cancel</Button>
+                            <Button type="button" onClick={handleConfirmEditScore}>Save changes</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </ProtectedRoute>
     );
 }

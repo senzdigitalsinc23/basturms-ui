@@ -39,6 +39,7 @@ import {
   Library,
   BookMarked,
   Landmark,
+  Clipboard,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -105,6 +106,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/academics/grading', label: 'Score Entry' },
         { href: '/academics/settings', label: 'Academic Settings' },
         { href: '/academics/timetable', label: 'Timetable' },
+        { href: '/academics/lesson-notes', label: 'Lesson Notes' },
       ],
     },
     {
@@ -177,7 +179,8 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/attendance/my-classes', label: 'Student Attendance', icon: CalendarCheck },
     { href: '/academics/grading', label: 'Grading & Scores', icon: PenSquare },
-    { href: '/my-classes', label: 'My Classes', icon: Users },
+    { href: '/my-classes', label: 'My Classes & Students', icon: Users },
+    { href: '/academics/lesson-notes', label: 'Lesson Notes', icon: Clipboard },
   ],
   Student: [
     { href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard },

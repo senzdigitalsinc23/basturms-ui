@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, addAttendanceRecord, getStudentProfileById, addAuditLog, getStaff, getStaffAppointmentHistory } from '@/lib/store';
@@ -32,6 +33,7 @@ export function ClassAttendanceTracker() {
     const [isLoading, setIsLoading] = useState(false);
     const { user } = useAuth();
     const { toast } = useToast();
+    const [isClassTeacher, setIsClassTeacher] = useState(false);
 
     useEffect(() => {
         const classes = getClasses();
@@ -54,6 +56,22 @@ export function ClassAttendanceTracker() {
             }
         }
     }, [user]);
+    
+    useEffect(() => {
+        if (user?.role === 'Teacher' && selectedClass) {
+            const staffList = getStaff();
+            const currentTeacher = staffList.find(s => s.user_id === user.id);
+            if(currentTeacher) {
+                const appointments = getStaffAppointmentHistory();
+                const latestAppointment = appointments
+                    .filter(a => a.staff_id === currentTeacher.staff_id)
+                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+                setIsClassTeacher(latestAppointment?.is_class_teacher_for_class_id === selectedClass);
+            }
+        } else if (user?.role === 'Admin') {
+            setIsClassTeacher(true); // Admins can always mark
+        }
+    }, [selectedClass, user]);
 
     useEffect(() => {
         if (selectedClass) {
@@ -180,6 +198,7 @@ export function ClassAttendanceTracker() {
                                                 value={student.status}
                                                 onValueChange={(status) => handleStatusChange(student.id, status as AttendanceRecord['status'])}
                                                 className="flex justify-end gap-4"
+                                                disabled={!isClassTeacher}
                                             >
                                                 <div className="flex items-center space-x-2">
                                                     <RadioGroupItem value="Present" id={`${student.id}-present`} />
@@ -214,7 +233,7 @@ export function ClassAttendanceTracker() {
             </CardContent>
             {selectedClass && students.length > 0 && (
                 <CardFooter className="justify-end">
-                    <Button onClick={handleSaveAttendance} disabled={isLoading}>
+                    <Button onClick={handleSaveAttendance} disabled={isLoading || !isClassTeacher} title={!isClassTeacher ? "You can only mark attendance for classes you are assigned as Class Teacher" : ""}>
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         <Save className="mr-2 h-4 w-4" />
                         Save Attendance
