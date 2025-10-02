@@ -53,12 +53,30 @@ export function ScoreEntryForm() {
     // Effect for when the class changes
     useEffect(() => {
         if (selectedClass) {
-            // Get subjects for the selected class
             const allSubjects = getSubjects();
-            const assignmentsForClass = addClassSubject().filter(cs => cs.class_id === selectedClass);
-            const subjectIds = assignmentsForClass.map(cs => cs.subject_id);
-            const subjects = allSubjects.filter(s => subjectIds.includes(s.id));
-            setClassSubjects(subjects);
+            let subjectsToShow: Subject[] = [];
+
+            if (user?.role === 'Admin') {
+                const assignmentsForClass = addClassSubject().filter(cs => cs.class_id === selectedClass);
+                const subjectIds = assignmentsForClass.map(cs => cs.subject_id);
+                subjectsToShow = allSubjects.filter(s => subjectIds.includes(s.id));
+            } else if (user?.role === 'Teacher') {
+                const staffMember = getStaff().find(s => s.user_id === user.id);
+                if (staffMember) {
+                    const latestAppointment = getStaffAppointmentHistory()
+                        .filter(a => a.staff_id === staffMember.staff_id)
+                        .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+                    
+                    if (latestAppointment?.subjects_assigned && latestAppointment.class_assigned?.includes(selectedClass)) {
+                         // Filter subjects assigned to the class AND to the teacher.
+                        const classSubjectIds = addClassSubject().filter(cs => cs.class_id === selectedClass).map(cs => cs.subject_id);
+                        const teacherAndClassSubjectIds = latestAppointment.subjects_assigned.filter(subId => classSubjectIds.includes(subId));
+                        subjectsToShow = allSubjects.filter(s => teacherAndClassSubjectIds.includes(s.id));
+                    }
+                }
+            }
+            
+            setClassSubjects(subjectsToShow);
 
             // Get activities for the selected class
             const allActivities = getAssignmentActivities();
@@ -85,7 +103,7 @@ export function ScoreEntryForm() {
             const allStudents = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
             
             const initialScores: Record<string, string> = {};
-            subjects.forEach(sub => {
+            subjectsToShow.forEach(sub => {
                 initialScores[sub.id] = '';
             });
 
@@ -99,7 +117,7 @@ export function ScoreEntryForm() {
             setStudents([]);
             setAssignmentOptions([]);
         }
-    }, [selectedClass]);
+    }, [selectedClass, user]);
 
     // Effect for loading scores when an assignment is selected
     useEffect(() => {
