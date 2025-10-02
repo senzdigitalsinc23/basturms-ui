@@ -101,6 +101,13 @@ export function TimetableScheduler() {
                         const randomTeacher = getRandomElement(availableTeachers);
                         teacherToAssignId = randomTeacher?.staff_id;
                     }
+                    
+                    if (!teacherToAssignId && isLowerPrimary) {
+                         // Fallback for lower primary if class teacher can't teach a subject
+                         const availableTeachers = getAvailableTeachers(day, slot, randomSubject.id, classId);
+                         const randomTeacher = getRandomElement(availableTeachers);
+                         teacherToAssignId = randomTeacher?.staff_id;
+                    }
 
                     if (teacherToAssignId) {
                          newScheduleForClass[day][slot] = {
@@ -220,7 +227,7 @@ export function TimetableScheduler() {
     };
 
     return (
-        <Card className="print:shadow-none print:border-none">
+        <Card>
             <CardHeader className="print:hidden">
                 <div className="flex items-center justify-between">
                     <div>
@@ -270,7 +277,7 @@ export function TimetableScheduler() {
             </CardHeader>
             <CardContent>
                 {selectedClass ? (
-                    <>
+                    <div id="printable-timetable">
                         <div className="text-center mb-4 hidden print:block">
                             <h1 className="text-2xl font-bold">{classes.find(c => c.id === selectedClass)?.name} - Weekly Timetable</h1>
                         </div>
@@ -340,7 +347,7 @@ export function TimetableScheduler() {
                                 </TableBody>
                             </Table>
                         </div>
-                    </>
+                    </div>
                 ) : (
                     <div className="flex items-center justify-center h-48 text-muted-foreground">
                         <p>Please select a class to start building the timetable.</p>

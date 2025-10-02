@@ -91,7 +91,24 @@ body {
 @media print {
   @page {
     size: landscape;
+    margin: 1cm;
   }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-timetable, #printable-timetable * {
+    visibility: visible;
+  }
+
+  #printable-timetable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
