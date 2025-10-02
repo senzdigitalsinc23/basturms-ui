@@ -149,13 +149,13 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
 const getInitialStaff = (): Staff[] => {
     return [
         {
-            "staff_id": "STF001", "user_id": "1", "first_name": "Douglas", "last_name": "Senzu", "email": "admin@campus.com", "phone": "123-456-7890", "roles": ["Admin"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
+            "staff_id": "STF001", "user_id": "1", "first_name": "Douglas", "last_name": "Senzu", "email": "admin@campus.com", "phone": "123-456-7890", "roles": ["Admin"], "status": "Active", "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
         },
         {
-            "staff_id": "STF002", "user_id": "3", "first_name": "Jane", "last_name": "Smith", "email": "headmaster@campus.com", "phone": "098-765-4321", "roles": ["Headmaster"], "id_type": "Passport", "id_no": "P0123456", "date_of_joining": "2022-09-01T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Kumasi", "hometown": "Kumasi", "house_no": "H2", "gps_no": "AK-456-789" }
+            "staff_id": "STF002", "user_id": "3", "first_name": "Jane", "last_name": "Smith", "email": "headmaster@campus.com", "phone": "098-765-4321", "roles": ["Headmaster"], "status": "Active", "id_type": "Passport", "id_no": "P0123456", "date_of_joining": "2022-09-01T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Kumasi", "hometown": "Kumasi", "house_no": "H2", "gps_no": "AK-456-789" }
         },
         {
-            "staff_id": "STF003", "user_id": "2", "first_name": "J.", "last_name": "Konnie", "email": "jkonnie@teacher.com", "phone": "123-456-7891", "roles": ["Teacher"], "id_type": "Ghana Card", "id_no": "GHA-123456789-1", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-457" }
+            "staff_id": "STF003", "user_id": "2", "first_name": "J.", "last_name": "Konnie", "email": "jkonnie@teacher.com", "phone": "123-456-7891", "roles": ["Teacher"], "status": "Active", "id_type": "Ghana Card", "id_no": "GHA-123456789-1", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-457" }
         }
     ];
 };
@@ -1593,23 +1593,6 @@ export const bulkDeleteStaff = (staffIds: string[], editorId: string): number =>
     return deletedCount;
 }
 
-export const toggleStaffStatus = (staffId: string, editorId: string): Staff | null => {
-    const staffList = getStaff();
-    const staff = staffList.find(s => s.staff_id === staffId);
-    if (staff && staff.user_id) {
-        const updatedUser = toggleUserStatus(staff.user_id);
-        if(updatedUser){
-            addAuditLog({
-                user: getUserById(editorId)?.email || 'Unknown',
-                name: getUserById(editorId)?.name || 'Unknown',
-                action: 'Toggle Staff Status',
-                details: `Toggled account status for staff member ${staff.first_name} ${staff.last_name} to ${updatedUser.status}`
-            });
-            return staff;
-        }
-    }
-    return null;
-}
 
 export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {
     const histories = storeGetStaffAcademicHistory();
@@ -1721,18 +1704,34 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     return deletedCount;
 }
 
+export const toggleEmploymentStatus = (staffId: string, editorId: string): Staff | null => {
+    const staffList = getStaff();
+    const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
+    if (staffIndex === -1) return null;
+
+    const staff = staffList[staffIndex];
+    staff.status = staff.status === 'Active' ? 'Inactive' : 'Active';
     
-
+    // Also toggle the user account if it exists
+    if (staff.user_id) {
+        const user = getUserById(staff.user_id);
+        if(user) {
+            const newStatus = staff.status === 'Active' ? 'active' : 'frozen';
+            if(user.status !== newStatus) {
+                toggleUserStatus(staff.user_id);
+            }
+        }
+    }
     
+    staffList[staffIndex] = staff;
+    saveToStorage(STAFF_KEY, staffList);
+    
+    addAuditLog({
+        user: getUserById(editorId)?.email || 'Unknown',
+        name: getUserById(editorId)?.name || 'Unknown',
+        action: 'Toggle Staff Employment Status',
+        details: `Toggled employment status for staff member ${staff.first_name} ${staff.last_name} to ${staff.status}`
+    });
 
-
-
-
-
-
-
-
-
-
-
-
+    return staff;
+}

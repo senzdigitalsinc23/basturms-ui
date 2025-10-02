@@ -165,9 +165,9 @@ export const columns = ({ onEdit, onDelete, onToggleStatus }: ColumnsProps): Col
                                 Generate ID Card
                            </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onToggleStatus(staffDisplay.staff_id)} disabled={!staffDisplay.user}>
+                        <DropdownMenuItem onClick={() => onToggleStatus(staffDisplay.staff_id)}>
                             {staffDisplay.status === 'Active' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
-                            {staffDisplay.status === 'Active' ? 'Freeze Account' : 'Activate Account'}
+                            {staffDisplay.status === 'Active' ? 'Deactivate' : 'Activate'} Staff
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialog>

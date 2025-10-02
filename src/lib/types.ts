@@ -367,6 +367,9 @@ export interface StudentProfile {
 }
 
 // Staff Management Types
+export type EmploymentStatus = 'Active' | 'On-leave' | 'Inactive';
+export const ALL_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['Active', 'On-leave', 'Inactive'];
+export type ContractType = 'Full-time' | 'Part-time' | 'Contract';
 
 export interface Staff {
     staff_id: string;
@@ -377,6 +380,7 @@ export interface Staff {
     email: string;
     phone: string;
     roles: Role[];
+    status: EmploymentStatus;
     id_type: 'Ghana Card' | 'Passport' | 'Voter ID' | 'Drivers License';
     id_no: string;
     snnit_no?: string;
@@ -439,10 +443,6 @@ export interface LeaveRequest {
     days_approved?: number;
 }
 
-
-export type EmploymentStatus = 'Active' | 'On-leave' | 'Inactive';
-export const ALL_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['Active', 'On-leave', 'Inactive'];
-export type ContractType = 'Full-time' | 'Part-time' | 'Contract';
 
 export interface StaffEmploymentDetails {
     user_id: string;
