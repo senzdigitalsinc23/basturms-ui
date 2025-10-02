@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, addAttendanceRecord, getStudentProfileById, addAuditLog } from '@/lib/store';
+import { getClasses, getStudentProfiles, addAttendanceRecord, getStudentProfileById, addAuditLog, getStaff, getStaffAppointmentHistory } from '@/lib/store';
 import { Class, StudentProfile, AttendanceRecord } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -23,8 +23,9 @@ type StudentForAttendance = {
     status: AttendanceRecord['status'];
 };
 
-export function AttendanceTracker() {
-    const [classes, setClasses] = useState<Class[]>([]);
+export function ClassAttendanceTracker() {
+    const [allClasses, setAllClasses] = useState<Class[]>([]);
+    const [teacherClasses, setTeacherClasses] = useState<Class[]>([]);
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
     const [attendanceDate, setAttendanceDate] = useState<Date>(new Date());
     const [students, setStudents] = useState<StudentForAttendance[]>([]);
@@ -33,8 +34,26 @@ export function AttendanceTracker() {
     const { toast } = useToast();
 
     useEffect(() => {
-        setClasses(getClasses());
-    }, []);
+        const classes = getClasses();
+        setAllClasses(classes);
+        if (user?.role === 'Admin') {
+            setTeacherClasses(classes);
+        } else if (user?.role === 'Teacher') {
+            const staffList = getStaff();
+            const currentTeacher = staffList.find(s => s.user_id === user.id);
+            if (currentTeacher) {
+                const appointments = getStaffAppointmentHistory();
+                const teacherAppointments = appointments
+                    .filter(a => a.staff_id === currentTeacher.staff_id)
+                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
+                const latestAppointment = teacherAppointments[0];
+                if (latestAppointment && latestAppointment.class_assigned) {
+                    const assignedClasses = classes.filter(c => latestAppointment.class_assigned?.includes(c.id));
+                    setTeacherClasses(assignedClasses);
+                }
+            }
+        }
+    }, [user]);
 
     useEffect(() => {
         if (selectedClass) {
@@ -72,7 +91,7 @@ export function AttendanceTracker() {
                     status: student.status,
                 };
                 // This is not efficient, but it's the only way with the current store API
-                addAttendanceRecord(student.id, record, user.id);
+                addAttendanceRecord(student.id, record, user.id, 'student');
                 successCount++;
             } catch (error) {
                 console.error(`Failed to save attendance for ${student.name}`, error);
@@ -86,7 +105,7 @@ export function AttendanceTracker() {
                 title: "Attendance Saved",
                 description: `Attendance for ${successCount} student(s) has been saved successfully.`
             });
-             const className = classes.find(c => c.id === selectedClass)?.name || 'Unknown Class';
+             const className = allClasses.find(c => c.id === selectedClass)?.name || 'Unknown Class';
              const studentStatuses = students.map(s => `${s.name}: ${s.status}`).join(', ');
              const logDetails = `Saved attendance for ${className} on ${format(attendanceDate, 'PPP')}. Details: ${studentStatuses}`;
             addAuditLog({
@@ -117,7 +136,7 @@ export function AttendanceTracker() {
                             <SelectValue placeholder="Select Class" />
                         </SelectTrigger>
                         <SelectContent>
-                            {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                            {teacherClasses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                      <Popover>

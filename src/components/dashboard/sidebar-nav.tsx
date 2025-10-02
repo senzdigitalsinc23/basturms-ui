@@ -175,9 +175,9 @@ const menuItems: Record<Role, NavItem[]> = {
   ],
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/academics/grading', label: 'Grading & Assignments', icon: PenSquare },
-    { href: '/#', label: 'My Students', icon: Users },
-    { href: '/#', label: 'Grades', icon: GraduationCap },
+    { href: '/attendance/my-classes', label: 'Student Attendance', icon: CalendarCheck },
+    { href: '/academics/grading', label: 'Grading & Scores', icon: PenSquare },
+    { href: '/my-classes', label: 'My Classes', icon: Users },
   ],
   Student: [
     { href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard },
