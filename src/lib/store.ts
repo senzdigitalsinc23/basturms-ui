@@ -115,6 +115,32 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       created_at: now,
       updated_at: now,
     },
+     {
+      id: '2',
+      name: 'Teacher User',
+      username: 'teacher',
+      email: 'teacher@campus.com',
+      password: 'password',
+      role_id: getRoleId('Teacher')!,
+      is_super_admin: false,
+      avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
+      status: 'active',
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: '3',
+      name: 'Headmaster User',
+      username: 'headmaster',
+      email: 'headmaster@campus.com',
+      password: 'password',
+      role_id: getRoleId('Headmaster')!,
+      is_super_admin: false,
+      avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
+      status: 'active',
+      created_at: now,
+      updated_at: now,
+    }
   ];
 };
 
@@ -124,10 +150,10 @@ const getInitialStaff = (): Staff[] => {
             "staff_id": "STF001", "user_id": "1", "first_name": "Douglas", "last_name": "Senzu", "email": "admin@campus.com", "phone": "123-456-7890", "roles": ["Admin"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
         },
         {
-            "staff_id": "STF002", "user_id": "", "first_name": "Jane", "last_name": "Smith", "email": "jane.smith@staff.com", "phone": "098-765-4321", "roles": ["Headmaster"], "id_type": "Passport", "id_no": "P0123456", "date_of_joining": "2022-09-01T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Kumasi", "hometown": "Kumasi", "house_no": "H2", "gps_no": "AK-456-789" }
+            "staff_id": "STF002", "user_id": "3", "first_name": "Jane", "last_name": "Smith", "email": "headmaster@campus.com", "phone": "098-765-4321", "roles": ["Headmaster"], "id_type": "Passport", "id_no": "P0123456", "date_of_joining": "2022-09-01T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Kumasi", "hometown": "Kumasi", "house_no": "H2", "gps_no": "AK-456-789" }
         },
         {
-            "staff_id": "STF003", "user_id": "", "first_name": "John", "last_name": "Doe", "email": "john.doe@staff.com", "phone": "123-456-7890", "roles": ["Teacher"], "id_type": "Ghana Card", "id_no": "GHA-123456789-0", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-456" }
+            "staff_id": "STF003", "user_id": "2", "first_name": "John", "last_name": "Doe", "email": "teacher@campus.com", "phone": "123-456-7891", "roles": ["Teacher"], "id_type": "Ghana Card", "id_no": "GHA-123456789-1", "date_of_joining": "2023-01-15T00:00:00.000Z", "address": { "country": "Ghana", "residence": "Accra", "hometown": "Accra", "house_no": "H1", "gps_no": "GA-123-457" }
         }
     ];
 };
@@ -1718,6 +1744,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
     
 
     
+
 
 
 
