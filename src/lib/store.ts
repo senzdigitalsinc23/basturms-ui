@@ -439,92 +439,55 @@ export const saveToStorage = <T>(key: string, value: T) => {
 
 export const initializeStore = () => {
   if (typeof window !== 'undefined') {
-    if (!window.localStorage.getItem(ROLES_KEY)) {
-      saveToStorage(ROLES_KEY, getInitialRoles());
+    const allKeys = [
+        ROLES_KEY, USERS_KEY, LOGS_KEY, AUTH_LOGS_KEY, STUDENTS_KEY,
+        CLASSES_KEY, STAFF_PROFILES_KEY, FEE_STRUCTURES_KEY, TERMLY_BILLS_KEY,
+        TIMETABLE_KEY, STUDENT_REPORTS_KEY, ACADEMIC_YEARS_KEY, CALENDAR_EVENTS_KEY,
+        GRADING_SCHEME_KEY, ROLE_PERMISSIONS_KEY, BACKUP_SETTINGS_KEY,
+        ASSIGNMENT_ACTIVITIES_KEY, CLASS_ASSIGNMENT_ACTIVITIES_KEY, LEAVE_REQUESTS_KEY,
+        STAFF_KEY, DECLINED_STAFF_KEY, STAFF_ACADEMIC_HISTORY_KEY, STAFF_DOCUMENTS_KEY,
+        STAFF_APPOINTMENT_HISTORY_KEY, STAFF_ATTENDANCE_RECORDS_KEY, SUBJECTS_KEY,
+        CLASS_SUBJECTS_KEY, TEACHER_SUBJECTS_KEY
+    ];
+
+    let shouldInitialize = false;
+    for (const key of allKeys) {
+        if (!window.localStorage.getItem(key)) {
+            shouldInitialize = true;
+            break;
+        }
     }
-    const roles = getRoles();
-    if (!window.localStorage.getItem(USERS_KEY)) {
-      saveToStorage(USERS_KEY, getInitialUsers(roles));
-    }
-    if (!window.localStorage.getItem(LOGS_KEY)) {
-      saveToStorage(LOGS_KEY, []);
-    }
-     if (!window.localStorage.getItem(AUTH_LOGS_KEY)) {
-      saveToStorage(AUTH_LOGS_KEY, []);
-    }
-    if (!window.localStorage.getItem(STUDENTS_KEY)) {
+    
+    if (shouldInitialize) {
+        console.log("Initializing local storage with default data...");
+        const roles = getInitialRoles();
+        saveToStorage(ROLES_KEY, roles);
+        saveToStorage(USERS_KEY, getInitialUsers(roles));
+        saveToStorage(LOGS_KEY, []);
+        saveToStorage(AUTH_LOGS_KEY, []);
         saveToStorage(STUDENTS_KEY, getInitialStudentProfiles());
-    }
-     if (!window.localStorage.getItem(STUDENT_REPORTS_KEY)) {
         saveToStorage(STUDENT_REPORTS_KEY, []);
-    }
-    if (!window.localStorage.getItem(CLASSES_KEY)) {
         saveToStorage(CLASSES_KEY, getInitialClasses());
-    }
-    if (!window.localStorage.getItem(STAFF_PROFILES_KEY)) {
         saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
-    }
-    if (!window.localStorage.getItem(FEE_STRUCTURES_KEY)) {
         saveToStorage(FEE_STRUCTURES_KEY, []);
-    }
-    if (!window.localStorage.getItem(TERMLY_BILLS_KEY)) {
         saveToStorage(TERMLY_BILLS_KEY, []);
-    }
-    if (!window.localStorage.getItem(TIMETABLE_KEY)) {
         saveToStorage(TIMETABLE_KEY, {});
-    }
-    // Settings Keys
-    if (!window.localStorage.getItem(ACADEMIC_YEARS_KEY)) {
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
-    }
-    if (!window.localStorage.getItem(CALENDAR_EVENTS_KEY)) {
         saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
-    }
-    if (!window.localStorage.getItem(GRADING_SCHEME_KEY)) {
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
-    }
-    if (!window.localStorage.getItem(ROLE_PERMISSIONS_KEY)) {
         saveToStorage(ROLE_PERMISSIONS_KEY, getInitialRolePermissions());
-    }
-     if (!window.localStorage.getItem(ASSIGNMENT_ACTIVITIES_KEY)) {
         saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, getInitialAssignmentActivities());
-    }
-    if (!window.localStorage.getItem(CLASS_ASSIGNMENT_ACTIVITIES_KEY)) {
         saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
-    }
-    if (!window.localStorage.getItem(LEAVE_REQUESTS_KEY)) {
         saveToStorage(LEAVE_REQUESTS_KEY, getInitialLeaveRequests());
-    }
-    if (!window.localStorage.getItem(BACKUP_SETTINGS_KEY)) {
         saveToStorage(BACKUP_SETTINGS_KEY, { autoBackupEnabled: true, frequency: 'daily', backupTime: '00:00', lastBackup: null });
-    }
-    // Initialize new staff storages
-    if (!window.localStorage.getItem(STAFF_KEY)) {
         saveToStorage(STAFF_KEY, getInitialStaff());
-    }
-     if (!window.localStorage.getItem(DECLINED_STAFF_KEY)) {
         saveToStorage(DECLINED_STAFF_KEY, []);
-    }
-    if (!window.localStorage.getItem(STAFF_ACADEMIC_HISTORY_KEY)) {
         saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, []);
-    }
-    if (!window.localStorage.getItem(STAFF_DOCUMENTS_KEY)) {
         saveToStorage(STAFF_DOCUMENTS_KEY, []);
-    }
-    if (!window.localStorage.getItem(STAFF_APPOINTMENT_HISTORY_KEY)) {
         saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, []);
-    }
-     if (!window.localStorage.getItem(STAFF_ATTENDANCE_RECORDS_KEY)) {
         saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, []);
-    }
-    // Initialize new subject storages
-    if (!window.localStorage.getItem(SUBJECTS_KEY)) {
         saveToStorage(SUBJECTS_KEY, getInitialSubjects());
-    }
-    if (!window.localStorage.getItem(CLASS_SUBJECTS_KEY)) {
         saveToStorage(CLASS_SUBJECTS_KEY, []);
-    }
-    if (!window.localStorage.getItem(TEACHER_SUBJECTS_KEY)) {
         saveToStorage(TEACHER_SUBJECTS_KEY, []);
     }
   }
@@ -545,7 +508,7 @@ export const saveStudentReport = (report: StudentReport): void => {
 export const getStudentReport = (studentId: string, termName: string): StudentReport | null => {
     const reports = getFromStorage<StudentReport[]>(STUDENT_REPORTS_KEY, []);
     const year = termName.split(' ').pop();
-    const term = termName.split(' ')[0] + ' ' + termName.split(' ')[1];
+    const term = termName.split(' ').slice(0, -1).join(' ');
     return reports.find(r => r.student.student.student_no === studentId && r.term === term && r.year === year) || null;
 };
 
@@ -569,9 +532,9 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
         const sbaScores = studentScores.filter(s => s.assignment_name !== 'End of Term Exam');
         const examScoreRecord = studentScores.find(s => s.assignment_name === 'End of Term Exam');
 
-        const studentTotalRawSbaScore = sbaScores.reduce((acc, score) => acc + score.score, 0);
+        const studentTotalRawSbaScore = sbaScores.reduce((acc, score) => acc + (score.score || 0), 0);
         
-        const totalPossibleSbaScore = sbaScores.length * 10;
+        const totalPossibleSbaScore = sbaScores.length * SBA_MAX_SCORE_PER_ACTIVITY;
         
         const sbaScore = totalPossibleSbaScore > 0 ? (studentTotalRawSbaScore / totalPossibleSbaScore) * SBA_WEIGHT : 0;
         const rawExamScore = examScoreRecord?.score || 0;
@@ -595,8 +558,8 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
             const sba = scores.filter(sc => sc.assignment_name !== 'End of Term Exam');
             const exam = scores.find(sc => sc.assignment_name === 'End of Term Exam');
             
-            const rawSba = sba.reduce((acc, score) => acc + score.score, 0);
-            const possibleSba = sba.length * 10;
+            const rawSba = sba.reduce((acc, score) => acc + (score.score || 0), 0);
+            const possibleSba = sba.length * SBA_MAX_SCORE_PER_ACTIVITY;
             
             const finalSba = possibleSba > 0 ? (rawSba / possibleSba) * SBA_WEIGHT : 0;
             const finalExam = ((exam?.score || 0) / 100) * EXAM_WEIGHT;
@@ -608,9 +571,9 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
 
         return {
             subjectName: subject.name,
-            rawSbaScore: studentTotalRawSbaScore,
+            rawSbaScore: studentTotalRawSbaScore || 0,
             sbaScore: parseFloat(sbaScore.toFixed(1)),
-            rawExamScore: rawExamScore,
+            rawExamScore: rawExamScore || 0,
             examScore: parseFloat(examScore.toFixed(1)),
             totalScore,
             grade,

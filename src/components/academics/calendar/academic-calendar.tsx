@@ -34,7 +34,7 @@ const eventCategoryColors: Record<CalendarEventCategory, string> = {
     'Other': 'hsl(var(--chart-5))',
 };
 
-function EventForm({ onSave, selectedDate, existingEvent }: { onSave: (event: Omit<CalendarEvent, 'id'>, id?: string) => void, selectedDate?: Date, existingEvent?: CalendarEvent | null }) {
+function EventForm({ onSave, selectedDate, existingEvent, activeTerm }: { onSave: (event: Omit<CalendarEvent, 'id'>, id?: string) => void, selectedDate?: Date, existingEvent?: CalendarEvent | null, activeTerm: Term | null }) {
     const [title, setTitle] = useState(existingEvent?.title || '');
     const [date, setDate] = useState<Date | undefined>(existingEvent ? new Date(existingEvent.date) : selectedDate);
     const [category, setCategory] = useState<CalendarEventCategory>(existingEvent?.category || 'School Event');
@@ -56,6 +56,9 @@ function EventForm({ onSave, selectedDate, existingEvent }: { onSave: (event: Om
             onSave({ title, date: date.toISOString(), category }, existingEvent?.id);
         }
     };
+    
+    const isDateInActiveTerm = date && activeTerm && date >= new Date(activeTerm.startDate) && date <= new Date(activeTerm.endDate);
+
 
     return (
         <div className="space-y-4">
@@ -85,7 +88,7 @@ function EventForm({ onSave, selectedDate, existingEvent }: { onSave: (event: Om
                 </Select>
             </div>
             <DialogFooter>
-                <Button onClick={handleSave} disabled={!title || !date}>Save Event</Button>
+                <Button onClick={handleSave} disabled={!title || !date || !isDateInActiveTerm}>Save Event</Button>
             </DialogFooter>
         </div>
     );
@@ -102,6 +105,8 @@ export function AcademicCalendar() {
     const [isEventFormOpen, setIsEventFormOpen] = useState(false);
     const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState<Date | undefined>();
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+    const [activeTerm, setActiveTerm] = useState<Term | null>(null);
+
 
     const { toast } = useToast();
     const { user } = useAuth();
@@ -110,10 +115,17 @@ export function AcademicCalendar() {
         const years = getAcademicYears();
         setAcademicYears(years);
         const activeYear = years.find(y => y.status === 'Active') || years[0];
-        if (activeYear && !selectedYear) {
-            setSelectedYear(activeYear);
-            if (activeYear.terms.length > 0) {
-              setCurrentMonth(startOfMonth(new Date(activeYear.terms[0].startDate)));
+        if (activeYear) {
+            const currentActiveTerm = activeYear.terms.find(t => t.status === 'Active') || null;
+            setActiveTerm(currentActiveTerm);
+            
+            if (!selectedYear) {
+                 setSelectedYear(activeYear);
+                if (currentActiveTerm) {
+                    setCurrentMonth(startOfMonth(new Date(currentActiveTerm.startDate)));
+                } else if (activeYear.terms.length > 0) {
+                     setCurrentMonth(startOfMonth(new Date(activeYear.terms[0].startDate)));
+                }
             }
         }
         setEvents(getCalendarEvents());
@@ -203,9 +215,13 @@ export function AcademicCalendar() {
 
     const handleDayClick = (day: Date, modifiers: { disabled?: boolean }) => {
         if (modifiers.disabled || user?.role !== 'Admin') return;
-        setSelectedDateForNewEvent(day);
-        setEditingEvent(null);
-        setIsEventFormOpen(true);
+        if (activeTerm && day >= new Date(activeTerm.startDate) && day <= new Date(activeTerm.endDate)) {
+            setSelectedDateForNewEvent(day);
+            setEditingEvent(null);
+            setIsEventFormOpen(true);
+        } else {
+            toast({ variant: 'destructive', title: 'Date Out of Range', description: 'Events can only be added to the active term.' });
+        }
     };
     
     const handleEditClick = (event: CalendarEvent) => {
@@ -374,7 +390,7 @@ export function AcademicCalendar() {
                             <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Calendar Event'}</DialogTitle>
                             {(selectedDateForNewEvent && !editingEvent) && <DialogDescription>Adding event for {format(selectedDateForNewEvent, 'PPP')}.</DialogDescription>}
                         </DialogHeader>
-                        <EventForm onSave={handleSaveEvent} selectedDate={selectedDateForNewEvent} existingEvent={editingEvent} />
+                        <EventForm onSave={handleSaveEvent} selectedDate={selectedDateForNewEvent} existingEvent={editingEvent} activeTerm={activeTerm} />
                     </DialogContent>
                 </Dialog>
             )}

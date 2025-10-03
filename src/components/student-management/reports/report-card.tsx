@@ -22,12 +22,15 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
     const initials = studentName.split(' ').map(n => n[0]).join('');
 
     const isProvisional = status === 'Provisional';
+    const reportDate = format(new Date(), 'PPP');
+    const reportTerm = `${term}, ${year}`;
+
 
     return (
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative">
             {isProvisional && (
                  <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                    <p style={{ fontSize: '10rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold' }}>
+                    <p style={{ fontSize: '8rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold' }}>
                         PROVISIONAL
                     </p>
                 </div>
@@ -43,11 +46,10 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                         <p><strong>Name:</strong> {studentName}</p>
                         <p><strong>Student ID:</strong> {student.student.student_no}</p>
                         <p><strong>Class:</strong> {reportData.className}</p>
-                        <p><strong>Year:</strong> {year}</p>
                     </div>
                     <div className="text-sm uppercase text-right">
-                         <p><strong>Term:</strong> {term}</p>
-                        <p><strong>Date:</strong> {format(new Date(), 'PPP')}</p>
+                         <p><strong>Term:</strong> {reportTerm}</p>
+                        <p><strong>Date:</strong> {reportDate}</p>
                          <p><strong>Next Term Begins:</strong> {nextTermBegins ? format(new Date(nextTermBegins), 'PPP') : 'TBA'}</p>
                     </div>
                 </div>
