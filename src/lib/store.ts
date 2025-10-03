@@ -77,6 +77,7 @@ export type StudentReport = {
     headTeacherRemarks: string;
     schoolProfile: SchoolProfileData | null;
     className: string;
+    status: 'Provisional' | 'Final';
 };
 
 
@@ -91,6 +92,8 @@ const SCHOOL_KEY = 'campusconnect_school';
 const FEE_STRUCTURES_KEY = 'campusconnect_fee_structures';
 const TERMLY_BILLS_KEY = 'campusconnect_termly_bills';
 const TIMETABLE_KEY = 'campusconnect_timetable';
+const STUDENT_REPORTS_KEY = 'campusconnect_student_reports';
+
 
 // Settings Keys
 const ACADEMIC_YEARS_KEY = 'campusconnect_academic_years';
@@ -450,6 +453,9 @@ export const initializeStore = () => {
     if (!window.localStorage.getItem(STUDENTS_KEY)) {
         saveToStorage(STUDENTS_KEY, getInitialStudentProfiles());
     }
+     if (!window.localStorage.getItem(STUDENT_REPORTS_KEY)) {
+        saveToStorage(STUDENT_REPORTS_KEY, []);
+    }
     if (!window.localStorage.getItem(CLASSES_KEY)) {
         saveToStorage(CLASSES_KEY, getInitialClasses());
     }
@@ -522,7 +528,27 @@ export const initializeStore = () => {
   }
 };
 
-export const calculateStudentReport = (studentId: string, termName: string): StudentReport | null => {
+export const saveStudentReport = (report: StudentReport): void => {
+    const reports = getFromStorage<StudentReport[]>(STUDENT_REPORTS_KEY, []);
+    const reportIndex = reports.findIndex(r => r.student.student.student_no === report.student.student.student_no && r.term === report.term && r.year === report.year);
+
+    if (reportIndex !== -1) {
+        reports[reportIndex] = report;
+    } else {
+        reports.push(report);
+    }
+    saveToStorage(STUDENT_REPORTS_KEY, reports);
+};
+
+export const getStudentReport = (studentId: string, termName: string): StudentReport | null => {
+    const reports = getFromStorage<StudentReport[]>(STUDENT_REPORTS_KEY, []);
+    const year = termName.split(' ').pop();
+    const term = termName.split(' ')[0] + ' ' + termName.split(' ')[1];
+    return reports.find(r => r.student.student.student_no === studentId && r.term === term && r.year === year) || null;
+};
+
+
+export const calculateStudentReport = (studentId: string, termName: string, allStudentsInClass: StudentProfile[]): StudentReport | null => {
     const student = getStudentProfileById(studentId);
     if (!student) return null;
 
@@ -567,15 +593,37 @@ export const calculateStudentReport = (studentId: string, termName: string): Stu
                 break;
             }
         }
+        
+        // Calculate position
+        const allScoresForSubject = allStudentsInClass.map(s => {
+            const scores = s.assignmentScores?.filter(sc => sc.subject_id === subject.id) || [];
+            const sba = scores.filter(sc => sc.assignment_name !== 'End of Term Exam');
+            const exam = scores.find(sc => sc.assignment_name === 'End of Term Exam');
+            let totalSbaW = 0;
+            let weightedSba = 0;
+            sba.forEach(sc => {
+                const act = activities.find(a => a.name === sc.assignment_name.replace(/\s\d+$/, ''));
+                if(act) {
+                    totalSbaW += act.weight;
+                    weightedSba += (sc.score / 100) * act.weight;
+                }
+            });
+            const finalSba = totalSbaW > 0 ? (weightedSba / totalSbaW) * 50 : 0;
+            const finalExam = (exam?.score || 0) * 0.5;
+            return finalSba + finalExam;
+        }).sort((a, b) => b - a);
+
+        const position = allScoresForSubject.indexOf(totalScore) + 1;
+
 
         return {
             subjectName: subject.name,
-            sbaScore: parseFloat(sbaScore.toFixed(2)),
-            examScore: parseFloat(examScore.toFixed(2)),
+            sbaScore: parseFloat(sbaScore.toFixed(1)),
+            examScore: parseFloat(examScore.toFixed(1)),
             totalScore,
             grade,
             remarks,
-            position: 'N/A' // Position calculation is complex and needs all class results
+            position: `${position} / ${allScoresForSubject.length}`
         };
     });
     
@@ -597,7 +645,8 @@ export const calculateStudentReport = (studentId: string, termName: string): Stu
         classTeacherRemarks: 'A very brilliant and respectful student', // Placeholder
         headTeacherRemarks: 'An exceptionally brilliant student with a promising future.', // Placeholder
         schoolProfile,
-        className: getClasses().find(c => c.id === student.admissionDetails.class_assigned)?.name || 'N/A'
+        className: getClasses().find(c => c.id === student.admissionDetails.class_assigned)?.name || 'N/A',
+        status: 'Provisional',
     };
 };
 

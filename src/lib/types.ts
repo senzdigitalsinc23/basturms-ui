@@ -24,6 +24,7 @@ export type StudentReport = {
     headTeacherRemarks: string;
     schoolProfile: any; // Using 'any' for now, can be SchoolProfileData
     className: string;
+    status: 'Provisional' | 'Final';
 };
 
 
