@@ -251,11 +251,13 @@ export function ReportCardGenerator() {
                                         onCheckedChange={(checked) => handleSelectReport(report.student.student.student_no, !!checked)}
                                         className="bg-white"
                                     />
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingReport(report); setIsEditorOpen(true);}}>
-                                            <Pencil className="mr-2 h-4 w-4"/> Edit
-                                        </Button>
-                                    </DialogTrigger>
+                                    <Dialog onOpenChange={setIsEditorOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingReport(report); }}>
+                                                <Pencil className="mr-2 h-4 w-4"/> Edit
+                                            </Button>
+                                        </DialogTrigger>
+                                    </Dialog>
                                 </div>
                                 <div id={`report-card-${report.student.student.student_no}`}>
                                     <ReportCard reportData={report} />
