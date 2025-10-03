@@ -200,9 +200,9 @@ export default function AttendanceHistoryPage() {
                     </Select>
                  </div>
                 <Tabs defaultValue="students">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className={cn("grid w-full", user?.role === 'Teacher' ? 'grid-cols-1' : 'grid-cols-2')}>
                         <TabsTrigger value="students">Students</TabsTrigger>
-                        <TabsTrigger value="staff">Staff</TabsTrigger>
+                        {user?.role !== 'Teacher' && <TabsTrigger value="staff">Staff</TabsTrigger>}
                     </TabsList>
                     <TabsContent value="students" asChild>
                         <Card>
@@ -262,63 +262,65 @@ export default function AttendanceHistoryPage() {
                             </CardContent>
                         </Card>
                     </TabsContent>
-                    <TabsContent value="staff" asChild>
-                        <Card>
-                             <CardHeader>
-                                <CardTitle>Staff Attendance</CardTitle>
-                                <CardDescription>Select a date and role to view records.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-center gap-4">
-                                      <div className="relative flex-1">
-                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            type="search"
-                                            placeholder="Search by staff name..."
-                                            className="pl-8 w-full"
-                                            value={staffSearch}
-                                            onChange={(e) => setStaffSearch(e.target.value)}
-                                        />
+                    {user?.role !== 'Teacher' && (
+                        <TabsContent value="staff" asChild>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Staff Attendance</CardTitle>
+                                    <CardDescription>Select a date and role to view records.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                type="search"
+                                                placeholder="Search by staff name..."
+                                                className="pl-8 w-full"
+                                                value={staffSearch}
+                                                onChange={(e) => setStaffSearch(e.target.value)}
+                                            />
+                                        </div>
+                                        <Select value={selectedRole} onValueChange={setSelectedRole}>
+                                            <SelectTrigger className="w-full md:w-[200px]">
+                                                <SelectValue placeholder="Filter by Role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="All">All Roles</SelectItem>
+                                                {allStaffRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <Select value={selectedRole} onValueChange={setSelectedRole} disabled={user?.role === 'Teacher'}>
-                                        <SelectTrigger className="w-full md:w-[200px]">
-                                            <SelectValue placeholder="Filter by Role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="All">All Roles</SelectItem>
-                                            {allStaffRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="rounded-md border">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Staff Name</TableHead>
-                                                <TableHead className="text-right">Status</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {staffRecords.length > 0 ? staffRecords.map(record => (
-                                                <TableRow key={record.id}>
-                                                    <TableCell className="font-medium">{record.name}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
-                                                    </TableCell>
+                                    <div className="rounded-md border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Staff Name</TableHead>
+                                                    <TableHead className="text-right">Status</TableHead>
                                                 </TableRow>
-                                            )) : (
-                                                 <TableRow>
-                                                    <TableCell colSpan={2} className="h-24 text-center">
-                                                        No records found for this date.
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {staffRecords.length > 0 ? staffRecords.map(record => (
+                                                    <TableRow key={record.id}>
+                                                        <TableCell className="font-medium">{record.name}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={2} className="h-24 text-center">
+                                                            No records found for this date.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )}
                 </Tabs>
              </div>
         </ProtectedRoute>
