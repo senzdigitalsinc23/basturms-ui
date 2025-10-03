@@ -468,7 +468,7 @@ export default function StudentProfilePage() {
                                     <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
                                     <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
                                     <TableCell className="text-right">
-                                        {currentUser?.role === 'Admin' && (
+                                        {(currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') && (
                                             <>
                                                 <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
                                                     <Pencil className="h-4 w-4" />
@@ -513,7 +513,7 @@ export default function StudentProfilePage() {
                                     <TableCell className="max-w-xs truncate">{rec.teacher_remarks}</TableCell>
                                 </TableRow>
                             )}
-                            addRecordButton={ currentUser?.role === 'Admin' &&
+                            addRecordButton={ (currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') &&
                                 <Dialog open={isAcademicFormOpen} onOpenChange={setIsAcademicFormOpen}>
                                     <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                     <DialogContent><DialogHeader><DialogTitle>Add Academic Record</DialogTitle></DialogHeader>
@@ -677,7 +677,7 @@ export default function StudentProfilePage() {
                                 </TableRow>
                             )}
                             addRecordButton={
-                                currentUser?.role === 'Admin' &&
+                                (currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') &&
                                 <Dialog open={isDisciplinaryFormOpen} onOpenChange={setIsDisciplinaryFormOpen}>
                                     <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                     <DialogContent><DialogHeader><DialogTitle>Add Disciplinary Record</DialogTitle></DialogHeader>
@@ -702,7 +702,7 @@ export default function StudentProfilePage() {
                                     </TableRow>
                                 )}
                                 addRecordButton={
-                                    currentUser?.role === 'Admin' &&
+                                    (currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') &&
                                     <Dialog open={isAttendanceFormOpen} onOpenChange={setIsAttendanceFormOpen}>
                                         <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                         <DialogContent><DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
@@ -726,7 +726,7 @@ export default function StudentProfilePage() {
                                     </TableRow>
                                 )}
                                 addRecordButton={
-                                    currentUser?.role === 'Admin' &&
+                                    (currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') &&
                                     <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
                                         <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                         <DialogContent><DialogHeader><DialogTitle>Add Communication Log</DialogTitle></DialogHeader>
@@ -779,7 +779,7 @@ export default function StudentProfilePage() {
                             )}
                             emptyMessage="No documents have been uploaded."
                             addRecordButton={
-                                currentUser?.role === 'Admin' &&
+                                (currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') &&
                                 <Dialog open={isDocumentFormOpen} onOpenChange={setIsDocumentFormOpen}>
                                     <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                     <DialogContent><DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
