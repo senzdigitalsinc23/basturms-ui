@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -331,50 +330,53 @@ export default function StudentProfilePage() {
     return (
         <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>{/* This empty div helps with flex layout */}</div>
+                <div className="flex items-center justify-end">
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href="/student-management/students">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to List
-                            </Link>
-                        </Button>
-                        <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                    Log Communication
+                         {currentUser?.role === 'Admin' && (
+                            <>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href="/student-management/students">
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Back to List
+                                    </Link>
                                 </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add Communication Log</DialogTitle>
-                                    <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
-                                </DialogHeader>
-                                <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
-                            </DialogContent>
-                        </Dialog>
-                        <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="sm">
-                                    <Edit className="mr-2 h-4 w-4" /> Edit Student
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-2xl">
-                                <DialogHeader>
-                                    <DialogTitle>Edit Student Profile</DialogTitle>
-                                    <DialogDescription>
-                                        Update the details for {fullName}.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <EditStudentForm
-                                    defaultValues={profile}
-                                    classes={classes}
-                                    onSubmit={handleUpdateProfile}
-                                />
-                            </DialogContent>
-                        </Dialog>
+                                <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                            <MessageSquare className="mr-2 h-4 w-4" />
+                                            Log Communication
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Add Communication Log</DialogTitle>
+                                            <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
+                                        </DialogHeader>
+                                        <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
+                                    </DialogContent>
+                                </Dialog>
+                                <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button size="sm">
+                                            <Edit className="mr-2 h-4 w-4" /> Edit Student
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-2xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Edit Student Profile</DialogTitle>
+                                            <DialogDescription>
+                                                Update the details for {fullName}.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <EditStudentForm
+                                            defaultValues={profile}
+                                            classes={classes}
+                                            onSubmit={handleUpdateProfile}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
+                            </>
+                        )}
                     </div>
                 </div>
                 <Card>
@@ -466,28 +468,32 @@ export default function StudentProfilePage() {
                                     <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
                                     <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
+                                        {currentUser?.role === 'Admin' && (
+                                            <>
+                                                <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
+                                                    <Pencil className="h-4 w-4" />
                                                 </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action will permanently delete the score for {rec.assignment_name} in {subjects.find(s => s.id === rec.subject_id)?.name}.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteScore(rec)}>Delete Score</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This action will permanently delete the score for {rec.assignment_name} in {subjects.find(s => s.id === rec.subject_id)?.name}.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteScore(rec)}>Delete Score</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -507,7 +513,7 @@ export default function StudentProfilePage() {
                                     <TableCell className="max-w-xs truncate">{rec.teacher_remarks}</TableCell>
                                 </TableRow>
                             )}
-                            addRecordButton={
+                            addRecordButton={ currentUser?.role === 'Admin' &&
                                 <Dialog open={isAcademicFormOpen} onOpenChange={setIsAcademicFormOpen}>
                                     <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                     <DialogContent><DialogHeader><DialogTitle>Add Academic Record</DialogTitle></DialogHeader>
@@ -608,6 +614,7 @@ export default function StudentProfilePage() {
                                         <CardDescription>Allergies, vaccinations, and other medical information.</CardDescription>
                                     </div>
                                 </div>
+                                {currentUser?.role === 'Admin' && (
                                 <Dialog open={isHealthFormOpen} onOpenChange={setIsHealthFormOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Health Records</Button>
@@ -620,6 +627,7 @@ export default function StudentProfilePage() {
                                         />
                                     </DialogContent>
                                 </Dialog>
+                                )}
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="grid grid-cols-2 gap-6">
@@ -669,6 +677,7 @@ export default function StudentProfilePage() {
                                 </TableRow>
                             )}
                             addRecordButton={
+                                currentUser?.role === 'Admin' &&
                                 <Dialog open={isDisciplinaryFormOpen} onOpenChange={setIsDisciplinaryFormOpen}>
                                     <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                     <DialogContent><DialogHeader><DialogTitle>Add Disciplinary Record</DialogTitle></DialogHeader>
@@ -693,6 +702,7 @@ export default function StudentProfilePage() {
                                     </TableRow>
                                 )}
                                 addRecordButton={
+                                    currentUser?.role === 'Admin' &&
                                     <Dialog open={isAttendanceFormOpen} onOpenChange={setIsAttendanceFormOpen}>
                                         <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                         <DialogContent><DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
@@ -716,6 +726,7 @@ export default function StudentProfilePage() {
                                     </TableRow>
                                 )}
                                 addRecordButton={
+                                    currentUser?.role === 'Admin' &&
                                     <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
                                         <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                         <DialogContent><DialogHeader><DialogTitle>Add Communication Log</DialogTitle></DialogHeader>
@@ -768,6 +779,7 @@ export default function StudentProfilePage() {
                             )}
                             emptyMessage="No documents have been uploaded."
                             addRecordButton={
+                                currentUser?.role === 'Admin' &&
                                 <Dialog open={isDocumentFormOpen} onOpenChange={setIsDocumentFormOpen}>
                                     <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                     <DialogContent><DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
