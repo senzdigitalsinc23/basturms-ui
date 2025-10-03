@@ -37,7 +37,7 @@ const prompt = ai.definePrompt({
   name: 'generateUserOnboardingTipsPrompt',
   input: {schema: GenerateUserOnboardingTipsInputSchema},
   output: {schema: GenerateUserOnboardingTipsOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  model: 'gemini-1.5-flash',
   prompt: `You are an onboarding expert. Generate onboarding tips for a new user with the role of {{role}} for a school management system called CampusConnect. The tips should be concise and easy to follow.`,
 });
 
