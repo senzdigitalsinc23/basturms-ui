@@ -24,13 +24,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
 
     return (
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative font-sans">
-            {isProvisional && (
-                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                    <p style={{ fontSize: '6rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold', letterSpacing: '0.5em', textAlign: 'center' }}>
-                        PROVISIONAL
-                    </p>
-                </div>
-            )}
+            
             <CardContent className="p-4 border-2 border-black h-full flex flex-col relative z-10">
                 <div className="text-center mb-4">
                     <h1 className="text-2xl font-bold uppercase">{reportData.schoolProfile?.schoolName || "Metoxi School"}</h1>
