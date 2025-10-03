@@ -1339,11 +1339,21 @@ export const addScore = (score: AssignmentScore, editorId: string): void => {
             profile.assignmentScores = [];
         }
 
-        // Remove existing score for the same assignment to avoid duplicates, then add the new one.
-        profile.assignmentScores = profile.assignmentScores.filter(s => 
-            !(s.student_id === score.student_id && s.subject_id === score.subject_id && s.assignment_name === score.assignment_name)
+        const existingScoreIndex = profile.assignmentScores.findIndex(s => 
+            s.student_id === score.student_id && 
+            s.subject_id === score.subject_id && 
+            s.assignment_name === score.assignment_name
         );
-        profile.assignmentScores.push(score);
+
+        if (existingScoreIndex !== -1) {
+            // If the new score is higher, update it.
+            if (score.score > profile.assignmentScores[existingScoreIndex].score) {
+                profile.assignmentScores[existingScoreIndex] = score;
+            }
+        } else {
+            // If no score exists, add the new one.
+            profile.assignmentScores.push(score);
+        }
 
         profile.student.updated_at = new Date().toISOString();
         profile.student.updated_by = editorId;
