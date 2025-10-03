@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -569,10 +570,7 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
         const studentTotalRawSbaScore = sbaScores.reduce((acc, score) => acc + score.score, 0);
         const totalPossibleSbaScore = sbaScores.length * SBA_MAX_SCORE_PER_ACTIVITY;
         
-        // Calculate SBA score (weighted at 40%)
         const sbaScore = totalPossibleSbaScore > 0 ? (studentTotalRawSbaScore / totalPossibleSbaScore) * SBA_WEIGHT : 0;
-        
-        // Exam score is out of 100, scale to 60%
         const examScore = ((examScoreRecord?.score || 0) / 100) * EXAM_WEIGHT;
 
         const totalScore = Math.round(sbaScore + examScore);
@@ -588,7 +586,6 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
             }
         }
         
-        // Calculate position
         const allScoresForSubject = allStudentsInClass.map(s => {
             const scores = s.assignmentScores?.filter(sc => sc.subject_id === subject.id) || [];
             const sba = scores.filter(sc => sc.assignment_name !== 'End of Term Exam');
@@ -1547,6 +1544,25 @@ export const deleteAssignmentScore = (studentId: string, subjectId: string, assi
     }
 
     return null;
+}
+
+export const deleteAllAssignmentScores = (studentId: string, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (profileIndex === -1) return null;
+
+    const profile = profiles[profileIndex];
+    if (!profile.assignmentScores || profile.assignmentScores.length === 0) {
+        return profile; // No scores to delete
+    }
+
+    profile.assignmentScores = [];
+    profile.student.updated_at = new Date().toISOString();
+    profile.student.updated_by = editorId;
+
+    profiles[profileIndex] = profile;
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profile;
 }
 
 

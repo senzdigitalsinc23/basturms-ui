@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects, updateAssignmentScore, deleteAssignmentScore } from '@/lib/store';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects, updateAssignmentScore, deleteAssignmentScore, deleteAllAssignmentScores } from '@/lib/store';
 import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData, AssignmentScore, Subject } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -63,7 +63,7 @@ function DetailItem({ icon, label, value }: { icon: React.ElementType, label: st
     )
 }
 
-function RecordCard<T>({ title, description, icon, records, columns, renderRow, emptyMessage = "No records found.", addRecordButton }: { 
+function RecordCard<T>({ title, description, icon, records, columns, renderRow, emptyMessage = "No records found.", addRecordButton, bulkDeleteButton }: { 
     title: string, 
     description: string, 
     icon: React.ElementType,
@@ -72,17 +72,21 @@ function RecordCard<T>({ title, description, icon, records, columns, renderRow, 
     renderRow: (record: T, index: number) => React.ReactNode,
     emptyMessage?: string,
     addRecordButton?: React.ReactNode,
+    bulkDeleteButton?: React.ReactNode,
 }) {
     const Icon = icon;
     return (
         <Card>
             <CardHeader>
-                <div className="flex items-center gap-4">
-                    <Icon className="h-6 w-6 text-primary" />
-                    <div>
-                        <CardTitle>{title}</CardTitle>
-                        <CardDescription>{description}</CardDescription>
+                <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-4">
+                        <Icon className="h-6 w-6 text-primary" />
+                        <div>
+                            <CardTitle>{title}</CardTitle>
+                            <CardDescription>{description}</CardDescription>
+                        </div>
                     </div>
+                     {bulkDeleteButton && <div className="flex-shrink-0">{bulkDeleteButton}</div>}
                 </div>
             </CardHeader>
             <CardContent>
@@ -308,6 +312,25 @@ export default function StudentProfilePage() {
             toast({ title: 'Score Deleted', description: 'The assignment score has been removed.' });
         }
     };
+    
+    const handleBulkDeleteScores = () => {
+        if (!currentUser || !profile) return;
+
+        const updatedProfile = deleteAllAssignmentScores(profile.student.student_no, currentUser.id);
+        
+        if(updatedProfile) {
+            fetchProfile();
+            addAuditLog({
+                user: currentUser.email,
+                name: currentUser.name,
+                action: 'Bulk Delete Scores',
+                details: `Deleted all assignment scores for student ${fullName}.`
+            });
+            toast({ title: 'All Scores Deleted', description: 'All assignment scores for this student have been removed.' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not delete assignment scores.' });
+        }
+    };
 
 
     if (!profile) {
@@ -498,6 +521,27 @@ export default function StudentProfilePage() {
                                 </TableRow>
                             )}
                             emptyMessage="No individual assignment scores have been recorded yet."
+                             bulkDeleteButton={
+                                currentUser?.role === 'Admin' && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm" disabled={!assignmentScores || assignmentScores.length === 0}>
+                                                <Trash2 className="mr-2 h-4 w-4"/> Bulk Delete Scores
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>This will permanently delete all assignment scores for {fullName}. This action cannot be undone.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleBulkDeleteScores}>Delete All Scores</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )
+                            }
                         />
                         <RecordCard<AcademicRecord>
                             title="Academic Performance"
