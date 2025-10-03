@@ -60,7 +60,9 @@ export type StudentReport = {
     nextTermBegins: string | null;
     subjects: {
         subjectName: string;
+        rawSbaScore: number;
         sbaScore: number;
+        rawExamScore: number;
         examScore: number;
         totalScore: number;
         grade: string;
@@ -568,10 +570,12 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
         const examScoreRecord = studentScores.find(s => s.assignment_name === 'End of Term Exam');
 
         const studentTotalRawSbaScore = sbaScores.reduce((acc, score) => acc + score.score, 0);
-        const totalPossibleSbaScore = sbaScores.length * SBA_MAX_SCORE_PER_ACTIVITY;
+        
+        const totalPossibleSbaScore = sbaScores.length * 10;
         
         const sbaScore = totalPossibleSbaScore > 0 ? (studentTotalRawSbaScore / totalPossibleSbaScore) * SBA_WEIGHT : 0;
-        const examScore = ((examScoreRecord?.score || 0) / 100) * EXAM_WEIGHT;
+        const rawExamScore = examScoreRecord?.score || 0;
+        const examScore = (rawExamScore / 100) * EXAM_WEIGHT;
 
         const totalScore = Math.round(sbaScore + examScore);
         
@@ -592,7 +596,7 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
             const exam = scores.find(sc => sc.assignment_name === 'End of Term Exam');
             
             const rawSba = sba.reduce((acc, score) => acc + score.score, 0);
-            const possibleSba = sba.length * SBA_MAX_SCORE_PER_ACTIVITY;
+            const possibleSba = sba.length * 10;
             
             const finalSba = possibleSba > 0 ? (rawSba / possibleSba) * SBA_WEIGHT : 0;
             const finalExam = ((exam?.score || 0) / 100) * EXAM_WEIGHT;
@@ -604,7 +608,9 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
 
         return {
             subjectName: subject.name,
+            rawSbaScore: studentTotalRawSbaScore,
             sbaScore: parseFloat(sbaScore.toFixed(1)),
+            rawExamScore: rawExamScore,
             examScore: parseFloat(examScore.toFixed(1)),
             totalScore,
             grade,

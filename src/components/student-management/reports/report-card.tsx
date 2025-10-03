@@ -70,10 +70,10 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                         {subjects.map((subj, index) => (
                             <tr key={index}>
                                 <td className="border border-black p-1 font-medium">{subj.subjectName}</td>
-                                <td className="border border-black p-1 text-center">{subj.rawSbaScore.toFixed(1)}</td>
-                                <td className="border border-black p-1 text-center">{subj.sbaScore.toFixed(1)}</td>
-                                <td className="border border-black p-1 text-center">{subj.rawExamScore.toFixed(1)}</td>
-                                <td className="border border-black p-1 text-center">{subj.examScore.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawSbaScore?.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.sbaScore?.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawExamScore?.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.examScore?.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center font-bold">{subj.totalScore}</td>
                                 <td className="border border-black p-1 text-center">{subj.grade}</td>
                                 <td className="border border-black p-1 text-center">{getOrdinal(subj.position)}</td>
