@@ -94,7 +94,7 @@ export function ReportCardGenerator() {
     const { user } = useAuth();
     const [classes, setClasses] = useState<Class[]>([]);
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
-    const [allTerms, setAllTerms] = useState<{ value: string; label: string }[]>([]);
+    const [activeTerm, setActiveTerm] = useState<{ value: string; label: string } | null>(null);
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
     const [selectedTerm, setSelectedTerm] = useState<string | undefined>();
     const [studentReports, setStudentReports] = useState<StudentReport[]>([]);
@@ -108,14 +108,16 @@ export function ReportCardGenerator() {
         setClasses(getClasses());
         const years = getAcademicYears();
         setAcademicYears(years);
-        
-        const terms = years.flatMap(year => 
-            year.terms.map(term => ({
-                value: `${term.name} ${year.year}`,
-                label: `${term.name} (${year.year})`
-            }))
-        );
-        setAllTerms(terms);
+
+        const activeYear = years.find(y => y.status === 'Active');
+        if (activeYear) {
+            const currentActiveTerm = activeYear.terms.find(t => t.status === 'Active');
+            if (currentActiveTerm) {
+                const termValue = `${currentActiveTerm.name} ${activeYear.year}`;
+                setActiveTerm({ value: termValue, label: `${currentActiveTerm.name} (${activeYear.year})` });
+                setSelectedTerm(termValue);
+            }
+        }
     }, []);
 
     const handleGenerateReports = () => {
@@ -218,15 +220,19 @@ export function ReportCardGenerator() {
                             {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                    <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled={!activeTerm}>
                         <SelectTrigger className="w-full sm:w-[200px]">
                             <SelectValue placeholder="Select Term" />
                         </SelectTrigger>
                         <SelectContent>
-                            {allTerms.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}
+                            {activeTerm ? (
+                                <SelectItem value={activeTerm.value}>{activeTerm.label}</SelectItem>
+                            ) : (
+                                <SelectItem value="disabled" disabled>No active term</SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
-                    <Button onClick={handleGenerateReports} disabled={isLoading}>
+                    <Button onClick={handleGenerateReports} disabled={isLoading || !selectedTerm}>
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Generate Reports
                     </Button>

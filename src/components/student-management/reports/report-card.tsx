@@ -31,7 +31,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative">
             {isProvisional && (
                  <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                    <p style={{ fontSize: '6rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold', letterSpacing: '0.5em' }}>
+                    <p style={{ fontSize: '6rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold', letterSpacing: '0.5em', textAlign: 'center' }}>
                         PROVISIONAL
                     </p>
                 </div>
@@ -43,7 +43,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                 </div>
 
                  <div className="flex justify-between items-start mb-4">
-                    <div className="text-sm uppercase">
+                    <div className="text-sm uppercase space-y-1">
                         <p><strong>Name:</strong> {studentName}</p>
                         <p><strong>Student ID:</strong> {student.student.student_no}</p>
                         <p><strong>Class:</strong> {reportData.className}</p>
