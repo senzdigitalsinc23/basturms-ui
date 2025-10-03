@@ -33,6 +33,7 @@ import jsPDF from 'jspdf';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProtectedRoute } from '@/components/protected-route';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const statusColors: Record<string, string> = {
@@ -68,7 +69,7 @@ function RecordCard<T>({ title, description, icon, records, columns, renderRow, 
     description: string, 
     icon: React.ElementType,
     records?: T[], 
-    columns: string[],
+    columns: (string | React.ReactNode)[],
     renderRow: (record: T, index: number) => React.ReactNode,
     emptyMessage?: string,
     addRecordButton?: React.ReactNode,
@@ -94,7 +95,7 @@ function RecordCard<T>({ title, description, icon, records, columns, renderRow, 
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                {columns.map(col => <TableHead key={col}>{col}</TableHead>)}
+                                {columns.map((col, index) => <TableHead key={index}>{col}</TableHead>)}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -131,6 +132,7 @@ export default function StudentProfilePage() {
     const [isEditScoreOpen, setIsEditScoreOpen] = useState(false);
     const [editingScore, setEditingScore] = useState<AssignmentScore | null>(null);
     const [newScoreValue, setNewScoreValue] = useState<number | string>('');
+    const [selectedScores, setSelectedScores] = useState<Record<string, boolean>>({});
 
     
     const { user: currentUser } = useAuth();
@@ -145,6 +147,7 @@ export default function StudentProfilePage() {
             setClasses(allClasses);
             setSubjects(getSubjects());
             setSchoolProfile(getSchoolProfile());
+            setSelectedScores({});
 
             if(studentProfile) {
                 const studentClass = allClasses.find(c => c.id === studentProfile.admissionDetails.class_assigned);
@@ -315,8 +318,20 @@ export default function StudentProfilePage() {
     
     const handleBulkDeleteScores = () => {
         if (!currentUser || !profile) return;
+        
+        const scoresToDelete = Object.keys(selectedScores).filter(key => selectedScores[key]);
+        if (scoresToDelete.length === 0) {
+            toast({ variant: 'destructive', title: 'No Scores Selected', description: 'Please select scores to delete.' });
+            return;
+        }
 
-        const updatedProfile = deleteAllAssignmentScores(profile.student.student_no, currentUser.id);
+        let updatedProfile: StudentProfile | null = profile;
+        scoresToDelete.forEach(scoreKey => {
+            const [subjectId, assignmentName] = scoreKey.split('___');
+            if (updatedProfile) {
+                updatedProfile = deleteAssignmentScore(updatedProfile.student.student_no, subjectId, assignmentName, currentUser.id);
+            }
+        });
         
         if(updatedProfile) {
             fetchProfile();
@@ -324,9 +339,9 @@ export default function StudentProfilePage() {
                 user: currentUser.email,
                 name: currentUser.name,
                 action: 'Bulk Delete Scores',
-                details: `Deleted all assignment scores for student ${fullName}.`
+                details: `Deleted ${scoresToDelete.length} assignment scores for student ${fullName}.`
             });
-            toast({ title: 'All Scores Deleted', description: 'All assignment scores for this student have been removed.' });
+            toast({ title: 'Scores Deleted', description: `${scoresToDelete.length} assignment scores have been removed.` });
         } else {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not delete assignment scores.' });
         }
@@ -349,6 +364,9 @@ export default function StudentProfilePage() {
     
     const currentTermPayment = financialDetails?.payment_history.slice(-1)[0];
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
+    
+    const scoresSelectedCount = Object.values(selectedScores).filter(Boolean).length;
+
 
     return (
         <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
@@ -357,12 +375,6 @@ export default function StudentProfilePage() {
                     <div className="flex items-center gap-2">
                          {currentUser?.role === 'Admin' && (
                             <>
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link href="/student-management/students">
-                                        <ArrowLeft className="mr-2 h-4 w-4" />
-                                        Back to List
-                                    </Link>
-                                </Button>
                                 <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="sm">
@@ -376,26 +388,6 @@ export default function StudentProfilePage() {
                                             <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
                                         </DialogHeader>
                                         <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
-                                    </DialogContent>
-                                </Dialog>
-                                <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button size="sm">
-                                            <Edit className="mr-2 h-4 w-4" /> Edit Student
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-2xl">
-                                        <DialogHeader>
-                                            <DialogTitle>Edit Student Profile</DialogTitle>
-                                            <DialogDescription>
-                                                Update the details for {fullName}.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <EditStudentForm
-                                            defaultValues={profile}
-                                            classes={classes}
-                                            onSubmit={handleUpdateProfile}
-                                        />
                                     </DialogContent>
                                 </Dialog>
                             </>
@@ -484,9 +476,35 @@ export default function StudentProfilePage() {
                             description="Detailed scores from classwork, homework, and exams."
                             icon={FileText}
                             records={assignmentScores}
-                            columns={['Assignment', 'Subject', 'Score', 'Actions']}
-                            renderRow={(rec, i) => (
+                            columns={[
+                                <Checkbox
+                                    key="select-all"
+                                    checked={scoresSelectedCount > 0 && scoresSelectedCount === assignmentScores?.length}
+                                    onCheckedChange={(checked) => {
+                                        const newSelection: Record<string, boolean> = {};
+                                        if (checked && assignmentScores) {
+                                            assignmentScores.forEach(rec => newSelection[`${rec.subject_id}___${rec.assignment_name}`] = true);
+                                        }
+                                        setSelectedScores(newSelection);
+                                    }}
+                                />,
+                                'Assignment', 'Subject', 'Score', 'Actions'
+                            ]}
+                            renderRow={(rec, i) => {
+                                const scoreKey = `${rec.subject_id}___${rec.assignment_name}`;
+                                return (
                                 <TableRow key={i}>
+                                    <TableCell>
+                                        <Checkbox
+                                            checked={!!selectedScores[scoreKey]}
+                                            onCheckedChange={(checked) => {
+                                                const newSelection = { ...selectedScores };
+                                                if (checked) newSelection[scoreKey] = true;
+                                                else delete newSelection[scoreKey];
+                                                setSelectedScores(newSelection);
+                                            }}
+                                        />
+                                    </TableCell>
                                     <TableCell>{rec.assignment_name}</TableCell>
                                     <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
                                     <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
@@ -519,24 +537,24 @@ export default function StudentProfilePage() {
                                         )}
                                     </TableCell>
                                 </TableRow>
-                            )}
+                            )}}
                             emptyMessage="No individual assignment scores have been recorded yet."
                              bulkDeleteButton={
-                                currentUser?.role === 'Admin' && (
+                                currentUser?.role === 'Admin' && scoresSelectedCount > 0 && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" size="sm" disabled={!assignmentScores || assignmentScores.length === 0}>
-                                                <Trash2 className="mr-2 h-4 w-4"/> Bulk Delete Scores
+                                            <Button variant="destructive" size="sm">
+                                                <Trash2 className="mr-2 h-4 w-4"/> Delete Selected ({scoresSelectedCount})
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>This will permanently delete all assignment scores for {fullName}. This action cannot be undone.</AlertDialogDescription>
+                                                <AlertDialogDescription>This will permanently delete the {scoresSelectedCount} selected assignment scores for {fullName}. This action cannot be undone.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleBulkDeleteScores}>Delete All Scores</AlertDialogAction>
+                                                <AlertDialogAction onClick={handleBulkDeleteScores}>Delete Selected Scores</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>

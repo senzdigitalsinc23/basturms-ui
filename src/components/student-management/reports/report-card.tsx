@@ -1,4 +1,5 @@
 
+
 'use client';
 import { StudentReport } from "@/lib/store";
 import { format } from "date-fns";
@@ -37,15 +38,17 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                     <h2 className="text-lg font-semibold uppercase">TERMINAL REPORT</h2>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-4 mb-4 text-sm">
-                    <div>
-                        <p><strong>CLASS:</strong> <span className="uppercase">{reportData.className}</span></p>
-                        <p><strong>YEAR:</strong> <span className="uppercase">{year}</span></p>
-                        <p><strong>NEXT TERM BEGINS:</strong> <span className="uppercase">{nextTermBegins ? format(new Date(nextTermBegins), 'PPP') : 'TBA'}</span></p>
+                 <div className="flex justify-between items-center mb-4">
+                    <div className="text-sm uppercase">
+                        <p><strong>Name:</strong> {studentName}</p>
+                        <p><strong>Student ID:</strong> {student.student.student_no}</p>
+                        <p><strong>Class:</strong> {reportData.className}</p>
+                        <p><strong>Year:</strong> {year}</p>
                     </div>
-                    <div className="text-right">
-                        <p><strong>TERM:</strong> <span className="uppercase">{term}</span></p>
-                        <p><strong>DATE:</strong> <span className="uppercase">{format(new Date(), 'PPP')}</span></p>
+                    <div className="text-sm uppercase text-right">
+                         <p><strong>Term:</strong> {term}</p>
+                        <p><strong>Date:</strong> {format(new Date(), 'PPP')}</p>
+                         <p><strong>Next Term Begins:</strong> {nextTermBegins ? format(new Date(nextTermBegins), 'PPP') : 'TBA'}</p>
                     </div>
                 </div>
 
@@ -53,7 +56,9 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                     <thead>
                         <tr className="bg-gray-100">
                             <th className="border border-black p-1 font-bold">SUBJECT</th>
+                            <th className="border border-black p-1 font-bold w-24">RAW SBA SCORE</th>
                             <th className="border border-black p-1 font-bold w-20">SBA (40%)</th>
+                            <th className="border border-black p-1 font-bold w-24">RAW EXAM SCORE</th>
                             <th className="border border-black p-1 font-bold w-20">EXAM (60%)</th>
                             <th className="border border-black p-1 font-bold w-20">TOTAL (100)</th>
                             <th className="border border-black p-1 font-bold w-16">GRADE</th>
@@ -65,7 +70,9 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                         {subjects.map((subj, index) => (
                             <tr key={index}>
                                 <td className="border border-black p-1 font-medium">{subj.subjectName}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawSbaScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center">{subj.sbaScore.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawExamScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center">{subj.examScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center font-bold">{subj.totalScore}</td>
                                 <td className="border border-black p-1 text-center">{subj.grade}</td>

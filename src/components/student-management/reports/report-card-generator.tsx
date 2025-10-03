@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport } from '@/lib/store';
@@ -16,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 
 function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentReport; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
     const { user } = useAuth();
@@ -55,24 +57,29 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
                     <DialogTitle>Edit Report for {report.student.student.first_name}</DialogTitle>
                     <DialogDescription>Add remarks and other details to finalize the report.</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="conduct">Conduct</Label>
-                            <Textarea id="conduct" value={conduct} onChange={(e) => setConduct(e.target.value)} disabled={!isAdmin && !isTeacher} />
-                        </div>
-                        <div>
-                            <Label htmlFor="talent">Talent & Interest</Label>
-                            <Textarea id="talent" value={talentAndInterest} onChange={(e) => setTalentAndInterest(e.target.value)} disabled={!isAdmin && !isTeacher} />
+                <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto p-2">
+                     <div className="p-4 border rounded-md">
+                        <h4 className="font-semibold mb-2">Conduct & Attitude</h4>
+                         <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="conduct">Conduct</Label>
+                                <Textarea id="conduct" value={conduct} onChange={(e) => setConduct(e.target.value)} disabled={!isAdmin && !isTeacher} />
+                            </div>
+                            <div>
+                                <Label htmlFor="talent">Talent & Interest</Label>
+                                <Textarea id="talent" value={talentAndInterest} onChange={(e) => setTalentAndInterest(e.target.value)} disabled={!isAdmin && !isTeacher} />
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <Label htmlFor="teacher-remarks">Class Teacher's Remarks</Label>
+
+                    <div className="p-4 border rounded-md">
+                        <h4 className="font-semibold mb-2">Class Teacher's Remarks</h4>
                         <Textarea id="teacher-remarks" value={classTeacherRemarks} onChange={(e) => setClassTeacherRemarks(e.target.value)} disabled={!isAdmin && !isTeacher} />
                     </div>
+
                     {isAdmin && (
-                        <div>
-                            <Label htmlFor="head-remarks">Head Teacher's Remarks</Label>
+                        <div className="p-4 border rounded-md bg-muted/50">
+                            <h4 className="font-semibold mb-2">Head Teacher's Remarks</h4>
                             <Textarea id="head-remarks" value={headTeacherRemarks} onChange={(e) => setHeadTeacherRemarks(e.target.value)} />
                         </div>
                     )}
