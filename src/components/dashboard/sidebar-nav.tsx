@@ -39,6 +39,7 @@ import {
   BookMarked,
   Landmark,
   Clipboard,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -114,6 +115,7 @@ const menuItems: Record<Role, NavItem[]> = {
       items: [
         { href: '/student-management/students', label: 'Students' },
         { href: '/student-management/promotions', label: 'Promotion/Graduation' },
+        { href: '/student-management/reports', label: 'Report Generation' },
         { href: '/student-management/add', label: 'Add Student' },
       ],
     },
