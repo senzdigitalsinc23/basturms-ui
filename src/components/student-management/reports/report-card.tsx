@@ -1,8 +1,15 @@
+
 'use client';
 import { StudentReport } from "@/lib/store";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const getOrdinal = (n: number) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 export function ReportCard({ reportData }: { reportData: StudentReport }) {
     const { student, term, year, nextTermBegins, subjects, attendance, talentAndInterest, conduct, classTeacherRemarks, headTeacherRemarks, status } = reportData;
@@ -14,7 +21,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
     return (
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative">
             {isProvisional && (
-                <div className="absolute inset-0 flex items-center justify-center z-0">
+                <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                     <p className="text-8xl font-bold text-gray-200/50 transform -rotate-45 select-none">
                         PROVISIONAL REPORT
                     </p>
@@ -58,7 +65,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                                 <td className="border border-black p-1 text-center">{subj.examScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center font-bold">{subj.totalScore}</td>
                                 <td className="border border-black p-1 text-center">{subj.grade}</td>
-                                <td className="border border-black p-1 text-center">{subj.position}</td>
+                                <td className="border border-black p-1 text-center">{getOrdinal(subj.position)}</td>
                                 <td className="border border-black p-1">{subj.remarks}</td>
                             </tr>
                         ))}

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -64,7 +63,7 @@ export type StudentReport = {
         examScore: number;
         totalScore: number;
         grade: string;
-        position: string;
+        position: number;
         remarks: string;
     }[];
     attendance: {
@@ -623,7 +622,7 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
             totalScore,
             grade,
             remarks,
-            position: `${position} / ${allScoresForSubject.length}`
+            position
         };
     });
     

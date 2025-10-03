@@ -11,7 +11,7 @@ export type StudentReport = {
         examScore: number;
         totalScore: number;
         grade: string;
-        position: string;
+        position: number;
         remarks: string;
     }[];
     attendance: {

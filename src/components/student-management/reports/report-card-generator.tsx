@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport } from '@/lib/store';
@@ -14,8 +15,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
-function ReportEditor({ report, onSave }: { report: StudentReport; onSave: (updatedReport: StudentReport) => void; }) {
+function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentReport; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
     const { user } = useAuth();
     const [conduct, setConduct] = useState(report.conduct);
     const [talentAndInterest, setTalentAndInterest] = useState(report.talentAndInterest);
@@ -36,37 +38,48 @@ function ReportEditor({ report, onSave }: { report: StudentReport; onSave: (upda
         };
         onSave(updatedReport);
     }
+    
+    useEffect(() => {
+        if(open) {
+            setConduct(report.conduct);
+            setTalentAndInterest(report.talentAndInterest);
+            setClassTeacherRemarks(report.classTeacherRemarks);
+            setHeadTeacherRemarks(report.headTeacherRemarks);
+        }
+    }, [open, report]);
 
     return (
-        <DialogContent className="max-w-2xl">
-            <DialogHeader>
-                <DialogTitle>Edit Report for {report.student.student.first_name}</DialogTitle>
-                <DialogDescription>Add remarks and other details to finalize the report.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <Label htmlFor="conduct">Conduct</Label>
-                        <Textarea id="conduct" value={conduct} onChange={(e) => setConduct(e.target.value)} disabled={!isTeacher} />
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Edit Report for {report.student.student.first_name}</DialogTitle>
+                    <DialogDescription>Add remarks and other details to finalize the report.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="conduct">Conduct</Label>
+                            <Textarea id="conduct" value={conduct} onChange={(e) => setConduct(e.target.value)} disabled={!isTeacher && !isAdmin} />
+                        </div>
+                        <div>
+                            <Label htmlFor="talent">Talent & Interest</Label>
+                            <Textarea id="talent" value={talentAndInterest} onChange={(e) => setTalentAndInterest(e.target.value)} disabled={!isTeacher && !isAdmin} />
+                        </div>
                     </div>
                     <div>
-                        <Label htmlFor="talent">Talent & Interest</Label>
-                        <Textarea id="talent" value={talentAndInterest} onChange={(e) => setTalentAndInterest(e.target.value)} disabled={!isTeacher} />
+                        <Label htmlFor="teacher-remarks">Class Teacher's Remarks</Label>
+                        <Textarea id="teacher-remarks" value={classTeacherRemarks} onChange={(e) => setClassTeacherRemarks(e.target.value)} disabled={!isTeacher && !isAdmin} />
                     </div>
+                    {isAdmin && (
+                        <div>
+                            <Label htmlFor="head-remarks">Head Teacher's Remarks</Label>
+                            <Textarea id="head-remarks" value={headTeacherRemarks} onChange={(e) => setHeadTeacherRemarks(e.target.value)} />
+                        </div>
+                    )}
                 </div>
-                <div>
-                    <Label htmlFor="teacher-remarks">Class Teacher's Remarks</Label>
-                    <Textarea id="teacher-remarks" value={classTeacherRemarks} onChange={(e) => setClassTeacherRemarks(e.target.value)} disabled={!isTeacher} />
-                </div>
-                {isAdmin && (
-                    <div>
-                        <Label htmlFor="head-remarks">Head Teacher's Remarks</Label>
-                        <Textarea id="head-remarks" value={headTeacherRemarks} onChange={(e) => setHeadTeacherRemarks(e.target.value)} />
-                    </div>
-                )}
-            </div>
-            <Button onClick={handleSave}>Save Report</Button>
-        </DialogContent>
+                <Button onClick={handleSave}>Save Report</Button>
+            </DialogContent>
+        </Dialog>
     )
 }
 
@@ -80,6 +93,9 @@ export function ReportCardGenerator() {
     const [studentReports, setStudentReports] = useState<StudentReport[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const [editingReport, setEditingReport] = useState<StudentReport | null>(null);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [selectedReports, setSelectedReports] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         setClasses(getClasses());
@@ -112,6 +128,7 @@ export function ReportCardGenerator() {
         }).filter((report): report is StudentReport => report !== null);
         
         setStudentReports(reports);
+        setSelectedReports({});
         setIsLoading(false);
     };
 
@@ -122,31 +139,61 @@ export function ReportCardGenerator() {
             prevReports.map(r => r.student.student.student_no === updatedReport.student.student.student_no ? updatedReport : r)
         );
         toast({ title: 'Report Updated', description: `Report for ${updatedReport.student.student.first_name} has been saved.`});
+        setIsEditorOpen(false);
+        setEditingReport(null);
     };
 
-    const handlePrintAll = async () => {
+    const handlePrintSelected = async () => {
+        const reportIdsToPrint = Object.keys(selectedReports).filter(key => selectedReports[key]);
+        if (reportIdsToPrint.length === 0) {
+            toast({ variant: 'destructive', title: 'No Reports Selected', description: 'Please select at least one report to print.' });
+            return;
+        }
+
         setIsLoading(true);
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const cardElements = document.querySelectorAll<HTMLElement>('.report-card');
-
-        for (let i = 0; i < cardElements.length; i++) {
-            const canvas = await html2canvas(cardElements[i], { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const ratio = canvas.width / canvas.height;
-            const width = pdfWidth - 20; // with margin
-            const height = width / ratio;
-            
-            if (i > 0) {
-                pdf.addPage();
+        
+        for (let i = 0; i < reportIdsToPrint.length; i++) {
+            const reportId = reportIdsToPrint[i];
+            const cardElement = document.getElementById(`report-card-${reportId}`);
+            if (cardElement) {
+                const canvas = await html2canvas(cardElement, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const ratio = canvas.width / canvas.height;
+                const width = pdfWidth - 20; // with margin
+                const height = width / ratio;
+                
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                pdf.addImage(imgData, 'PNG', 10, 10, width, height < pdfHeight - 20 ? height : pdfHeight - 20);
             }
-            pdf.addImage(imgData, 'PNG', 10, 10, width, height < pdfHeight - 20 ? height : pdfHeight - 20);
         }
         
-        pdf.save('report_cards.pdf');
+        pdf.save('selected_report_cards.pdf');
         setIsLoading(false);
     };
+
+    const handleSelectReport = (studentId: string, checked: boolean) => {
+        setSelectedReports(prev => ({...prev, [studentId]: checked}));
+    }
+    
+    const handleSelectAll = (checked: boolean) => {
+        if(checked) {
+            const newSelection = studentReports.reduce((acc, report) => {
+                acc[report.student.student.student_no] = true;
+                return acc;
+            }, {} as Record<string, boolean>);
+            setSelectedReports(newSelection);
+        } else {
+            setSelectedReports({});
+        }
+    }
+    
+    const isAllSelected = studentReports.length > 0 && Object.keys(selectedReports).length === studentReports.length;
+
     
     return (
         <div className="space-y-6">
@@ -177,29 +224,46 @@ export function ReportCardGenerator() {
                         Generate Reports
                     </Button>
                     {studentReports.length > 0 && (
-                        <Button variant="secondary" onClick={handlePrintAll} disabled={isLoading}>
+                        <Button variant="secondary" onClick={handlePrintSelected} disabled={isLoading}>
                             <Printer className="mr-2 h-4 w-4" />
-                            Print All ({studentReports.length})
+                            Print Selected ({Object.values(selectedReports).filter(Boolean).length})
                         </Button>
                     )}
                 </CardContent>
             </Card>
 
             {studentReports.length > 0 && (
-                <div className="space-y-8">
-                    {studentReports.map(report => (
-                         <Dialog key={report.student.student.student_no}>
-                            <div className="relative group">
-                                <ReportCard reportData={report} />
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Pencil className="mr-2 h-4 w-4"/> Edit
-                                    </Button>
-                                </DialogTrigger>
+                <div>
+                     <div className="flex items-center space-x-2 py-4">
+                        <Checkbox 
+                            id="select-all-reports" 
+                            checked={isAllSelected} 
+                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                        />
+                        <Label htmlFor="select-all-reports">Select All</Label>
+                    </div>
+                    <div className="space-y-8">
+                        {studentReports.map(report => (
+                            <div key={report.student.student.student_no} className="relative group">
+                                <div className="absolute top-2 left-2 z-20 flex items-center space-x-2">
+                                     <Checkbox 
+                                        checked={!!selectedReports[report.student.student.student_no]} 
+                                        onCheckedChange={(checked) => handleSelectReport(report.student.student.student_no, !!checked)}
+                                        className="bg-white"
+                                    />
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingReport(report); setIsEditorOpen(true);}}>
+                                            <Pencil className="mr-2 h-4 w-4"/> Edit
+                                        </Button>
+                                    </DialogTrigger>
+                                </div>
+                                <div id={`report-card-${report.student.student.student_no}`}>
+                                    <ReportCard reportData={report} />
+                                </div>
                             </div>
-                             <ReportEditor report={report} onSave={handleSaveAndCloseEditor} />
-                        </Dialog>
-                    ))}
+                        ))}
+                        {editingReport && <ReportEditor report={editingReport} onSave={handleSaveAndCloseEditor} open={isEditorOpen} onOpenChange={setIsEditorOpen} />}
+                    </div>
                 </div>
             )}
         </div>
