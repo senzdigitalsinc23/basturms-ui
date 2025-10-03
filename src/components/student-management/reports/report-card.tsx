@@ -6,9 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const getOrdinal = (n: number) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    if (n > 3 && n < 21) return n + 'th';
+    switch (n % 10) {
+        case 1:  return n + "st";
+        case 2:  return n + "nd";
+        case 3:  return n + "rd";
+        default: return n + "th";
+    }
 }
 
 export function ReportCard({ reportData }: { reportData: StudentReport }) {
@@ -21,9 +25,9 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
     return (
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative">
             {isProvisional && (
-                <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                    <p className="text-8xl font-bold text-gray-200/50 transform -rotate-45 select-none">
-                        PROVISIONAL REPORT
+                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+                    <p style={{ fontSize: '10rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold' }}>
+                        PROVISIONAL
                     </p>
                 </div>
             )}
@@ -49,8 +53,8 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                     <thead>
                         <tr className="bg-gray-100">
                             <th className="border border-black p-1 font-bold">SUBJECT</th>
-                            <th className="border border-black p-1 font-bold w-20">Raw SBA (50)</th>
-                            <th className="border border-black p-1 font-bold w-20">Raw EXAM (50)</th>
+                            <th className="border border-black p-1 font-bold w-20">SBA (40%)</th>
+                            <th className="border border-black p-1 font-bold w-20">EXAM (60%)</th>
                             <th className="border border-black p-1 font-bold w-20">TOTAL (100)</th>
                             <th className="border border-black p-1 font-bold w-16">GRADE</th>
                             <th className="border border-black p-1 font-bold w-16">POSITION</th>

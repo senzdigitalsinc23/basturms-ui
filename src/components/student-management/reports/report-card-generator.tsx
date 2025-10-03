@@ -59,16 +59,16 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label htmlFor="conduct">Conduct</Label>
-                            <Textarea id="conduct" value={conduct} onChange={(e) => setConduct(e.target.value)} disabled={!isTeacher && !isAdmin} />
+                            <Textarea id="conduct" value={conduct} onChange={(e) => setConduct(e.target.value)} disabled={!isAdmin && !isTeacher} />
                         </div>
                         <div>
                             <Label htmlFor="talent">Talent & Interest</Label>
-                            <Textarea id="talent" value={talentAndInterest} onChange={(e) => setTalentAndInterest(e.target.value)} disabled={!isTeacher && !isAdmin} />
+                            <Textarea id="talent" value={talentAndInterest} onChange={(e) => setTalentAndInterest(e.target.value)} disabled={!isAdmin && !isTeacher} />
                         </div>
                     </div>
                     <div>
                         <Label htmlFor="teacher-remarks">Class Teacher's Remarks</Label>
-                        <Textarea id="teacher-remarks" value={classTeacherRemarks} onChange={(e) => setClassTeacherRemarks(e.target.value)} disabled={!isTeacher && !isAdmin} />
+                        <Textarea id="teacher-remarks" value={classTeacherRemarks} onChange={(e) => setClassTeacherRemarks(e.target.value)} disabled={!isAdmin && !isTeacher} />
                     </div>
                     {isAdmin && (
                         <div>
@@ -251,9 +251,12 @@ export function ReportCardGenerator() {
                                         onCheckedChange={(checked) => handleSelectReport(report.student.student.student_no, !!checked)}
                                         className="bg-white"
                                     />
-                                    <Dialog onOpenChange={setIsEditorOpen}>
+                                    <Dialog onOpenChange={(open) => {
+                                        if (open) setEditingReport(report);
+                                        setIsEditorOpen(open);
+                                    }}>
                                         <DialogTrigger asChild>
-                                            <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingReport(report); }}>
+                                            <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Pencil className="mr-2 h-4 w-4"/> Edit
                                             </Button>
                                         </DialogTrigger>
