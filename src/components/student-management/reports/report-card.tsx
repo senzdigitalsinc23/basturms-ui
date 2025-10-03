@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const getOrdinal = (n: number) => {
+    if(!n) return 'N/A';
     if (n > 3 && n < 21) return n + 'th';
     switch (n % 10) {
         case 1:  return n + "st";
@@ -30,7 +31,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative">
             {isProvisional && (
                  <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                    <p style={{ fontSize: '8rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold' }}>
+                    <p style={{ fontSize: '6rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold', letterSpacing: '0.5em' }}>
                         PROVISIONAL
                     </p>
                 </div>
@@ -41,13 +42,13 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                     <h2 className="text-lg font-semibold uppercase">TERMINAL REPORT</h2>
                 </div>
 
-                 <div className="flex justify-between items-center mb-4">
+                 <div className="flex justify-between items-start mb-4">
                     <div className="text-sm uppercase">
                         <p><strong>Name:</strong> {studentName}</p>
                         <p><strong>Student ID:</strong> {student.student.student_no}</p>
                         <p><strong>Class:</strong> {reportData.className}</p>
                     </div>
-                    <div className="text-sm uppercase text-right">
+                    <div className="text-sm uppercase text-right space-y-1">
                          <p><strong>Term:</strong> {reportTerm}</p>
                         <p><strong>Date:</strong> {reportDate}</p>
                          <p><strong>Next Term Begins:</strong> {nextTermBegins ? format(new Date(nextTermBegins), 'PPP') : 'TBA'}</p>
@@ -72,10 +73,10 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                         {subjects.map((subj, index) => (
                             <tr key={index}>
                                 <td className="border border-black p-1 font-medium">{subj.subjectName}</td>
-                                <td className="border border-black p-1 text-center">{subj.rawSbaScore?.toFixed(1)}</td>
-                                <td className="border border-black p-1 text-center">{subj.sbaScore?.toFixed(1)}</td>
-                                <td className="border border-black p-1 text-center">{subj.rawExamScore?.toFixed(1)}</td>
-                                <td className="border border-black p-1 text-center">{subj.examScore?.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawSbaScore.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.sbaScore.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawExamScore.toFixed(1)}</td>
+                                <td className="border border-black p-1 text-center">{subj.examScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center font-bold">{subj.totalScore}</td>
                                 <td className="border border-black p-1 text-center">{subj.grade}</td>
                                 <td className="border border-black p-1 text-center">{getOrdinal(subj.position)}</td>
