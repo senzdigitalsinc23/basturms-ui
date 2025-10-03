@@ -1,5 +1,32 @@
 
 
+export type StudentReport = {
+    student: StudentProfile;
+    term: string;
+    year: string;
+    nextTermBegins: string | null;
+    subjects: {
+        subjectName: string;
+        sbaScore: number;
+        examScore: number;
+        totalScore: number;
+        grade: string;
+        position: string;
+        remarks: string;
+    }[];
+    attendance: {
+        daysAttended: number;
+        totalDays: number;
+    };
+    conduct: string;
+    talentAndInterest: string;
+    classTeacherRemarks: string;
+    headTeacherRemarks: string;
+    schoolProfile: any; // Using 'any' for now, can be SchoolProfileData
+    className: string;
+};
+
+
 export type Role =
   | 'Admin'
   | 'Teacher'

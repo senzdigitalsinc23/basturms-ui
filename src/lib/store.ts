@@ -53,6 +53,32 @@ import initialStaffProfiles from './initial-staff-profiles.json';
 import { SchoolProfileData } from '@/components/settings/school-profile-settings';
 import { FullSchedule } from '@/components/academics/timetable/timetable-scheduler';
 
+export type StudentReport = {
+    student: StudentProfile;
+    term: string;
+    year: string;
+    nextTermBegins: string | null;
+    subjects: {
+        subjectName: string;
+        sbaScore: number;
+        examScore: number;
+        totalScore: number;
+        grade: string;
+        position: string;
+        remarks: string;
+    }[];
+    attendance: {
+        daysAttended: number;
+        totalDays: number;
+    };
+    conduct: string;
+    talentAndInterest: string;
+    classTeacherRemarks: string;
+    headTeacherRemarks: string;
+    schoolProfile: SchoolProfileData | null;
+    className: string;
+};
+
 
 const USERS_KEY = 'campusconnect_users';
 const ROLES_KEY = 'campusconnect_roles';
@@ -495,6 +521,86 @@ export const initializeStore = () => {
     }
   }
 };
+
+export const calculateStudentReport = (studentId: string, termName: string): StudentReport | null => {
+    const student = getStudentProfileById(studentId);
+    if (!student) return null;
+
+    const allSubjects = getSubjects();
+    const classSubjects = addClassSubject().filter(cs => cs.class_id === student.admissionDetails.class_assigned).map(cs => allSubjects.find(s => s.id === cs.subject_id)).filter(Boolean) as Subject[];
+    const activities = getAssignmentActivities();
+    const gradingScheme = getGradingScheme();
+    const schoolProfile = getSchoolProfile();
+
+    const reportSubjects = classSubjects.map(subject => {
+        const studentScores = student.assignmentScores?.filter(s => s.subject_id === subject.id) || [];
+        
+        const sbaScores = studentScores.filter(s => s.assignment_name !== 'End of Term Exam');
+        const examScoreRecord = studentScores.find(s => s.assignment_name === 'End of Term Exam');
+
+        let totalSbaWeight = 0;
+        let weightedSbaScore = 0;
+        sbaScores.forEach(score => {
+            const activityName = score.assignment_name.replace(/\s\d+$/, ''); // "Classwork 1" -> "Classwork"
+            const activity = activities.find(a => a.name === activityName);
+            if (activity) {
+                totalSbaWeight += activity.weight;
+                weightedSbaScore += (score.score / 100) * activity.weight;
+            }
+        });
+        
+        // Normalize SBA score to 50
+        const sbaScore = totalSbaWeight > 0 ? (weightedSbaScore / totalSbaWeight) * 50 : 0;
+        
+        // Exam score is out of 100, scale to 50
+        const examScore = (examScoreRecord?.score || 0) * 0.5;
+
+        const totalScore = Math.round(sbaScore + examScore);
+        
+        let grade = "N/A";
+        let remarks = "N/A";
+        for (const gradeInfo of gradingScheme) {
+            const [min, max] = gradeInfo.range.split('-').map(Number);
+            if (totalScore >= min && totalScore <= max) {
+                grade = gradeInfo.grade;
+                remarks = gradeInfo.remarks;
+                break;
+            }
+        }
+
+        return {
+            subjectName: subject.name,
+            sbaScore: parseFloat(sbaScore.toFixed(2)),
+            examScore: parseFloat(examScore.toFixed(2)),
+            totalScore,
+            grade,
+            remarks,
+            position: 'N/A' // Position calculation is complex and needs all class results
+        };
+    });
+    
+    const academicYear = getAcademicYears().find(y => y.terms.some(t => `${t.name} ${y.year}` === termName));
+    const termInfo = academicYear?.terms.find(t => `${t.name} ${academicYear.year}` === termName);
+    const nextTermIndex = academicYear?.terms.findIndex(t => t.name === termInfo?.name) as number + 1;
+    const nextTerm = academicYear?.terms[nextTermIndex];
+
+
+    return {
+        student,
+        term: termInfo?.name || '',
+        year: academicYear?.year || '',
+        nextTermBegins: nextTerm?.startDate || null,
+        subjects: reportSubjects,
+        attendance: { daysAttended: 1, totalDays: 1 }, // Placeholder
+        conduct: 'Good', // Placeholder
+        talentAndInterest: 'Singing', // Placeholder
+        classTeacherRemarks: 'A very brilliant and respectful student', // Placeholder
+        headTeacherRemarks: 'An exceptionally brilliant student with a promising future.', // Placeholder
+        schoolProfile,
+        className: getClasses().find(c => c.id === student.admissionDetails.class_assigned)?.name || 'N/A'
+    };
+};
+
 
 // Timetable functions
 export const getTimetable = (): FullSchedule => getFromStorage<FullSchedule>(TIMETABLE_KEY, {});
