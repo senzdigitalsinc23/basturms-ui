@@ -26,7 +26,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative font-sans">
             {isProvisional && (
                  <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                    <p style={{ fontSize: '8rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold', letterSpacing: '0.5em', textAlign: 'center' }}>
+                    <p style={{ fontSize: '6rem', color: 'rgba(229, 231, 235, 0.5)', transform: 'rotate(-45deg)', userSelect: 'none', fontWeight: 'bold', letterSpacing: '0.5em', textAlign: 'center' }}>
                         PROVISIONAL
                     </p>
                 </div>
@@ -68,9 +68,9 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                         {subjects.map((subj, index) => (
                             <tr key={index}>
                                 <td className="border border-black p-1 font-medium">{subj.subjectName}</td>
-                                <td className="border border-black p-1 text-center">{subj.rawSbaScore?.toFixed(1) || '0.0'}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawSbaScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center">{subj.sbaScore.toFixed(1)}</td>
-                                <td className="border border-black p-1 text-center">{subj.rawExamScore?.toFixed(1) || '0.0'}</td>
+                                <td className="border border-black p-1 text-center">{subj.rawExamScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center">{subj.examScore.toFixed(1)}</td>
                                 <td className="border border-black p-1 text-center font-bold">{subj.totalScore}</td>
                                 <td className="border border-black p-1 text-center">{subj.grade}</td>
