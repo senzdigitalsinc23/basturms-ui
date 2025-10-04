@@ -25,7 +25,7 @@ export function UserManagement() {
     refreshData();
   }, [refreshTrigger]);
 
-  const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, entityId?: string }) => {
+  const handleAddUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, entityId?: string, signature?: string }) => {
     const newUser = addUser(user);
     setRefreshTrigger(prev => prev + 1); // Trigger refresh
     if(currentUser) {

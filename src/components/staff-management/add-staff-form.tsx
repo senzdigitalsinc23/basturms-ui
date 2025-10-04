@@ -1,7 +1,7 @@
 
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,19 +17,20 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, CalendarIcon, X, Check, ChevronsUpDown } from 'lucide-react';
+import { Loader2, CalendarIcon, X, Check, ChevronsUpDown, Upload } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES, Subject, Staff, ALL_ACCOUNTANT_ROLES } from '@/lib/types';
-import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffDocuments, storeGetStaffAcademicHistory } from '@/lib/store';
+import { ALL_ROLES, Role, AppointmentStatus, ALL_APPOINTMENT_STATUSES, Subject, Staff, ALL_ACCOUNTANT_ROLES, User } from '@/lib/types';
+import { getStaffAppointmentHistory, getClasses, addStaff, addStaffAcademicHistory, addStaffDocument, getSubjects, updateStaff, getStaffDocuments, storeGetStaffAcademicHistory, getUserById } from '@/lib/store';
 import type { Class } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Badge } from '../ui/badge';
 import { addStaffAppointmentHistory } from '@/lib/store';
 import { Checkbox } from '../ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
-const MAX_STEPS = 6;
+const MAX_STEPS = 7;
 
 const academicHistorySchema = z.object({
   school: z.string().min(1, 'School name is required'),
@@ -77,6 +78,9 @@ const formSchema = z.object({
   class_assigned: z.array(z.string()).optional(),
   subjects_assigned: z.array(z.string()).optional(),
   appointment_status: z.enum(ALL_APPOINTMENT_STATUSES, { required_error: 'Appointment status is required.' }),
+
+  // Signature
+  signature: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -182,6 +186,58 @@ function DocumentsFields() {
     );
 }
 
+function SignatureField() {
+    const { control, setValue, watch } = useFormContext<FormData>();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const signature = watch('signature');
+
+    const handleSignatureClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setValue('signature', reader.result as string, { shouldValidate: true });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <FormLabel>Signature</FormLabel>
+            <div className="flex items-center gap-4 p-4 border rounded-md">
+                {signature ? (
+                    <img src={signature} alt="Signature Preview" className="h-20 w-auto bg-gray-100 p-2 rounded-md" />
+                ) : (
+                    <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">No signature uploaded.</div>
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={handleSignatureClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    {signature ? 'Change Signature' : 'Upload Signature'}
+                </Button>
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/png" onChange={handleFileChange} />
+            </div>
+            <FormField
+                control={control}
+                name="signature"
+                render={({ field }) => (
+                   <FormItem>
+                     <FormControl>
+                       <Input type="hidden" {...field} />
+                     </FormControl>
+                     <FormMessage />
+                   </FormItem>
+                )}
+            />
+        </div>
+    );
+}
+
+
 function PreviewItem({ label, value }: { label: string, value?: React.ReactNode }) {
     return (
         <div>
@@ -215,6 +271,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     mode: 'onChange',
     defaultValues: isEditMode && defaultValues ? {
         ...defaultValues,
+        signature: getUserById(defaultValues.user_id)?.signature,
         appointment_date: new Date(defaultValues.date_of_joining),
         roles: defaultValues.roles || [],
         appointment_status: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.appointment_status || 'Appointed',
@@ -247,6 +304,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
       class_assigned: [],
       subjects_assigned: [],
       appointment_status: undefined,
+      signature: '',
     }
   });
 
@@ -284,7 +342,8 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     { id: 3, name: 'Academic History', fields: ['academic_history'] },
     { id: 4, name: 'Documents', fields: ['documents'] },
     { id: 5, name: 'Appointment', fields: ['appointment_date', 'roles', 'appointment_status'] },
-    { id: 6, name: 'Preview & Submit', fields: [] },
+    { id: 6, name: 'Signature', fields: ['signature'] },
+    { id: 7, name: 'Preview & Submit', fields: [] },
   ];
 
   const handleNext = async () => {
@@ -306,7 +365,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     }
     setIsLoading(true);
 
-    const staffData: Omit<Staff, 'user_id'> = {
+    const staffData: Omit<Staff, 'user_id'> & { signature?: string } = {
         staff_id: isEditMode && defaultValues ? defaultValues.staff_id : generatedStaffId,
         first_name: data.first_name,
         last_name: data.last_name,
@@ -319,6 +378,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
         snnit_no: data.snnit_no,
         date_of_joining: data.appointment_date.toISOString(),
         address: data.address,
+        signature: data.signature,
     };
     
     try {
@@ -337,15 +397,20 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
             }
         };
 
-        const newStaff = addStaff(finalData.staffData, user.id);
+        if (isEditMode && defaultValues) {
+            updateStaff(defaultValues.staff_id, finalData.staffData, user.id);
+        } else {
+            addStaff(finalData.staffData, user.id);
+        }
         
-        if (finalData.academic_history) {
+        // These parts only run for new staff or if you decide to allow editing them as well
+        if (finalData.academic_history && !isEditMode) {
             finalData.academic_history.forEach(history => {
                 addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
             });
         }
 
-        if (finalData.documents) {
+        if (finalData.documents && !isEditMode) {
             for (const doc of finalData.documents) {
                 const fileReader = new FileReader();
                 fileReader.readAsDataURL(doc.file);
@@ -359,7 +424,10 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
             }
         }
         
-        addStaffAppointmentHistory({...finalData.appointment_history, staff_id: newStaff.staff_id});
+        if (!isEditMode) {
+            addStaffAppointmentHistory({...finalData.appointment_history, staff_id: newStaff.staff_id});
+        }
+
 
         await new Promise(resolve => setTimeout(resolve, 500));
         
@@ -374,6 +442,8 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
 
         if (!isEditMode) {
           router.push(`/staff-management`);
+        } else {
+            onSubmit(finalData);
         }
     } catch (e: any) {
          toast({
@@ -393,7 +463,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
           <form onSubmit={handleSubmit(processSubmit)} className="flex flex-col h-full">
              <div className="flex-grow overflow-y-auto p-6">
                 <Tabs value={String(currentStep)} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6">
+                <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 mb-6">
                     {tabs.map(tab => (
                         <TabsTrigger key={tab.id} value={String(tab.id)} disabled={currentStep < tab.id} onClick={() => setCurrentStep(tab.id)}>
                             {tab.name}
@@ -706,7 +776,14 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                         )}/>
                     </div>
                 </TabsContent>
-                <TabsContent value="6">
+
+                 <TabsContent value="6">
+                    <div className="max-h-[60vh] overflow-y-auto p-1">
+                        <SignatureField />
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="7">
                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
                         <h3 className="text-lg font-semibold">Review Details</h3>
                         <p className="text-sm text-muted-foreground">Please review all the information carefully before submitting.</p>
@@ -765,6 +842,11 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                             {watch('documents')?.map((doc, i) => <li key={i} className="text-sm">{doc.name} ({(doc.file as File)?.name || 'Existing file'})</li>)}
                             </ul>
                         </>}
+                        {watch('signature') && <>
+                            <h4 className="text-md font-semibold text-primary pt-4">Signature</h4>
+                            <Separator />
+                            <img src={watch('signature')} alt="Signature Preview" className="h-20 w-auto bg-gray-100 p-2 rounded-md" />
+                        </>}
                     </div>
                 </TabsContent>
 
@@ -795,3 +877,4 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     </Card>
   );
 }
+

@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,6 +33,7 @@ const createSchema = z.object({
   role: z.enum(ALL_ROLES, { required_error: 'Please select a role.' }),
   password: z.string().min(8, 'Password must be at least 8 characters.'),
   entityId: z.string().optional(), // For linking to student or staff
+  signature: z.string().optional(),
 });
 
 const editSchema = z.object({
@@ -73,6 +75,7 @@ export function UserForm({
           password: '',
           role: undefined,
           entityId: undefined,
+          signature: '',
         },
   });
 
