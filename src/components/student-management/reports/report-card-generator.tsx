@@ -123,7 +123,7 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
                 <Button onClick={handleSave}>Save Report</Button>
             </DialogContent>
         </Dialog>
-    )
+    );
 }
 
 export function ReportCardGenerator() {
@@ -308,7 +308,7 @@ export function ReportCardGenerator() {
         setEditingReport(report);
         setIsEditorOpen(true);
     };
-
+    
     return (
         <div className="space-y-6">
             <Card>
@@ -398,7 +398,7 @@ export function ReportCardGenerator() {
                     </div>
                 </div>
             )}
-
+            
             <ReportEditor 
                 report={editingReport} 
                 onSave={handleSaveAndCloseEditor} 
@@ -408,6 +408,3 @@ export function ReportCardGenerator() {
         </div>
     );
 }
-
-
-    
