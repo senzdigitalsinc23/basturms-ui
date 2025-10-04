@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities, getStaff, getStaffAppointmentHistory } from '@/lib/store';
+import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities, getStaff, getStaffAppointmentHistory, getStudentReport } from '@/lib/store';
 import { Class, StudentProfile, Subject, ClassSubject, AssignmentScore, AssignmentActivity } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Save } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
+
 
 type StudentForGrading = {
     id: string;
@@ -25,6 +28,8 @@ export function ScoreEntryForm() {
     const [students, setStudents] = useState<StudentForGrading[]>([]);
     const [assignmentName, setAssignmentName] = useState<string | undefined>();
     const [assignmentOptions, setAssignmentOptions] = useState<string[]>([]);
+    const [isTermFinalized, setIsTermFinalized] = useState(false);
+
     const { toast } = useToast();
     const { user } = useAuth();
 
@@ -98,24 +103,33 @@ export function ScoreEntryForm() {
             setAssignmentOptions(options);
 
             setAssignmentName(undefined);
-
-            // Get students for the selected class and initialize scores
-            const allStudents = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
+            
+            const allStudentsInClass = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
             
             const initialScores: Record<string, string> = {};
             subjectsToShow.forEach(sub => {
                 initialScores[sub.id] = '';
             });
-
-            setStudents(allStudents.map(p => ({
+            
+            setStudents(allStudentsInClass.map(p => ({
                 id: p.student.student_no,
                 name: `${p.student.first_name} ${p.student.last_name}`,
-                scores: { ...initialScores } // Initialize with empty strings
+                scores: { ...initialScores } 
             })));
+
+            // Check if term is finalized
+            const activeTerm = "Second Term 2023/2024"; // Placeholder, should be dynamically determined
+            const allReportsFinal = allStudentsInClass.every(student => {
+                const report = getStudentReport(student.student.student_no, activeTerm);
+                return report?.status === 'Final';
+            });
+            setIsTermFinalized(allReportsFinal && allStudentsInClass.length > 0);
+
         } else {
             setClassSubjects([]);
             setStudents([]);
             setAssignmentOptions([]);
+            setIsTermFinalized(false);
         }
     }, [selectedClass, user]);
 
@@ -159,7 +173,7 @@ export function ScoreEntryForm() {
     }
 
     const handleSaveScores = () => {
-        if (!selectedClass || !user || !assignmentName) return;
+        if (!selectedClass || !user || !assignmentName || isTermFinalized) return;
         
         let savedCount = 0;
 
@@ -200,7 +214,7 @@ export function ScoreEntryForm() {
                     </SelectContent>
                 </Select>
                 {selectedClass && (
-                    <Select onValueChange={setAssignmentName} value={assignmentName}>
+                    <Select onValueChange={setAssignmentName} value={assignmentName} disabled={isTermFinalized}>
                         <SelectTrigger className="w-auto">
                             <SelectValue placeholder="Select assignment..." />
                         </SelectTrigger>
@@ -210,6 +224,16 @@ export function ScoreEntryForm() {
                     </Select>
                 )}
             </div>
+
+            {isTermFinalized && (
+                 <Alert variant="destructive">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Grading Locked</AlertTitle>
+                    <AlertDescription>
+                        All reports for this class and term have been finalized by the Headmaster. No further score entries or updates are allowed.
+                    </AlertDescription>
+                </Alert>
+            )}
             
             {selectedClass && assignmentName && (
                  <div className="rounded-md border overflow-x-auto">
@@ -234,6 +258,7 @@ export function ScoreEntryForm() {
                                                 className="w-20"
                                                 value={student.scores[subject.id]}
                                                 onChange={(e) => handleScoreChange(student.id, subject.id, e.target.value)}
+                                                disabled={isTermFinalized}
                                             />
                                         </TableCell>
                                     ))}
@@ -246,7 +271,7 @@ export function ScoreEntryForm() {
             
             {selectedClass && students.length > 0 && assignmentName && (
                 <div className="flex justify-end pt-4">
-                    <Button onClick={handleSaveScores}>
+                    <Button onClick={handleSaveScores} disabled={isTermFinalized}>
                         <Save className="mr-2 h-4 w-4" /> Save Scores
                     </Button>
                 </div>

@@ -44,13 +44,15 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
         headTeacherRemarks,
         classTeacherSignature,
         headTeacherSignature,
+        status,
     } = report;
 
     const isTeacher = user?.role === 'Teacher';
     const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
+    const isFinalized = status === 'Final';
     
     const handleSave = () => {
-        if (!report || !user) return;
+        if (!report || !user || isFinalized) return;
 
         const classTeacher = getStaff().find(s => s.staff_id === report.classTeacherId);
         const headTeacher = getStaff().find(s => s.roles.includes('Headmaster'));
@@ -59,16 +61,6 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
 
         const updatedReport: StudentReport = { ...report };
 
-        if ((document.getElementById('teacher-signature') as HTMLInputElement)?.checked && !classTeacherUser?.signature) {
-            toast({ variant: "destructive", title: "Signature Missing", description: "Class teacher's signature not found on system. Cannot sign report." });
-            return;
-        }
-
-        if ((document.getElementById('head-signature') as HTMLInputElement)?.checked && !headTeacherUser?.signature) {
-            toast({ variant: "destructive", title: "Signature Missing", description: "Headmaster's signature not found on system. Cannot sign report." });
-            return;
-        }
-        
         updatedReport.conduct = (document.getElementById('conduct') as HTMLTextAreaElement)?.value || conduct;
         updatedReport.talentAndInterest = (document.getElementById('talent') as HTMLTextAreaElement)?.value || talentAndInterest;
         updatedReport.classTeacherRemarks = (document.getElementById('teacher-remarks') as HTMLTextAreaElement)?.value || classTeacherRemarks;
@@ -76,12 +68,26 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
           updatedReport.headTeacherRemarks = (document.getElementById('head-remarks') as HTMLTextAreaElement)?.value || headTeacherRemarks;
         }
 
-        if ((document.getElementById('teacher-signature') as HTMLInputElement)?.checked) {
-          updatedReport.classTeacherSignature = classTeacherUser?.signature || null;
+        const appendTeacherSig = (document.getElementById('teacher-signature') as HTMLInputElement)?.checked;
+        if (appendTeacherSig) {
+            if (!classTeacherUser?.signature) {
+                 toast({ variant: "destructive", title: "Signature Missing", description: "Class teacher's signature not found on system. Cannot sign report." });
+                 return;
+            }
+            updatedReport.classTeacherSignature = classTeacherUser.signature;
         }
 
-        if (isAdmin && (document.getElementById('head-signature') as HTMLInputElement)?.checked) {
-          updatedReport.headTeacherSignature = headTeacherUser?.signature || null;
+        const appendHeadSig = (document.getElementById('head-signature') as HTMLInputElement)?.checked;
+        if (isAdmin && appendHeadSig) {
+            if (!updatedReport.classTeacherSignature) {
+                toast({ variant: "destructive", title: "Teacher Signature Required", description: "The class teacher must sign the report before the headmaster can finalize it." });
+                return;
+            }
+            if (!headTeacherUser?.signature) {
+                toast({ variant: "destructive", title: "Signature Missing", description: "Headmaster's signature not found on system. Cannot sign report." });
+                return;
+            }
+            updatedReport.headTeacherSignature = headTeacherUser.signature;
         }
         
         updatedReport.status = updatedReport.headTeacherSignature ? 'Final' : (updatedReport.classTeacherSignature ? 'Provisional' : report.status);
@@ -94,7 +100,7 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Edit Report for {report.student.student.first_name}</DialogTitle>
-                    <DialogDescription>Add remarks and other details to finalize the report.</DialogDescription>
+                    <DialogDescription>Add remarks and other details to finalize the report. {isFinalized && <span className="font-bold text-destructive">This report is finalized and cannot be edited.</span>}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto p-2">
                      <div className="p-4 border rounded-md">
@@ -102,20 +108,20 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
                          <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label htmlFor="conduct">Conduct</Label>
-                                <Textarea id="conduct" defaultValue={conduct} disabled={!isAdmin && !isTeacher} />
+                                <Textarea id="conduct" defaultValue={conduct} disabled={isFinalized || (!isAdmin && !isTeacher)} />
                             </div>
                             <div>
                                 <Label htmlFor="talent">Talent & Interest</Label>
-                                <Textarea id="talent" defaultValue={talentAndInterest} disabled={!isAdmin && !isTeacher} />
+                                <Textarea id="talent" defaultValue={talentAndInterest} disabled={isFinalized || (!isAdmin && !isTeacher)} />
                             </div>
                         </div>
                     </div>
 
                     <div className="p-4 border rounded-md">
                         <h4 className="font-semibold mb-2">Class Teacher's Remarks & Signature</h4>
-                        <Textarea id="teacher-remarks" defaultValue={classTeacherRemarks} disabled={!isAdmin && !isTeacher} />
+                        <Textarea id="teacher-remarks" defaultValue={classTeacherRemarks} disabled={isFinalized || (!isAdmin && !isTeacher)} />
                          <div className="flex items-center space-x-2 mt-2">
-                           <Checkbox id="teacher-signature" defaultChecked={!!classTeacherSignature} disabled={!isAdmin && !isTeacher} />
+                           <Checkbox id="teacher-signature" defaultChecked={!!classTeacherSignature} disabled={isFinalized || (!isAdmin && !isTeacher)} />
                            <Label htmlFor="teacher-signature">Append Class Teacher's Signature</Label>
                         </div>
                     </div>
@@ -123,20 +129,20 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
                     {isAdmin && (
                         <div className="p-4 border rounded-md bg-muted/50">
                             <h4 className="font-semibold mb-2">Head Teacher's Remarks & Signature</h4>
-                            <Textarea id="head-remarks" defaultValue={headTeacherRemarks} />
+                            <Textarea id="head-remarks" defaultValue={headTeacherRemarks} disabled={isFinalized}/>
                            <div className="flex items-center space-x-2 mt-2">
-                               <Checkbox id="head-signature" defaultChecked={!!headTeacherSignature} />
-                               <Label htmlFor="head-signature">Append Head Teacher's Signature & Finalize</Label>
+                               <Checkbox id="head-signature" defaultChecked={!!headTeacherSignature} disabled={isFinalized || !classTeacherSignature}/>
+                               <Label htmlFor="head-signature" className={cn(!classTeacherSignature && "text-muted-foreground")}>Append Head Teacher's Signature & Finalize</Label>
                             </div>
+                            {!classTeacherSignature && <p className="text-xs text-destructive mt-1">Class Teacher must sign first.</p>}
                         </div>
                     )}
                 </div>
-                <Button onClick={handleSave}>Save Report</Button>
+                {!isFinalized && <Button onClick={handleSave}>Save Report</Button>}
             </DialogContent>
         </Dialog>
     );
 }
-
 
 export function ReportCardGenerator() {
     const { user } = useAuth();
@@ -153,6 +159,7 @@ export function ReportCardGenerator() {
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [selectedReports, setSelectedReports] = useState<Record<string, boolean>>({});
     const [isBulkSignAlertOpen, setIsBulkSignAlertOpen] = useState(false);
+    const [generateForDefaulters, setGenerateForDefaulters] = useState(false);
 
     useEffect(() => {
         const classes = getClasses();
@@ -204,7 +211,7 @@ export function ReportCardGenerator() {
 
         const reports = allStudentsInClass.map(student => {
             const isFeeDefaulter = (student.financialDetails?.account_balance || 0) < 0;
-            if ((user?.role === 'Teacher' && isFeeDefaulter) && !(user?.role === 'Admin' || user?.role === 'Headmaster')) {
+            if (isFeeDefaulter && !generateForDefaulters) {
                 skippedStudents.push(`${student.student.first_name} ${student.student.last_name}`);
                 return null;
             }
@@ -251,7 +258,10 @@ export function ReportCardGenerator() {
         
         const updatedReports = studentReports.map(report => {
             if (user.role === 'Admin' || user.role === 'Headmaster') {
-                return { ...report, headTeacherSignature: currentUserSignature, status: 'Final' as const };
+                 if (report.classTeacherSignature) {
+                    return { ...report, headTeacherSignature: currentUserSignature, status: 'Final' as const };
+                 }
+                 return report;
             }
             if (user.role === 'Teacher') {
                 return { ...report, classTeacherSignature: currentUserSignature, status: 'Provisional' as const };
@@ -317,6 +327,14 @@ export function ReportCardGenerator() {
     const isAllSelected = studentReports.length > 0 && Object.values(selectedReports).every(v => v) && Object.keys(selectedReports).length === studentReports.length;
 
     const handleEditClick = (report: StudentReport) => {
+        if (report.status === 'Final') {
+            toast({
+                variant: 'destructive',
+                title: 'Report Finalized',
+                description: 'This report has been finalized by the Headmaster and can no longer be edited.'
+            });
+            return;
+        }
         setEditingReport(report);
         setIsEditorOpen(true);
     };
@@ -353,6 +371,12 @@ export function ReportCardGenerator() {
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Generate Reports
                     </Button>
+                    {(user?.role === 'Admin' || user?.role === 'Headmaster') && (
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="generate-for-defaulters" checked={generateForDefaulters} onCheckedChange={(checked) => setGenerateForDefaulters(!!checked)} />
+                            <Label htmlFor="generate-for-defaulters">Generate for defaulters</Label>
+                        </div>
+                    )}
                     {studentReports.length > 0 && (
                          <div className="flex-1 flex justify-end gap-2">
                              <AlertDialog open={isBulkSignAlertOpen} onOpenChange={setIsBulkSignAlertOpen}>
