@@ -12,7 +12,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,7 +22,6 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
     const { user } = useAuth();
     const { toast } = useToast();
     
-    // Internal state for the form fields
     const [conduct, setConduct] = useState('');
     const [talentAndInterest, setTalentAndInterest] = useState('');
     const [classTeacherRemarks, setClassTeacherRemarks] = useState('');
@@ -33,7 +32,6 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
     const isTeacher = user?.role === 'Teacher';
     const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
     
-    // Effect to reset form state when the report prop changes (a new report is being edited)
     useEffect(() => {
         if (report) {
             setConduct(report.conduct);
@@ -46,10 +44,10 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
     }, [report]);
 
     const handleSave = () => {
-        if (!report) return;
+        if (!report || !user) return;
 
         const classTeacher = getStaff().find(s => s.staff_id === report.classTeacherId);
-        const headTeacher = getStaff().find(s => s.roles.includes('Headmaster')); // Simple logic
+        const headTeacher = getStaff().find(s => s.roles.includes('Headmaster'));
         const headTeacherUser = headTeacher ? getUserById(headTeacher.user_id) : null;
         const classTeacherUser = classTeacher ? getUserById(classTeacher.user_id) : null;
 
@@ -220,7 +218,6 @@ export function ReportCardGenerator() {
 
     const handleSaveAndCloseEditor = (updatedReport: StudentReport) => {
         saveStudentReport(updatedReport);
-        // Update the local state to reflect the change immediately
         setStudentReports(prevReports => 
             prevReports.map(r => r.student.student.student_no === updatedReport.student.student.student_no ? updatedReport : r)
         );
@@ -275,7 +272,7 @@ export function ReportCardGenerator() {
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = pdf.internal.pageSize.getHeight();
                 const ratio = canvas.width / canvas.height;
-                const width = pdfWidth - 20; // with margin
+                const width = pdfWidth - 20;
                 const height = width / ratio;
                 
                 if (i > 0) {
@@ -401,7 +398,8 @@ export function ReportCardGenerator() {
                     </div>
                 </div>
             )}
-             <ReportEditor 
+
+            <ReportEditor 
                 report={editingReport} 
                 onSave={handleSaveAndCloseEditor} 
                 open={isEditorOpen} 
@@ -410,3 +408,6 @@ export function ReportCardGenerator() {
         </div>
     );
 }
+
+
+    
