@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities, getStaff, getStaffAppointmentHistory, getStudentReport } from '@/lib/store';
+import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities, getStaff, getStaffAppointmentHistory, getStudentReport, getAcademicYears } from '@/lib/store';
 import { Class, StudentProfile, Subject, ClassSubject, AssignmentScore, AssignmentActivity } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -61,7 +61,7 @@ export function ScoreEntryForm() {
             const allSubjects = getSubjects();
             let subjectsToShow: Subject[] = [];
 
-            if (user?.role === 'Admin') {
+            if (user?.role === 'Admin' || user?.role === 'Headmaster') {
                 const assignmentsForClass = addClassSubject().filter(cs => cs.class_id === selectedClass);
                 const subjectIds = assignmentsForClass.map(cs => cs.subject_id);
                 subjectsToShow = allSubjects.filter(s => subjectIds.includes(s.id));
@@ -118,12 +118,20 @@ export function ScoreEntryForm() {
             })));
 
             // Check if term is finalized
-            const activeTerm = "Second Term 2023/2024"; // Placeholder, should be dynamically determined
-            const allReportsFinal = allStudentsInClass.every(student => {
-                const report = getStudentReport(student.student.student_no, activeTerm);
-                return report?.status === 'Final';
-            });
-            setIsTermFinalized(allReportsFinal && allStudentsInClass.length > 0);
+            const academicYears = getAcademicYears();
+            const activeYear = academicYears.find(y => y.status === 'Active');
+            if (activeYear) {
+                const activeTermInfo = activeYear.terms.find(t => t.status === 'Active');
+                if (activeTermInfo) {
+                    const activeTermName = `${activeTermInfo.name} ${activeYear.year}`;
+                    const allReportsFinal = allStudentsInClass.every(student => {
+                        const report = getStudentReport(student.student.student_no, activeTermName);
+                        return report?.status === 'Final';
+                    });
+                    setIsTermFinalized(allReportsFinal && allStudentsInClass.length > 0);
+                }
+            }
+
 
         } else {
             setClassSubjects([]);
