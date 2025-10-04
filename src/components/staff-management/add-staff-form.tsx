@@ -227,7 +227,7 @@ function SignatureField() {
                 render={({ field }) => (
                    <FormItem>
                      <FormControl>
-                       <Input type="hidden" {...field} />
+                       <Input type="hidden" {...field} value={field.value || ''} />
                      </FormControl>
                      <FormMessage />
                    </FormItem>
@@ -271,7 +271,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     mode: 'onChange',
     defaultValues: isEditMode && defaultValues ? {
         ...defaultValues,
-        signature: getUserById(defaultValues.user_id)?.signature,
+        signature: getUserById(defaultValues.user_id)?.signature || '',
         appointment_date: new Date(defaultValues.date_of_joining),
         roles: defaultValues.roles || [],
         appointment_status: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.appointment_status || 'Appointed',
@@ -877,4 +877,3 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     </Card>
   );
 }
-
