@@ -2,7 +2,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport } from '@/lib/store';
+import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport, getStaffAppointmentHistory, getStaff } from '@/lib/store';
 import { Class, StudentProfile, AcademicYear, Term } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,7 +92,8 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
 
 export function ReportCardGenerator() {
     const { user } = useAuth();
-    const [classes, setClasses] = useState<Class[]>([]);
+    const [allClasses, setAllClasses] = useState<Class[]>([]);
+    const [teacherClasses, setTeacherClasses] = useState<Class[]>([]);
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
     const [activeTerm, setActiveTerm] = useState<{ value: string; label: string } | null>(null);
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
@@ -105,7 +106,25 @@ export function ReportCardGenerator() {
     const [selectedReports, setSelectedReports] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        setClasses(getClasses());
+        const classes = getClasses();
+        setAllClasses(classes);
+        if (user?.role === 'Admin') {
+            setTeacherClasses(classes);
+        } else if (user?.role === 'Teacher') {
+            const staffList = getStaff();
+            const currentTeacher = staffList.find(s => s.user_id === user.id);
+            if (currentTeacher) {
+                const appointments = getStaffAppointmentHistory();
+                const latestAppointment = appointments
+                    .filter(a => a.staff_id === currentTeacher.staff_id)
+                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+                if (latestAppointment?.class_assigned) {
+                    const assignedClasses = classes.filter(c => latestAppointment.class_assigned?.includes(c.id));
+                    setTeacherClasses(assignedClasses);
+                }
+            }
+        }
+        
         const years = getAcademicYears();
         setAcademicYears(years);
 
@@ -118,7 +137,7 @@ export function ReportCardGenerator() {
                 setSelectedTerm(termValue);
             }
         }
-    }, []);
+    }, [user]);
 
     const handleGenerateReports = () => {
         if (!selectedClass || !selectedTerm) {
@@ -217,7 +236,7 @@ export function ReportCardGenerator() {
                             <SelectValue placeholder="Select Class" />
                         </SelectTrigger>
                         <SelectContent>
-                            {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                            {teacherClasses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled={!activeTerm}>

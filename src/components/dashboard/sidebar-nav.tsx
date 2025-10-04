@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -183,6 +184,7 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/attendance/history', label: 'Attendance History', icon: History },
     { href: '/academics/grading', label: 'Grading & Scores', icon: PenSquare },
     { href: '/my-classes', label: 'My Classes & Students', icon: Users },
+    { href: '/student-management/reports', label: 'Report Generation', icon: FileText },
     { href: '/academics/lesson-notes', label: 'Lesson Notes', icon: Clipboard },
     { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
