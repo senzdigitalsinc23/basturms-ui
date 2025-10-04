@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentReport | null; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
+function ReportEditor({ reportData, onSave, open, onOpenChange }: { reportData: StudentReport | null; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
     const { user } = useAuth();
     const { toast } = useToast();
     
@@ -33,20 +33,20 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
     const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
     
     useEffect(() => {
-        if (report) {
-            setConduct(report.conduct);
-            setTalentAndInterest(report.talentAndInterest);
-            setClassTeacherRemarks(report.classTeacherRemarks);
-            setHeadTeacherRemarks(report.headTeacherRemarks);
-            setAppendTeacherSig(!!report.classTeacherSignature);
-            setAppendHeadSig(!!report.headTeacherSignature);
+        if (reportData) {
+            setConduct(reportData.conduct);
+            setTalentAndInterest(reportData.talentAndInterest);
+            setClassTeacherRemarks(reportData.classTeacherRemarks);
+            setHeadTeacherRemarks(reportData.headTeacherRemarks);
+            setAppendTeacherSig(!!reportData.classTeacherSignature);
+            setAppendHeadSig(!!reportData.headTeacherSignature);
         }
-    }, [report]);
+    }, [reportData]);
 
     const handleSave = () => {
-        if (!report || !user) return;
+        if (!reportData || !user) return;
 
-        const classTeacher = getStaff().find(s => s.staff_id === report.classTeacherId);
+        const classTeacher = getStaff().find(s => s.staff_id === reportData.classTeacherId);
         const headTeacher = getStaff().find(s => s.roles.includes('Headmaster'));
         const headTeacherUser = headTeacher ? getUserById(headTeacher.user_id) : null;
         const classTeacherUser = classTeacher ? getUserById(classTeacher.user_id) : null;
@@ -62,27 +62,27 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
         }
 
         const updatedReport: StudentReport = {
-            ...report,
+            ...reportData,
             conduct,
             talentAndInterest,
             classTeacherRemarks,
-            headTeacherRemarks: isAdmin ? headTeacherRemarks : report.headTeacherRemarks,
+            headTeacherRemarks: isAdmin ? headTeacherRemarks : reportData.headTeacherRemarks,
             classTeacherSignature: appendTeacherSig ? classTeacherUser?.signature || null : null,
-            headTeacherSignature: isAdmin && appendHeadSig ? headTeacherUser?.signature || null : report.headTeacherSignature,
+            headTeacherSignature: isAdmin && appendHeadSig ? headTeacherUser?.signature || null : reportData.headTeacherSignature,
         };
         
-        updatedReport.status = updatedReport.headTeacherSignature ? 'Final' : (updatedReport.classTeacherSignature ? 'Provisional' : report.status);
+        updatedReport.status = updatedReport.headTeacherSignature ? 'Final' : (updatedReport.classTeacherSignature ? 'Provisional' : reportData.status);
         
         onSave(updatedReport);
     }
     
-    if (!report) return null;
+    if (!reportData) return null;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Edit Report for {report.student.student.first_name}</DialogTitle>
+                    <DialogTitle>Edit Report for {reportData.student.student.first_name}</DialogTitle>
                     <DialogDescription>Add remarks and other details to finalize the report.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto p-2">
@@ -400,7 +400,7 @@ export function ReportCardGenerator() {
             )}
             
             <ReportEditor 
-                report={editingReport} 
+                reportData={editingReport} 
                 onSave={handleSaveAndCloseEditor} 
                 open={isEditorOpen} 
                 onOpenChange={setIsEditorOpen} 
