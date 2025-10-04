@@ -1,4 +1,5 @@
 
+
 'use client';
 import { StudentReport } from "@/lib/store";
 import { format } from "date-fns";
@@ -13,7 +14,7 @@ const getOrdinal = (n: number) => {
 }
 
 export function ReportCard({ reportData }: { reportData: StudentReport }) {
-    const { student, term, year, nextTermBegins, subjects, attendance, talentAndInterest, conduct, classTeacherRemarks, headTeacherRemarks, status } = reportData;
+    const { student, term, year, nextTermBegins, subjects, attendance, talentAndInterest, conduct, classTeacherRemarks, headTeacherRemarks, status, classTeacherSignature, headTeacherSignature } = reportData;
     const studentName = `${student.student.first_name} ${student.student.last_name}`;
     const initials = studentName.split(' ').map(n => n[0]).join('');
 
@@ -25,7 +26,17 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
     return (
         <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative font-sans">
             
-            <CardContent className="p-4 border-2 border-black h-full flex flex-col relative z-10">
+             <CardContent className="p-4 border-2 border-black h-full flex flex-col relative z-10">
+                 {isProvisional && !reportData.headTeacherSignature && (
+                    <div className="absolute inset-0 flex items-center justify-center z-0">
+                        <p className="text-9xl font-bold text-gray-200/80 -rotate-45 select-none">PROVISIONAL</p>
+                    </div>
+                )}
+                 {reportData.headTeacherSignature && (
+                    <div className="absolute inset-0 flex items-center justify-center z-0">
+                        <p className="text-9xl font-bold text-green-200/80 -rotate-45 select-none">ENDORSED</p>
+                    </div>
+                )}
                 <div className="text-center mb-4">
                     <h1 className="text-2xl font-bold uppercase">{reportData.schoolProfile?.schoolName || "Metoxi School"}</h1>
                     <h2 className="text-lg font-semibold uppercase">TERMINAL REPORT</h2>
@@ -85,13 +96,15 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                      <p><strong>HEAD TEACHER'S REMARKS:</strong> {headTeacherRemarks}</p>
 
                      <div className="flex justify-between pt-16">
-                        <div>
-                            <div className="border-t-2 border-dotted border-black w-48 mt-8"></div>
-                            <p className="text-center">Class Teacher's Signature</p>
+                        <div className="text-center">
+                            {classTeacherSignature ? <img src={classTeacherSignature} alt="Teacher's Signature" className="h-12 mx-auto" /> : <div className="h-12"></div>}
+                            <div className="border-t-2 border-dotted border-black w-48 mt-2"></div>
+                            <p>Class Teacher's Signature</p>
                         </div>
-                         <div>
-                            <div className="border-t-2 border-dotted border-black w-48 mt-8"></div>
-                            <p className="text-center">Head Teacher's Signature</p>
+                         <div className="text-center">
+                            {headTeacherSignature ? <img src={headTeacherSignature} alt="Head's Signature" className="h-12 mx-auto" /> : <div className="h-12"></div>}
+                            <div className="border-t-2 border-dotted border-black w-48 mt-2"></div>
+                            <p>Head Teacher's Signature</p>
                         </div>
                      </div>
                 </div>

@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentReport; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
     const { user } = useAuth();
@@ -25,9 +26,23 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
     const [talentAndInterest, setTalentAndInterest] = useState(report.talentAndInterest);
     const [classTeacherRemarks, setClassTeacherRemarks] = useState(report.classTeacherRemarks);
     const [headTeacherRemarks, setHeadTeacherRemarks] = useState(report.headTeacherRemarks);
+    const [classTeacherSignature, setClassTeacherSignature] = useState<string | null>(report.classTeacherSignature || null);
+    const [headTeacherSignature, setHeadTeacherSignature] = useState<string | null>(report.headTeacherSignature || null);
 
     const isTeacher = user?.role === 'Teacher';
     const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
+    
+    const handleFileChange = (setter: React.Dispatch<React.SetStateAction<string | null>>) => (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setter(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
 
     const handleSave = () => {
         const updatedReport: StudentReport = {
@@ -36,7 +51,9 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
             talentAndInterest,
             classTeacherRemarks,
             headTeacherRemarks: isAdmin ? headTeacherRemarks : report.headTeacherRemarks,
-            status: isAdmin && headTeacherRemarks ? 'Final' : 'Provisional'
+            classTeacherSignature: classTeacherSignature,
+            headTeacherSignature: isAdmin ? headTeacherSignature : report.headTeacherSignature,
+            status: isAdmin && headTeacherSignature ? 'Final' : 'Provisional'
         };
         onSave(updatedReport);
     }
@@ -47,6 +64,8 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
             setTalentAndInterest(report.talentAndInterest);
             setClassTeacherRemarks(report.classTeacherRemarks);
             setHeadTeacherRemarks(report.headTeacherRemarks);
+            setClassTeacherSignature(report.classTeacherSignature || null);
+            setHeadTeacherSignature(report.headTeacherSignature || null);
         }
     }, [open, report]);
 
@@ -73,14 +92,22 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
                     </div>
 
                     <div className="p-4 border rounded-md">
-                        <h4 className="font-semibold mb-2">Class Teacher's Remarks</h4>
+                        <h4 className="font-semibold mb-2">Class Teacher's Remarks & Signature</h4>
                         <Textarea id="teacher-remarks" value={classTeacherRemarks} onChange={(e) => setClassTeacherRemarks(e.target.value)} disabled={!isAdmin && !isTeacher} />
+                         <div className="mt-2">
+                            <Label htmlFor="teacher-signature">Append Signature</Label>
+                            <Input id="teacher-signature" type="file" accept="image/png" onChange={handleFileChange(setClassTeacherSignature)} disabled={!isAdmin && !isTeacher} />
+                        </div>
                     </div>
 
                     {isAdmin && (
                         <div className="p-4 border rounded-md bg-muted/50">
-                            <h4 className="font-semibold mb-2">Head Teacher's Remarks</h4>
+                            <h4 className="font-semibold mb-2">Head Teacher's Remarks & Signature</h4>
                             <Textarea id="head-remarks" value={headTeacherRemarks} onChange={(e) => setHeadTeacherRemarks(e.target.value)} />
+                            <div className="mt-2">
+                                <Label htmlFor="head-signature">Append Signature</Label>
+                                <Input id="head-signature" type="file" accept="image/png" onChange={handleFileChange(setHeadTeacherSignature)} />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -108,7 +135,7 @@ export function ReportCardGenerator() {
     useEffect(() => {
         const classes = getClasses();
         setAllClasses(classes);
-        if (user?.role === 'Admin') {
+        if (user?.role === 'Admin' || user?.role === 'Headmaster') {
             setTeacherClasses(classes);
         } else if (user?.role === 'Teacher') {
             const staffList = getStaff();
@@ -145,16 +172,29 @@ export function ReportCardGenerator() {
             return;
         }
         setIsLoading(true);
-        const classStudents = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
         const allStudentsInClass = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
+        const skippedStudents: string[] = [];
 
-        const reports = classStudents.map(student => {
-             const existingReport = getStudentReport(student.student.student_no, selectedTerm);
-             if (existingReport) return existingReport;
+        const reports = allStudentsInClass.map(student => {
+            if (user?.role === 'Teacher' && (student.financialDetails?.account_balance || 0) < 0) {
+                skippedStudents.push(`${student.student.first_name} ${student.student.last_name}`);
+                return null;
+            }
+
+            const existingReport = getStudentReport(student.student.student_no, selectedTerm);
+            if (existingReport) return existingReport;
             
-             return calculateStudentReport(student.student.student_no, selectedTerm, allStudentsInClass);
+            return calculateStudentReport(student.student.student_no, selectedTerm, allStudentsInClass);
         }).filter((report): report is StudentReport => report !== null);
         
+        if (skippedStudents.length > 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Students Skipped',
+                description: `Reports for the following students were not generated due to outstanding fees: ${skippedStudents.join(', ')}`
+            });
+        }
+
         setStudentReports(reports);
         setSelectedReports({});
         setIsLoading(false);
