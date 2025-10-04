@@ -1,13 +1,13 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport, getStaffAppointmentHistory, getStaff, getUserById } from '@/lib/store';
-import { Class, StudentProfile, AcademicYear, Term, User } from '@/lib/types';
+import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport, getStaffAppointmentHistory, getStaff, getUserById, getRolePermissions } from '@/lib/store';
+import { Class, StudentProfile, AcademicYear, Term, User, Permission } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ReportCard } from './report-card';
-import { Loader2, Printer, Pencil, FileSignature } from 'lucide-react';
+import { Loader2, Printer, Pencil, FileSignature, Trash2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
@@ -17,15 +17,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 type ReportEditorProps = {
     report: StudentReport | null;
     onSave: (updatedReport: StudentReport) => void;
+    onRemoveSignatures: (report: StudentReport) => void;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 };
 
-function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: ReportEditorProps) {
+function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open, onOpenChange }: ReportEditorProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     
@@ -57,7 +59,7 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
         const classTeacher = getStaff().find(s => s.staff_id === report.classTeacherId);
         const headTeacher = getStaff().find(s => s.roles.includes('Headmaster'));
         const headTeacherUser = headTeacher ? getUserById(headTeacher.user_id) : null;
-        const classTeacherUser = classTeacher ? getUserById(classTeacher.user_id) : null;
+        const classTeacherUser = classTeacher ? getUserById(classTeacher?.user_id) : null;
 
         const updatedReport: StudentReport = { ...report };
 
@@ -138,7 +140,28 @@ function ReportEditor({ report: initialReport, onSave, open, onOpenChange }: Rep
                         </div>
                     )}
                 </div>
-                {!isFinalized && <Button onClick={handleSave}>Save Report</Button>}
+                <div className="flex justify-between">
+                    {isAdmin && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" disabled={!classTeacherSignature && !headTeacherSignature}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Remove Signatures
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This will remove all signatures from this report and revert its status to allow for corrections. This action can be reversed by re-signing.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => onRemoveSignatures(report)}>Proceed</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                     <Button onClick={handleSave} disabled={isFinalized}>Save Report</Button>
+                </div>
             </DialogContent>
         </Dialog>
     );
@@ -160,6 +183,7 @@ export function ReportCardGenerator() {
     const [selectedReports, setSelectedReports] = useState<Record<string, boolean>>({});
     const [isBulkSignAlertOpen, setIsBulkSignAlertOpen] = useState(false);
     const [generateForDefaulters, setGenerateForDefaulters] = useState(false);
+    const [hasDefaulterPerm, setHasDefaulterPerm] = useState(false);
 
     useEffect(() => {
         const classes = getClasses();
@@ -193,6 +217,14 @@ export function ReportCardGenerator() {
                 setSelectedTerm(termValue);
             }
         }
+        
+        // Check permissions
+        if(user) {
+            const allPerms = getRolePermissions();
+            const userPerms = allPerms[user.role] || [];
+            setHasDefaulterPerm(userPerms.includes('financials:billing'));
+        }
+
     }, [user]);
 
     const handleGenerateReports = () => {
@@ -245,6 +277,17 @@ export function ReportCardGenerator() {
         setEditingReport(null);
     };
 
+    const handleRemoveSignatures = (reportToClear: StudentReport) => {
+        const clearedReport: StudentReport = {
+            ...reportToClear,
+            classTeacherSignature: null,
+            headTeacherSignature: null,
+            status: 'Provisional'
+        };
+        handleSaveAndCloseEditor(clearedReport);
+        toast({ title: 'Signatures Removed', description: `Signatures have been removed from ${reportToClear.student.student.first_name}'s report.` });
+    };
+
     const handleBulkSign = () => {
         if (!user) return;
         
@@ -256,14 +299,17 @@ export function ReportCardGenerator() {
             return;
         }
         
+        let signedCount = 0;
         const updatedReports = studentReports.map(report => {
             if (user.role === 'Admin' || user.role === 'Headmaster') {
                  if (report.classTeacherSignature) {
+                    signedCount++;
                     return { ...report, headTeacherSignature: currentUserSignature, status: 'Final' as const };
                  }
                  return report;
             }
             if (user.role === 'Teacher') {
+                signedCount++;
                 return { ...report, classTeacherSignature: currentUserSignature, status: 'Provisional' as const };
             }
             return report;
@@ -271,9 +317,21 @@ export function ReportCardGenerator() {
 
         updatedReports.forEach(saveStudentReport);
         setStudentReports(updatedReports);
-        toast({ title: "Bulk Sign Successful", description: `${updatedReports.length} reports have been signed.` });
+        toast({ title: "Bulk Sign Successful", description: `${signedCount} reports have been signed.` });
         setIsBulkSignAlertOpen(false);
     };
+    
+    const handleBulkRemoveSignatures = () => {
+        const updatedReports = studentReports.map(report => ({
+            ...report,
+            classTeacherSignature: null,
+            headTeacherSignature: null,
+            status: 'Provisional' as const
+        }));
+         updatedReports.forEach(saveStudentReport);
+        setStudentReports(updatedReports);
+        toast({ title: "All Signatures Removed", description: `Signatures have been removed from all ${studentReports.length} reports.` });
+    }
 
     const handlePrintSelected = async () => {
         const reportIdsToPrint = Object.keys(selectedReports).filter(key => selectedReports[key]);
@@ -327,7 +385,7 @@ export function ReportCardGenerator() {
     const isAllSelected = studentReports.length > 0 && Object.values(selectedReports).every(v => v) && Object.keys(selectedReports).length === studentReports.length;
 
     const handleEditClick = (report: StudentReport) => {
-        if (report.status === 'Final') {
+        if (report.status === 'Final' && user?.role !== 'Admin' && user?.role !== 'Headmaster') {
             toast({
                 variant: 'destructive',
                 title: 'Report Finalized',
@@ -371,12 +429,10 @@ export function ReportCardGenerator() {
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Generate Reports
                     </Button>
-                    {(user?.role === 'Admin' || user?.role === 'Headmaster') && (
-                        <div className="flex items-center space-x-2">
-                            <Checkbox id="generate-for-defaulters" checked={generateForDefaulters} onCheckedChange={(checked) => setGenerateForDefaulters(!!checked)} />
-                            <Label htmlFor="generate-for-defaulters">Generate for defaulters</Label>
-                        </div>
-                    )}
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="generate-for-defaulters" checked={generateForDefaulters} onCheckedChange={(checked) => setGenerateForDefaulters(!!checked)} disabled={!hasDefaulterPerm} />
+                        <Label htmlFor="generate-for-defaulters" className={!hasDefaulterPerm ? 'text-muted-foreground' : ''}>Generate for defaulters</Label>
+                    </div>
                     {studentReports.length > 0 && (
                          <div className="flex-1 flex justify-end gap-2">
                              <AlertDialog open={isBulkSignAlertOpen} onOpenChange={setIsBulkSignAlertOpen}>
@@ -394,6 +450,23 @@ export function ReportCardGenerator() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
+                            {(user?.role === 'Admin' || user?.role === 'Headmaster') && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4"/> Remove All Signatures</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will remove all teacher and headmaster signatures from all {studentReports.length} reports, resetting them to a provisional state.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleBulkRemoveSignatures}>Confirm</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                             <Button variant="secondary" onClick={handlePrintSelected} disabled={isLoading}>
                                 <Printer className="mr-2 h-4 w-4" />
                                 Print Selected ({Object.values(selectedReports).filter(Boolean).length})
@@ -438,6 +511,7 @@ export function ReportCardGenerator() {
             <ReportEditor 
                 report={editingReport} 
                 onSave={handleSaveAndCloseEditor} 
+                onRemoveSignatures={handleRemoveSignatures}
                 open={isEditorOpen} 
                 onOpenChange={setIsEditorOpen} 
             />
