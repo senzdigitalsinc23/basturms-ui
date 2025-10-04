@@ -1,6 +1,7 @@
 
 
 
+
 export type StudentReport = {
     student: StudentProfile;
     term: string;
@@ -126,6 +127,7 @@ export interface User {
   role: Role; // For easy access in the app
   role_id: string;
   avatarUrl: string;
+  signature?: string; // Data URL of the user's signature image
   is_super_admin: boolean;
   status: 'active' | 'frozen';
   created_at: string;

@@ -1,14 +1,13 @@
 
-
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport, getStaffAppointmentHistory, getStaff } from '@/lib/store';
+import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport, getStaffAppointmentHistory, getStaff, getUserById } from '@/lib/store';
 import { Class, StudentProfile, AcademicYear, Term } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ReportCard } from './report-card';
-import { Loader2, Printer, Pencil } from 'lucide-react';
+import { Loader2, Printer, Pencil, FileSignature } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
@@ -17,57 +16,69 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentReport; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
+function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentReport | null; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
     const { user } = useAuth();
-    const [conduct, setConduct] = useState(report.conduct);
-    const [talentAndInterest, setTalentAndInterest] = useState(report.talentAndInterest);
-    const [classTeacherRemarks, setClassTeacherRemarks] = useState(report.classTeacherRemarks);
-    const [headTeacherRemarks, setHeadTeacherRemarks] = useState(report.headTeacherRemarks);
-    const [classTeacherSignature, setClassTeacherSignature] = useState<string | null>(report.classTeacherSignature || null);
-    const [headTeacherSignature, setHeadTeacherSignature] = useState<string | null>(report.headTeacherSignature || null);
+    const { toast } = useToast();
+    
+    // Internal state for the form fields
+    const [conduct, setConduct] = useState('');
+    const [talentAndInterest, setTalentAndInterest] = useState('');
+    const [classTeacherRemarks, setClassTeacherRemarks] = useState('');
+    const [headTeacherRemarks, setHeadTeacherRemarks] = useState('');
+    const [appendTeacherSig, setAppendTeacherSig] = useState(false);
+    const [appendHeadSig, setAppendHeadSig] = useState(false);
 
     const isTeacher = user?.role === 'Teacher';
     const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
     
-    const handleFileChange = (setter: React.Dispatch<React.SetStateAction<string | null>>) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setter(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+    // Effect to reset form state when the report prop changes (a new report is being edited)
+    useEffect(() => {
+        if (report) {
+            setConduct(report.conduct);
+            setTalentAndInterest(report.talentAndInterest);
+            setClassTeacherRemarks(report.classTeacherRemarks);
+            setHeadTeacherRemarks(report.headTeacherRemarks);
+            setAppendTeacherSig(!!report.classTeacherSignature);
+            setAppendHeadSig(!!report.headTeacherSignature);
         }
-    };
-
+    }, [report]);
 
     const handleSave = () => {
+        if (!report) return;
+
+        const classTeacher = getStaff().find(s => s.staff_id === report.classTeacherId);
+        const headTeacher = getStaff().find(s => s.roles.includes('Headmaster')); // Simple logic
+        const headTeacherUser = headTeacher ? getUserById(headTeacher.user_id) : null;
+        const classTeacherUser = classTeacher ? getUserById(classTeacher.user_id) : null;
+
+        if (appendTeacherSig && !classTeacherUser?.signature) {
+            toast({ variant: "destructive", title: "Signature Missing", description: "Class teacher's signature not found on system. Cannot sign report." });
+            return;
+        }
+
+        if (appendHeadSig && !headTeacherUser?.signature) {
+            toast({ variant: "destructive", title: "Signature Missing", description: "Headmaster's signature not found on system. Cannot sign report." });
+            return;
+        }
+
         const updatedReport: StudentReport = {
             ...report,
             conduct,
             talentAndInterest,
             classTeacherRemarks,
             headTeacherRemarks: isAdmin ? headTeacherRemarks : report.headTeacherRemarks,
-            classTeacherSignature: classTeacherSignature,
-            headTeacherSignature: isAdmin ? headTeacherSignature : report.headTeacherSignature,
-            status: isAdmin && headTeacherSignature ? 'Final' : 'Provisional'
+            classTeacherSignature: appendTeacherSig ? classTeacherUser?.signature || null : null,
+            headTeacherSignature: isAdmin && appendHeadSig ? headTeacherUser?.signature || null : report.headTeacherSignature,
         };
+        
+        updatedReport.status = updatedReport.headTeacherSignature ? 'Final' : (updatedReport.classTeacherSignature ? 'Provisional' : report.status);
+        
         onSave(updatedReport);
     }
     
-    useEffect(() => {
-        if(open) {
-            setConduct(report.conduct);
-            setTalentAndInterest(report.talentAndInterest);
-            setClassTeacherRemarks(report.classTeacherRemarks);
-            setHeadTeacherRemarks(report.headTeacherRemarks);
-            setClassTeacherSignature(report.classTeacherSignature || null);
-            setHeadTeacherSignature(report.headTeacherSignature || null);
-        }
-    }, [open, report]);
+    if (!report) return null;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -94,9 +105,9 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
                     <div className="p-4 border rounded-md">
                         <h4 className="font-semibold mb-2">Class Teacher's Remarks & Signature</h4>
                         <Textarea id="teacher-remarks" value={classTeacherRemarks} onChange={(e) => setClassTeacherRemarks(e.target.value)} disabled={!isAdmin && !isTeacher} />
-                         <div className="mt-2">
-                            <Label htmlFor="teacher-signature">Append Signature</Label>
-                            <Input id="teacher-signature" type="file" accept="image/png" onChange={handleFileChange(setClassTeacherSignature)} disabled={!isAdmin && !isTeacher} />
+                         <div className="flex items-center space-x-2 mt-2">
+                           <Checkbox id="teacher-signature" checked={appendTeacherSig} onCheckedChange={(checked) => setAppendTeacherSig(!!checked)} disabled={!isAdmin && !isTeacher} />
+                           <Label htmlFor="teacher-signature">Append Class Teacher's Signature</Label>
                         </div>
                     </div>
 
@@ -104,9 +115,9 @@ function ReportEditor({ report, onSave, open, onOpenChange }: { report: StudentR
                         <div className="p-4 border rounded-md bg-muted/50">
                             <h4 className="font-semibold mb-2">Head Teacher's Remarks & Signature</h4>
                             <Textarea id="head-remarks" value={headTeacherRemarks} onChange={(e) => setHeadTeacherRemarks(e.target.value)} />
-                            <div className="mt-2">
-                                <Label htmlFor="head-signature">Append Signature</Label>
-                                <Input id="head-signature" type="file" accept="image/png" onChange={handleFileChange(setHeadTeacherSignature)} />
+                           <div className="flex items-center space-x-2 mt-2">
+                               <Checkbox id="head-signature" checked={appendHeadSig} onCheckedChange={(checked) => setAppendHeadSig(!!checked)} />
+                               <Label htmlFor="head-signature">Append Head Teacher's Signature & Finalize</Label>
                             </div>
                         </div>
                     )}
@@ -131,6 +142,7 @@ export function ReportCardGenerator() {
     const [editingReport, setEditingReport] = useState<StudentReport | null>(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [selectedReports, setSelectedReports] = useState<Record<string, boolean>>({});
+    const [isBulkSignAlertOpen, setIsBulkSignAlertOpen] = useState(false);
 
     useEffect(() => {
         const classes = getClasses();
@@ -171,12 +183,18 @@ export function ReportCardGenerator() {
             toast({ variant: 'destructive', title: 'Selection Required', description: 'Please select both a class and a term.' });
             return;
         }
+        if (selectedTerm !== activeTerm?.value) {
+            toast({ variant: 'destructive', title: 'Term Not Active', description: 'Report cards can only be generated for the current active term.' });
+            return;
+        }
+
         setIsLoading(true);
         const allStudentsInClass = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
         const skippedStudents: string[] = [];
 
         const reports = allStudentsInClass.map(student => {
-            if (user?.role === 'Teacher' && (student.financialDetails?.account_balance || 0) < 0) {
+            const isFeeDefaulter = (student.financialDetails?.account_balance || 0) < 0;
+            if ((user?.role === 'Teacher' && isFeeDefaulter) && !(user?.role === 'Admin' || user?.role === 'Headmaster')) {
                 skippedStudents.push(`${student.student.first_name} ${student.student.last_name}`);
                 return null;
             }
@@ -209,6 +227,33 @@ export function ReportCardGenerator() {
         toast({ title: 'Report Updated', description: `Report for ${updatedReport.student.student.first_name} has been saved.`});
         setIsEditorOpen(false);
         setEditingReport(null);
+    };
+
+    const handleBulkSign = () => {
+        if (!user) return;
+        
+        const currentUserSignature = getUserById(user.id)?.signature;
+
+        if (!currentUserSignature) {
+            toast({ variant: 'destructive', title: 'Signature Not Found', description: 'Please upload your signature in your user profile to sign reports.' });
+            setIsBulkSignAlertOpen(false);
+            return;
+        }
+        
+        const updatedReports = studentReports.map(report => {
+            if (user.role === 'Admin' || user.role === 'Headmaster') {
+                return { ...report, headTeacherSignature: currentUserSignature, status: 'Final' as const };
+            }
+            if (user.role === 'Teacher') {
+                return { ...report, classTeacherSignature: currentUserSignature, status: 'Provisional' as const };
+            }
+            return report;
+        });
+
+        updatedReports.forEach(saveStudentReport);
+        setStudentReports(updatedReports);
+        toast({ title: "Bulk Sign Successful", description: `${updatedReports.length} reports have been signed.` });
+        setIsBulkSignAlertOpen(false);
     };
 
     const handlePrintSelected = async () => {
@@ -260,9 +305,13 @@ export function ReportCardGenerator() {
         }
     }
     
-    const isAllSelected = studentReports.length > 0 && Object.keys(selectedReports).length === studentReports.length;
+    const isAllSelected = studentReports.length > 0 && Object.values(selectedReports).every(v => v) && Object.keys(selectedReports).length === studentReports.length;
 
-    
+    const handleEditClick = (report: StudentReport) => {
+        setEditingReport(report);
+        setIsEditorOpen(true);
+    };
+
     return (
         <div className="space-y-6">
             <Card>
@@ -296,10 +345,27 @@ export function ReportCardGenerator() {
                         Generate Reports
                     </Button>
                     {studentReports.length > 0 && (
-                        <Button variant="secondary" onClick={handlePrintSelected} disabled={isLoading}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print Selected ({Object.values(selectedReports).filter(Boolean).length})
-                        </Button>
+                         <div className="flex-1 flex justify-end gap-2">
+                             <AlertDialog open={isBulkSignAlertOpen} onOpenChange={setIsBulkSignAlertOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline"><FileSignature className="mr-2 h-4 w-4" /> Sign All</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirm Bulk Signature</AlertDialogTitle>
+                                        <AlertDialogDescription>Are you sure you want to append your signature to all {studentReports.length} generated reports? This action cannot be undone.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleBulkSign}>Confirm & Sign</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialog>
+                            </AlertDialog>
+                            <Button variant="secondary" onClick={handlePrintSelected} disabled={isLoading}>
+                                <Printer className="mr-2 h-4 w-4" />
+                                Print Selected ({Object.values(selectedReports).filter(Boolean).length})
+                            </Button>
+                         </div>
                     )}
                 </CardContent>
             </Card>
@@ -312,7 +378,7 @@ export function ReportCardGenerator() {
                             checked={isAllSelected} 
                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
                         />
-                        <Label htmlFor="select-all-reports">Select All</Label>
+                        <Label htmlFor="select-all-reports">Select All ({studentReports.length})</Label>
                     </div>
                     <div className="space-y-8">
                         {studentReports.map(report => (
@@ -323,26 +389,24 @@ export function ReportCardGenerator() {
                                         onCheckedChange={(checked) => handleSelectReport(report.student.student.student_no, !!checked)}
                                         className="bg-white"
                                     />
-                                    <Dialog onOpenChange={(open) => {
-                                        if (open) setEditingReport(report);
-                                        setIsEditorOpen(open);
-                                    }}>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Pencil className="mr-2 h-4 w-4"/> Edit
-                                            </Button>
-                                        </DialogTrigger>
-                                    </Dialog>
+                                    <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleEditClick(report)}>
+                                        <Pencil className="mr-2 h-4 w-4"/> Edit
+                                    </Button>
                                 </div>
                                 <div id={`report-card-${report.student.student.student_no}`}>
                                     <ReportCard reportData={report} />
                                 </div>
                             </div>
                         ))}
-                        {editingReport && <ReportEditor report={editingReport} onSave={handleSaveAndCloseEditor} open={isEditorOpen} onOpenChange={setIsEditorOpen} />}
                     </div>
                 </div>
             )}
+             <ReportEditor 
+                report={editingReport} 
+                onSave={handleSaveAndCloseEditor} 
+                open={isEditorOpen} 
+                onOpenChange={setIsEditorOpen} 
+            />
         </div>
     );
 }

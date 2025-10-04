@@ -1,17 +1,19 @@
+
 'use client';
 import { User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '../ui/button';
-import { Pencil, KeyRound } from 'lucide-react';
-import { useState } from 'react';
+import { Pencil, KeyRound, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { UserForm } from './user-form';
 import { useAuth } from '@/hooks/use-auth';
-import { updateUser as storeUpdateUser, addAuditLog, changePassword, resetPassword } from '@/lib/store';
+import { updateUser as storeUpdateUser, addAuditLog, changePassword, resetPassword, getStaff } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { ResetPasswordForm } from './reset-password-form';
+import { Input } from '../ui/input';
 
 export function UserProfile({ user: initialUser }: { user: User }) {
   const [user, setUser] = useState(initialUser);
@@ -19,6 +21,7 @@ export function UserProfile({ user: initialUser }: { user: User }) {
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userInitials = user.name
     .split(' ')
@@ -71,6 +74,24 @@ export function UserProfile({ user: initialUser }: { user: User }) {
     }
   }
 
+  const handleSignatureUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const signatureDataUrl = reader.result as string;
+        handleUpdate({ signature: signatureDataUrl });
+        toast({ title: "Signature Updated", description: "Your signature has been uploaded." });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+
   const isOwner = currentUser?.id === user.id;
   const isAdmin = currentUser?.role === 'Admin';
 
@@ -100,7 +121,7 @@ export function UserProfile({ user: initialUser }: { user: User }) {
                             <DialogTitle>Edit Profile</DialogTitle>
                             <DialogDescription>Update personal information.</DialogDescription>
                         </DialogHeader>
-                        <UserForm isEditMode defaultValues={user} onSubmit={handleUpdate} />
+                        <UserForm isEditMode defaultValues={user} onSubmit={handleUpdate} staffList={getStaff()} />
                     </DialogContent>
                 </Dialog>
             )}
@@ -146,6 +167,25 @@ export function UserProfile({ user: initialUser }: { user: User }) {
             <p className="font-semibold">{user.is_super_admin ? 'Yes' : 'No'}</p>
           </div>
         </div>
+        
+        {isOwner && (
+            <div>
+                <p className="font-medium text-muted-foreground">My Signature</p>
+                <div className="mt-2 flex items-center gap-4 p-4 border rounded-md">
+                    {user.signature ? (
+                        <img src={user.signature} alt="User signature" className="h-16 w-auto bg-gray-100 p-2 rounded-md" />
+                    ) : (
+                        <div className="h-16 flex items-center justify-center text-muted-foreground text-sm">No signature uploaded.</div>
+                    )}
+                    <Button variant="outline" size="sm" onClick={handleSignatureUploadClick}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        {user.signature ? 'Change Signature' : 'Upload Signature'}
+                    </Button>
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/png" onChange={handleFileChange} />
+                </div>
+            </div>
+        )}
+
       </CardContent>
     </Card>
   );
