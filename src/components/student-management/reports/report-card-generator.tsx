@@ -18,7 +18,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-function ReportEditor({ reportData, onSave, open, onOpenChange }: { reportData: StudentReport | null; onSave: (updatedReport: StudentReport) => void; open: boolean; onOpenChange: (open: boolean) => void; }) {
+type ReportEditorProps = {
+    reportData: StudentReport | null;
+    onSave: (updatedReport: StudentReport) => void;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+};
+
+function ReportEditor({ reportData, onSave, open, onOpenChange }: ReportEditorProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     
