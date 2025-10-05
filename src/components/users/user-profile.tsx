@@ -1,4 +1,3 @@
-
 'use client';
 import { User } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -84,7 +83,7 @@ export function UserProfile({ user: initialUser }: { user: User }) {
       const reader = new FileReader();
       reader.onloadend = () => {
         const signatureDataUrl = reader.result as string;
-        handleUpdate({ signature: signatureDataUrl });
+        handleUpdate({ ...user, signature: signatureDataUrl });
         toast({ title: "Signature Updated", description: "Your signature has been uploaded." });
       };
       reader.readAsDataURL(file);

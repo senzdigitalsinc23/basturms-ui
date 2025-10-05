@@ -1,5 +1,3 @@
-
-
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
@@ -325,7 +323,13 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
         const appYear = new Date(appointmentDate).getFullYear();
         const yearYY = appYear.toString().slice(-2);
         
-        const appointmentsInYear = history.filter(h => new Date(h.appointment_date).getFullYear() === appYear);
+        const appointmentsInYear = history.filter(h => {
+          try {
+            return new Date(h.appointment_date).getFullYear() === appYear;
+          } catch (e) {
+            return false;
+          }
+        });
 
         const nextInYear = appointmentsInYear.length + 1;
         const nextNumberPadded = nextInYear.toString().padStart(3, '0');
@@ -405,12 +409,14 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
         
         // These parts only run for new staff or if you decide to allow editing them as well
         if (finalData.academic_history && !isEditMode) {
+            const newStaff = staffData;
             finalData.academic_history.forEach(history => {
                 addStaffAcademicHistory({ ...history, staff_id: newStaff.staff_id });
             });
         }
 
         if (finalData.documents && !isEditMode) {
+            const newStaff = staffData;
             for (const doc of finalData.documents) {
                 const fileReader = new FileReader();
                 fileReader.readAsDataURL(doc.file);
@@ -425,6 +431,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
         }
         
         if (!isEditMode) {
+            const newStaff = staffData;
             addStaffAppointmentHistory({...finalData.appointment_history, staff_id: newStaff.staff_id});
         }
 

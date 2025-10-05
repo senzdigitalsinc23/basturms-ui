@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -295,8 +294,16 @@ export function SidebarNav() {
   const pathname = usePathname();
   const [schoolName, setSchoolName] = useState('Metoxi');
   const [schoolLogo, setSchoolLogo] = useState<string | undefined>('/placeholder-logo.png');
+  const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>();
 
   const navItems = user ? getRoleNavItems(user.role) : [];
+
+  useEffect(() => {
+    const activeItem = navItems.findIndex(item => item.items?.some(subItem => subItem.href === pathname));
+    if (activeItem !== -1) {
+      setActiveAccordionItem(`item-${activeItem}`);
+    }
+  }, [pathname, navItems]);
 
   const updateSchoolProfile = () => {
     const profile = getSchoolProfile();
@@ -330,7 +337,7 @@ export function SidebarNav() {
             </Link>
         </SidebarHeader>
       <SidebarContent className="p-2">
-        <Accordion type="single" collapsible className="w-full">
+        <Accordion type="single" collapsible className="w-full" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
           {navItems.map((item, index) =>
             item.items ? (
               <AccordionItem value={`item-${index}`} key={index} className="border-b-0">
