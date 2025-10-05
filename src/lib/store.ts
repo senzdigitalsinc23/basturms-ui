@@ -179,6 +179,19 @@ const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
       status: 'active',
       created_at: now,
       updated_at: now,
+    },
+    {
+        id: '4',
+        name: 'Guest User',
+        username: 'guest',
+        email: 'guest@campus.com',
+        password: 'password',
+        role_id: getRoleId('Guest')!,
+        is_super_admin: false,
+        avatarUrl: 'https://picsum.photos/seed/guest/40/40',
+        status: 'active',
+        created_at: now,
+        updated_at: now,
     }
   ];
 };
@@ -379,9 +392,10 @@ const getInitialRolePermissions = (): RolePermissions => {
         'Proprietor': ['logs:view_audit'],
         'I.T Manager': ['user:view', 'user:create', 'user:update', 'logs:view_auth', 'settings:edit', 'backup:create', 'backup:restore'],
         'I.T Support': [],
-        'Accountant': [],
+        'Accountant': ['financials:billing', 'financials:collect', 'financials:reports'],
         'Parent': [],
         'Student': [],
+        'Guest': ['backup:create', 'backup:restore'],
     };
 };
 
@@ -445,26 +459,9 @@ export const saveToStorage = <T>(key: string, value: T) => {
 
 export const initializeStore = () => {
   if (typeof window !== 'undefined') {
-    const allKeys = [
-        ROLES_KEY, USERS_KEY, LOGS_KEY, AUTH_LOGS_KEY, STUDENTS_KEY,
-        CLASSES_KEY, STAFF_PROFILES_KEY, FEE_STRUCTURES_KEY, TERMLY_BILLS_KEY,
-        TIMETABLE_KEY, STUDENT_REPORTS_KEY, ACADEMIC_YEARS_KEY, CALENDAR_EVENTS_KEY,
-        GRADING_SCHEME_KEY, ROLE_PERMISSIONS_KEY, BACKUP_SETTINGS_KEY, PROMOTION_CRITERIA_KEY,
-        ASSIGNMENT_ACTIVITIES_KEY, CLASS_ASSIGNMENT_ACTIVITIES_KEY, LEAVE_REQUESTS_KEY,
-        STAFF_KEY, DECLINED_STAFF_KEY, STAFF_ACADEMIC_HISTORY_KEY, STAFF_DOCUMENTS_KEY,
-        STAFF_APPOINTMENT_HISTORY_KEY, STAFF_ATTENDANCE_RECORDS_KEY, SUBJECTS_KEY,
-        CLASS_SUBJECTS_KEY, TEACHER_SUBJECTS_KEY
-    ];
-
-    let shouldInitialize = false;
-    for (const key of allKeys) {
-        if (!window.localStorage.getItem(key)) {
-            shouldInitialize = true;
-            break;
-        }
-    }
+    const isInitialized = window.localStorage.getItem(USERS_KEY);
     
-    if (shouldInitialize) {
+    if (!isInitialized) {
         console.log("Initializing local storage with default data...");
         const roles = getInitialRoles();
         saveToStorage(ROLES_KEY, roles);
@@ -912,7 +909,7 @@ export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSettin
 export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
 export const getRolePermissions = (): RolePermissions => getFromStorage<RolePermissions>(ROLE_PERMISSIONS_KEY, {});
 export const saveRolePermissions = (permissions: RolePermissions): void => saveToStorage(ROLE_PERMISSIONS_KEY, permissions);
-export const getPromotionCriteria = (): PromotionCriteria | null => getFromStorage<PromotionCriteria | null>(PROMOTION_CRITERIA_KEY, null);
+export const getPromotionCriteria = (): PromotionCriteria => getFromStorage<PromotionCriteria>(PROMOTION_CRITERIA_KEY, { minAverageScore: 50, coreSubjects: [], minCoreSubjectsToPass: 0 });
 export const savePromotionCriteria = (criteria: PromotionCriteria): void => saveToStorage(PROMOTION_CRITERIA_KEY, criteria);
 
 // Assignment Activity Functions
