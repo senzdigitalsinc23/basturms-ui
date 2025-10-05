@@ -1,5 +1,6 @@
 
 
+
 export type ExpenseCategory = 'Salaries' | 'Utilities' | 'Maintenance' | 'Supplies' | 'Procurement' | 'Miscellaneous';
 
 export interface Expense {

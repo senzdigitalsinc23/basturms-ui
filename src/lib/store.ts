@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -48,6 +49,7 @@ import {
   TermlyBill,
   SchoolLevel,
   PromotionCriteria,
+  Expense,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -100,6 +102,7 @@ const FEE_STRUCTURES_KEY = 'campusconnect_fee_structures';
 const TERMLY_BILLS_KEY = 'campusconnect_termly_bills';
 const TIMETABLE_KEY = 'campusconnect_timetable';
 const STUDENT_REPORTS_KEY = 'campusconnect_student_reports';
+const EXPENSES_KEY = 'campusconnect_expenses';
 
 
 // Settings Keys
@@ -475,6 +478,7 @@ export const initializeStore = () => {
         saveToStorage(FEE_STRUCTURES_KEY, []);
         saveToStorage(TERMLY_BILLS_KEY, []);
         saveToStorage(TIMETABLE_KEY, {});
+        saveToStorage(EXPENSES_KEY, []);
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
         saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
@@ -496,6 +500,9 @@ export const initializeStore = () => {
     }
   }
 };
+
+export const getExpenses = (): Expense[] => getFromStorage<Expense[]>(EXPENSES_KEY, []);
+export const saveExpenses = (expenses: Expense[]): void => saveToStorage(EXPENSES_KEY, expenses);
 
 export const saveStudentReport = (report: StudentReport): void => {
     const reports = getFromStorage<StudentReport[]>(STUDENT_REPORTS_KEY, []);
@@ -690,20 +697,13 @@ export const deleteTermlyBill = (billNumber: string, editorId: string): void => 
     });
 };
 
-export const prepareBills = (
-    assigned_classes: string[], 
-    assigned_students: string[], 
-    billItems: FeeItem[], 
-    term: string, 
-    editorId: string, 
-    billNumber: string
-): void => {
+export const prepareBills = (bill: TermlyBill, editorId: string): void => {
     const profiles = getStudentProfiles();
     
     const allStudentsToBill = new Set<string>([
-        ...assigned_students,
+        ...bill.assigned_students,
         ...getStudentProfiles()
-            .filter(p => assigned_classes.includes(p.admissionDetails.class_assigned))
+            .filter(p => bill.assigned_classes.includes(p.admissionDetails.class_assigned))
             .map(p => p.student.student_no)
     ]);
     
@@ -712,23 +712,17 @@ export const prepareBills = (
     const updatedProfiles = profiles.map(profile => {
         if (allStudentsToBill.has(profile.student.student_no)) {
             billedStudentIds.push(profile.student.student_no);
-            const schoolLevel = getClassSchoolLevel(profile.admissionDetails.class_assigned);
             
-            const studentBillItems = billItems.map(item => ({
-                description: item.description,
-                amount: item.amount || 0
-            }));
-            
-            const totalBillAmount = studentBillItems.reduce((acc, item) => acc + item.amount, 0);
+            const totalBillAmount = bill.items.reduce((acc, item) => acc + item.amount, 0);
 
             const newTermPayment: TermPayment = {
-                bill_number: billNumber,
-                term: term,
+                bill_number: bill.bill_number,
+                term: bill.term,
                 total_fees: totalBillAmount,
                 amount_paid: 0,
                 outstanding: totalBillAmount,
                 status: 'Unpaid',
-                bill_items: studentBillItems,
+                bill_items: bill.items,
                 payments: [],
             };
 
@@ -736,10 +730,12 @@ export const prepareBills = (
                 profile.financialDetails = { account_balance: 0, payment_history: [] };
             }
 
-            const existingBillIndex = profile.financialDetails.payment_history.findIndex(p => p.term === term);
+            const existingBillIndex = profile.financialDetails.payment_history.findIndex(p => p.term === bill.term);
             if (existingBillIndex > -1) {
+                // This logic might need refinement if multiple bills per term are allowed.
+                // For now, it replaces the existing bill.
                 const oldBill = profile.financialDetails.payment_history[existingBillIndex];
-                profile.financialDetails.account_balance += oldBill.outstanding; // Add back old debt
+                profile.financialDetails.account_balance += oldBill.outstanding; // Reverse old debt
                 profile.financialDetails.payment_history.splice(existingBillIndex, 1);
             }
 
@@ -750,9 +746,12 @@ export const prepareBills = (
     });
     
     const bills = getTermlyBills();
-    const billIndex = bills.findIndex(b => b.bill_number === billNumber);
+    const billIndex = bills.findIndex(b => b.bill_number === bill.bill_number);
     if(billIndex !== -1) {
         bills[billIndex].billed_student_ids = billedStudentIds;
+        bills[billIndex].status = 'Approved';
+        bills[billIndex].approved_by = editorId;
+        bills[billIndex].approved_at = new Date().toISOString();
     }
     saveTermlyBills(bills);
 
