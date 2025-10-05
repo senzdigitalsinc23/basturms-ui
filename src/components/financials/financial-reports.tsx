@@ -17,6 +17,8 @@ import { DateRange } from 'react-day-picker';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import Papa from 'papaparse';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '../ui/badge';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
@@ -26,15 +28,24 @@ type PaymentRecord = {
     className: string;
     paymentDate: string;
     amount: number;
+    totalBilled: number;
     method: string;
     billNumber: string;
     receiptNumber?: string;
+}
+
+type DebtorRecord = {
+    studentId: string;
+    studentName: string;
+    className: string;
+    outstandingBalance: number;
 }
 
 export function FinancialReports() {
     const [allProfiles, setAllProfiles] = useState<StudentProfile[]>([]);
     const [allClasses, setAllClasses] = useState<Class[]>([]);
     const [filteredRecords, setFilteredRecords] = useState<PaymentRecord[]>([]);
+    const [debtorsList, setDebtorsList] = useState<DebtorRecord[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [selectedClass, setSelectedClass] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
@@ -48,59 +59,79 @@ export function FinancialReports() {
 
     useEffect(() => {
         const allPayments: PaymentRecord[] = [];
-        allProfiles.forEach(profile => {
+        const allDebtors: DebtorRecord[] = [];
+
+        const filteredProfiles = allProfiles.filter(p => {
+            const inClass = selectedClass === 'all' || p.admissionDetails.class_assigned === selectedClass;
+            const matchesSearch = !searchTerm || `${p.student.first_name} ${p.student.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) || p.student.student_no.toLowerCase().includes(searchTerm.toLowerCase());
+            return inClass && matchesSearch;
+        });
+
+        filteredProfiles.forEach(profile => {
+            let hasOutstanding = false;
             profile.financialDetails?.payment_history.forEach(termPayment => {
+                
                 termPayment.payments.forEach(payment => {
-                    allPayments.push({
-                        studentId: profile.student.student_no,
-                        studentName: `${profile.student.first_name} ${profile.student.last_name}`,
-                        className: classMap.get(profile.admissionDetails.class_assigned) || 'N/A',
-                        paymentDate: payment.date,
-                        amount: payment.amount,
-                        method: payment.method,
-                        billNumber: termPayment.bill_number,
-                        receiptNumber: payment.receipt_number,
-                    });
+                    const paymentDate = new Date(payment.date);
+                    const inDateRange = !dateRange?.from || (paymentDate >= dateRange.from && (!dateRange.to || paymentDate <= dateRange.to));
+
+                    if (inDateRange) {
+                        allPayments.push({
+                            studentId: profile.student.student_no,
+                            studentName: `${profile.student.first_name} ${profile.student.last_name}`,
+                            className: classMap.get(profile.admissionDetails.class_assigned) || 'N/A',
+                            paymentDate: payment.date,
+                            amount: payment.amount,
+                            totalBilled: termPayment.total_fees,
+                            method: payment.method,
+                            billNumber: termPayment.bill_number,
+                            receiptNumber: payment.receipt_number,
+                        });
+                    }
                 });
+
+                if (termPayment.outstanding > 0) {
+                    hasOutstanding = true;
+                }
             });
+
+            if (profile.financialDetails && profile.financialDetails.account_balance < 0) {
+                allDebtors.push({
+                    studentId: profile.student.student_no,
+                    studentName: `${profile.student.first_name} ${profile.student.last_name}`,
+                    className: classMap.get(profile.admissionDetails.class_assigned) || 'N/A',
+                    outstandingBalance: Math.abs(profile.financialDetails.account_balance),
+                });
+            }
         });
 
-        const filtered = allPayments.filter(record => {
-            const paymentDate = new Date(record.paymentDate);
-            const inDateRange = !dateRange?.from || (paymentDate >= dateRange.from && (!dateRange.to || paymentDate <= dateRange.to));
-            const inClass = selectedClass === 'all' || allProfiles.find(p => p.student.student_no === record.studentId)?.admissionDetails.class_assigned === selectedClass;
-            const matchesSearch = !searchTerm || record.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || record.studentId.toLowerCase().includes(searchTerm.toLowerCase());
-            return inDateRange && inClass && matchesSearch;
-        });
-
-        setFilteredRecords(filtered.sort((a,b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()));
+        setFilteredRecords(allPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()));
+        setDebtorsList(allDebtors.sort((a,b) => b.outstandingBalance - a.outstandingBalance));
 
     }, [dateRange, selectedClass, searchTerm, allProfiles, classMap]);
     
     const summary = useMemo(() => {
         let totalPaid = 0;
-        let totalExpected = 0; // This is a simplification. A real implementation would be more complex.
+        let totalExpected = 0;
         
+        const uniqueBills = new Set<string>();
+
         filteredRecords.forEach(rec => {
             totalPaid += rec.amount;
+            if (!uniqueBills.has(rec.billNumber)) {
+                totalExpected += rec.totalBilled;
+                uniqueBills.add(rec.billNumber);
+            }
         });
 
-        // Simple estimation of expected fees
-        const relevantStudentIds = new Set(filteredRecords.map(r => r.studentId));
-        relevantStudentIds.forEach(studentId => {
-            const profile = allProfiles.find(p => p.student.student_no === studentId);
-            profile?.financialDetails?.payment_history.forEach(term => {
-                totalExpected += term.total_fees;
-            })
-        });
-
+        const outstanding = debtorsList.reduce((acc, debtor) => acc + debtor.outstandingBalance, 0);
 
         return {
             totalPaid,
             totalExpected,
-            outstanding: Math.max(0, totalExpected - totalPaid)
+            outstanding,
         }
-    }, [filteredRecords, allProfiles]);
+    }, [filteredRecords, debtorsList]);
 
     const handleClearFilters = () => {
         setDateRange(undefined);
@@ -108,32 +139,45 @@ export function FinancialReports() {
         setSearchTerm('');
     };
     
-    const handleExportPDF = () => {
+    const handleExportPDF = (reportType: 'collection' | 'debtors') => {
         const doc = new jsPDF();
-        doc.text("Fee Collection Report", 14, 15);
         
-        (doc as any).autoTable({
-            head: [['Date', 'Student Name', 'Class', 'Amount', 'Method', 'Bill No.']],
-            body: filteredRecords.map(rec => [
-                format(new Date(rec.paymentDate), 'yyyy-MM-dd'),
-                rec.studentName,
-                rec.className,
-                formatCurrency(rec.amount),
-                rec.method,
-                rec.billNumber
-            ])
-        });
-
-        doc.save('fee_collection_report.pdf');
+        if (reportType === 'collection') {
+            doc.text("Fee Collection Report", 14, 15);
+            (doc as any).autoTable({
+                head: [['Date', 'Student Name', 'Class', 'Billed', 'Paid', 'Method']],
+                body: filteredRecords.map(rec => [
+                    format(new Date(rec.paymentDate), 'yyyy-MM-dd'),
+                    rec.studentName,
+                    rec.className,
+                    formatCurrency(rec.totalBilled),
+                    formatCurrency(rec.amount),
+                    rec.method,
+                ])
+            });
+            doc.save('fee_collection_report.pdf');
+        } else {
+             doc.text("Debtors Report", 14, 15);
+            (doc as any).autoTable({
+                head: [['Student Name', 'Class', 'Outstanding Balance']],
+                body: debtorsList.map(rec => [
+                    rec.studentName,
+                    rec.className,
+                    formatCurrency(rec.outstandingBalance),
+                ])
+            });
+            doc.save('debtors_report.pdf');
+        }
     };
 
-    const handleExportCSV = () => {
-        const csv = Papa.unparse(filteredRecords);
+    const handleExportCSV = (reportType: 'collection' | 'debtors') => {
+        const dataToExport = reportType === 'collection' ? filteredRecords : debtorsList;
+        const csv = Papa.unparse(dataToExport);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', 'fee_collection_report.csv');
+        link.setAttribute('download', `${reportType}_report.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -142,11 +186,11 @@ export function FinancialReports() {
 
     return (
         <Tabs defaultValue="fee-collection" className="w-full">
-            <TabsList>
+            <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="fee-collection">Fee Collection Report</TabsTrigger>
-                <TabsTrigger value="outstanding-balance" disabled>Outstanding Balance</TabsTrigger>
+                <TabsTrigger value="debtors">Debtors Report</TabsTrigger>
             </TabsList>
-            <TabsContent value="fee-collection" className="space-y-4">
+            <div className="pt-4">
                 <Card>
                     <CardHeader>
                         <CardTitle>Filters</CardTitle>
@@ -166,7 +210,7 @@ export function FinancialReports() {
                                             format(dateRange.from, "LLL dd, y")
                                         )
                                     ) : (
-                                        <span>Pick a date range</span>
+                                        <span>Filter by date range</span>
                                     )}
                                 </Button>
                             </PopoverTrigger>
@@ -202,14 +246,11 @@ export function FinancialReports() {
                         <Button variant="ghost" onClick={handleClearFilters}>
                             <X className="mr-2 h-4 w-4" /> Clear
                         </Button>
-                        <div className="flex-grow" />
-                        <div className="flex gap-2">
-                             <Button variant="outline" size="sm" onClick={handleExportPDF}><Download className="mr-2" /> PDF</Button>
-                             <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="mr-2" /> CSV</Button>
-                        </div>
                     </CardContent>
                 </Card>
-                <div className="grid md:grid-cols-3 gap-4">
+            </div>
+            <TabsContent value="fee-collection" className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4 pt-4">
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Fees Paid</CardTitle>
@@ -221,27 +262,26 @@ export function FinancialReports() {
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Expected Fees</CardTitle>
+                            <CardTitle className="text-sm font-medium">Total Fees Expected</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(summary.totalExpected)}</div>
-                             <p className="text-xs text-muted-foreground">(Estimated for filtered students)</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-destructive">Total Outstanding</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-destructive">{formatCurrency(summary.outstanding)}</div>
-                            <p className="text-xs text-muted-foreground">(Estimated for filtered students)</p>
+                             <p className="text-xs text-muted-foreground">(For bills with payments in date range)</p>
                         </CardContent>
                     </Card>
                 </div>
                  <Card>
                     <CardHeader>
-                        <CardTitle>Detailed Payment Records</CardTitle>
-                        <CardDescription>A list of all individual payments matching the current filters.</CardDescription>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Detailed Payment Records</CardTitle>
+                                <CardDescription>A list of all individual payments matching the current filters.</CardDescription>
+                            </div>
+                             <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleExportPDF('collection')}><Download className="mr-2" /> PDF</Button>
+                                <Button variant="outline" size="sm" onClick={() => handleExportCSV('collection')}><Download className="mr-2" /> CSV</Button>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="rounded-md border">
@@ -251,21 +291,21 @@ export function FinancialReports() {
                                         <TableHead>Payment Date</TableHead>
                                         <TableHead>Student</TableHead>
                                         <TableHead>Class</TableHead>
+                                        <TableHead>Total Billed</TableHead>
                                         <TableHead>Amount Paid</TableHead>
                                         <TableHead>Method</TableHead>
-                                        <TableHead>Bill Number</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredRecords.length > 0 ? (
                                         filteredRecords.map(rec => (
-                                            <TableRow key={`${rec.studentId}-${rec.paymentDate}`}>
+                                            <TableRow key={`${rec.studentId}-${rec.paymentDate}-${rec.amount}`}>
                                                 <TableCell>{format(new Date(rec.paymentDate), 'PPP')}</TableCell>
                                                 <TableCell>{rec.studentName}</TableCell>
                                                 <TableCell>{rec.className}</TableCell>
+                                                <TableCell>{formatCurrency(rec.totalBilled)}</TableCell>
                                                 <TableCell className="font-medium">{formatCurrency(rec.amount)}</TableCell>
                                                 <TableCell>{rec.method}</TableCell>
-                                                <TableCell className="font-mono">{rec.billNumber}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
@@ -281,8 +321,63 @@ export function FinancialReports() {
                     </CardContent>
                  </Card>
             </TabsContent>
+             <TabsContent value="debtors" className="space-y-4">
+                 <div className="grid md:grid-cols-1 gap-4 pt-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-destructive">Total Outstanding Balance</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-destructive">{formatCurrency(summary.outstanding)}</div>
+                            <p className="text-xs text-muted-foreground">Across all filtered students</p>
+                        </CardContent>
+                    </Card>
+                </div>
+                 <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Debtors List</CardTitle>
+                                <CardDescription>Students with an outstanding balance.</CardDescription>
+                            </div>
+                             <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleExportPDF('debtors')}><Download className="mr-2" /> PDF</Button>
+                                <Button variant="outline" size="sm" onClick={() => handleExportCSV('debtors')}><Download className="mr-2" /> CSV</Button>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Student Name</TableHead>
+                                        <TableHead>Class</TableHead>
+                                        <TableHead className="text-right">Outstanding Balance</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {debtorsList.length > 0 ? (
+                                        debtorsList.map(rec => (
+                                            <TableRow key={rec.studentId}>
+                                                <TableCell className="font-medium">{rec.studentName}</TableCell>
+                                                <TableCell><Badge variant="outline">{rec.className}</Badge></TableCell>
+                                                <TableCell className="text-right font-semibold text-destructive">{formatCurrency(rec.outstandingBalance)}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="h-24 text-center">
+                                                No debtors found for the selected filters.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                 </Card>
+            </TabsContent>
         </Tabs>
     );
 }
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

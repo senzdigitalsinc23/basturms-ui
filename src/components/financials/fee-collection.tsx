@@ -1,6 +1,7 @@
+
 'use client';
 import { useState, useEffect } from 'react';
-import { getStudentProfiles, recordPayment, addAuditLog, getSchoolProfile } from '@/lib/store';
+import { getStudentProfiles, recordPayment, addAuditLog, getSchoolProfile, getTermlyBills } from '@/lib/store';
 import { StudentProfile, TermPayment } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { generateInvoicePdf } from './student-financials';
 
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
@@ -76,14 +78,16 @@ const generateReceipt = (student: StudentProfile, payment: {amount: number, meth
             }
         }
     });
+    
+    const previousBalance = (student.financialDetails?.account_balance || 0) + payment.amount;
 
     // Total and Balance
     (doc as any).autoTable({
         startY: (doc as any).lastAutoTable.finalY + 5,
         body: [
-            ['Previous Balance', formatCurrency((student.financialDetails?.account_balance || 0) + payment.amount)],
+            ['Previous Balance', formatCurrency(Math.abs(previousBalance))],
             ['Amount Paid', formatCurrency(payment.amount)],
-            ['New Outstanding Balance', formatCurrency(student.financialDetails?.account_balance || 0)]
+            ['New Outstanding Balance', formatCurrency(Math.abs(student.financialDetails?.account_balance || 0))]
         ],
         theme: 'plain',
         styles: {
@@ -141,12 +145,28 @@ export function FeeCollection() {
         setSearchQuery('');
         setSearchResults([]);
     };
+    
+    const isReceiptNumberDuplicate = (receiptNo: string): boolean => {
+        if (!receiptNo) return false;
+        const allProfiles = getStudentProfiles();
+        return allProfiles.some(profile =>
+            profile.financialDetails?.payment_history.some(term =>
+                term.payments.some(p => p.receipt_number === receiptNo)
+            )
+        );
+    }
 
     const handleRecordPayment = () => {
         if (!selectedStudent || !user || !paymentAmount) {
             toast({ variant: 'destructive', title: 'Error', description: 'Missing required payment details.' });
             return;
         }
+
+        if (paymentMethod === 'Cash' && receiptNumber && isReceiptNumberDuplicate(receiptNumber)) {
+            toast({ variant: 'destructive', title: 'Duplicate Receipt Number', description: 'This receipt number has already been used. Please enter a unique one.' });
+            return;
+        }
+
 
         const paymentDetails = {
             amount: paymentAmount,

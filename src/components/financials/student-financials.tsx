@@ -10,9 +10,38 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Landmark, Printer } from 'lucide-react';
 import { Button } from '../ui/button';
-import { generateInvoicePdf } from './fee-collection';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
+
+export const generateInvoicePdf = (student: StudentProfile, termPayment: TermPayment) => {
+    const doc = new jsPDF();
+    const schoolProfile = getSchoolProfile();
+    const schoolName = schoolProfile?.schoolName || "CampusConnect School";
+    
+    doc.setFontSize(18);
+    doc.text(schoolName, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text("Student Bill", doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.text(`Student: ${student.student.first_name} ${student.student.last_name}`, 14, 45);
+    doc.text(`Term: ${termPayment.term}`, 14, 50);
+    doc.text(`Bill No: ${termPayment.bill_number}`, 14, 55);
+    doc.text(`Date: ${format(new Date(), 'PPP')}`, doc.internal.pageSize.getWidth() - 14, 45, { align: 'right' });
+
+    (doc as any).autoTable({
+        startY: 65,
+        head: [['Item Description', 'Amount']],
+        body: termPayment.bill_items.map(item => [item.description, formatCurrency(item.amount)]),
+        foot: [['Total Due', formatCurrency(termPayment.total_fees)]],
+        footStyles: { fontStyle: 'bold' }
+    });
+
+    return doc;
+};
+
 
 export function StudentFinancials() {
     const { user } = useAuth();
