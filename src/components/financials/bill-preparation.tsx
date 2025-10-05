@@ -1,7 +1,8 @@
 
+
 'use client';
 import { useState, useEffect } from 'react';
-import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill, getClassSchoolLevel, updateTermlyBillStatus } from '@/lib/store';
+import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill, getClassSchoolLevel, updateTermlyBillStatus, getUserById } from '@/lib/store';
 import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term, TermlyBill, SchoolLevel, ALL_SCHOOL_LEVELS } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { format } from 'date-fns';
 import { Separator } from '../ui/separator';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import JSZip from 'jszip';
+
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
@@ -29,7 +34,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => {
         const feeItem = getFeeStructures().find(fs => fs.name === i.description);
         return {
-            id: feeItem?.id || i.description,
+            id: feeItem?.id || `misc_${i.description.replace(/\s/g, '')}_${Date.now()}`,
             name: i.description,
             amount: i.amount,
             levelAmounts: feeItem?.levelAmounts || {},
@@ -43,6 +48,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
 
     const [classes, setClasses] = useState<Class[]>([]);
     const [students, setStudents] = useState<StudentProfile[]>([]);
+    const [filteredStudents, setFilteredStudents] = useState<StudentProfile[]>([]);
     const [selectedClasses, setSelectedClasses] = useState<string[]>(existingBill?.assigned_classes || []);
     const [selectedStudents, setSelectedStudents] = useState<string[]>(existingBill?.assigned_students || []);
     const [selectedLevel, setSelectedLevel] = useState<SchoolLevel | undefined>();
@@ -79,15 +85,34 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
 
             const miscItemsForLevel = miscItemsFromStructure.map(item => ({
                 ...item,
-                amount: item.levelAmounts[selectedLevel] || 0
+                amount: item.amount || (item.levelAmounts[selectedLevel] || 0)
             }));
+            
+            // Keep user-added misc items, and add template-based items if not already present
+            setBillItems(prevItems => {
+                const userMiscItems = prevItems.filter(item => item.isMiscellaneous && !miscItemsFromStructure.some(mi => mi.id === item.id));
+                const allTemplateItems = [...itemsForLevel, ...miscItemsForLevel];
+                const combined = [...userMiscItems];
 
-            setBillItems([...itemsForLevel, ...miscItemsForLevel]);
-        } else {
-            // If no level is selected, clear the standard items
-            setBillItems(billItems.filter(item => item.isMiscellaneous));
+                allTemplateItems.forEach(templateItem => {
+                    if (!combined.some(i => i.id === templateItem.id)) {
+                        combined.push(templateItem);
+                    }
+                });
+                
+                return combined;
+            });
+
         }
     }, [selectedLevel, feeStructures]);
+
+    useEffect(() => {
+        if (selectedClasses.length > 0) {
+            setFilteredStudents(students.filter(s => selectedClasses.includes(s.admissionDetails.class_assigned)));
+        } else {
+            setFilteredStudents(students);
+        }
+    }, [selectedClasses, students]);
 
     const addBillItem = (item: FeeStructureItem) => {
         if (!billItems.some(bi => bi.id === item.id)) {
@@ -203,7 +228,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Bill Items</Label>
-                                    {billItems.map((item, index) => (
+                                    {billItems.map((item) => (
                                         <div key={item.id} className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
                                             <div className="flex-1 font-medium">{item.name}</div>
                                              <Input
@@ -236,7 +261,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                                     <AccordionItem value="students">
                                         <AccordionTrigger><div className="flex items-center gap-2"><User className="h-5 w-5 text-primary"/> Assign by Student</div></AccordionTrigger>
                                         <AccordionContent>
-                                            <MultiSelectPopover title="Students" options={students.map(s => ({id: s.student.student_no, name: `${s.student.first_name} ${s.student.last_name}`}))} selectedValues={selectedStudents} onSelect={setSelectedStudents} />
+                                            <MultiSelectPopover title="Students" options={filteredStudents.map(s => ({id: s.student.student_no, name: `${s.student.first_name} ${s.student.last_name}`}))} selectedValues={selectedStudents} onSelect={setSelectedStudents} />
                                         </AccordionContent>
                                     </AccordionItem>
                             </Accordion>
@@ -374,13 +399,86 @@ export function TermlyBillManagement() {
         fetchBills();
         toast({ title: "Bill Deleted", description: "The termly bill and associated student records have been removed." });
     }
+    
+    const generateAndDownloadInvoices = async (bill: TermlyBill, studentsToBill: StudentProfile[]) => {
+        const zip = new JSZip();
+        
+        for (const student of studentsToBill) {
+            const pdfDoc = generateInvoicePdf(student, bill);
+            const pdfBlob = pdfDoc.output('blob');
+            zip.file(`${student.student.first_name}_${student.student.last_name}_${bill.bill_number}.pdf`, pdfBlob);
+        }
 
-    const handleApprove = (bill: TermlyBill) => {
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(zipBlob);
+        link.download = `Invoices_${bill.term.replace(/ /g, '_')}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const generateInvoicePdf = (student: StudentProfile, bill: TermlyBill) => {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text(`Invoice for ${student.student.first_name} ${student.student.last_name}`, 14, 22);
+        doc.setFontSize(11);
+        doc.text(`Term: ${bill.term}`, 14, 30);
+        doc.text(`Bill Number: ${bill.bill_number}`, 14, 36);
+        
+        const mergedBillItems = new Map<string, number>();
+
+        // Add items from the current bill
+        bill.items.forEach(item => {
+            mergedBillItems.set(item.description, (mergedBillItems.get(item.description) || 0) + item.amount);
+        });
+
+        // Check for other bills for the same student and term
+        const allBills = getTermlyBills();
+        const studentBillsForTerm = allBills.filter(b => 
+            b.term === bill.term && 
+            b.bill_number !== bill.bill_number &&
+            (b.assigned_students.includes(student.student.student_no) || b.assigned_classes.includes(student.admissionDetails.class_assigned))
+        );
+
+        studentBillsForTerm.forEach(otherBill => {
+            otherBill.items.forEach(item => {
+                mergedBillItems.set(item.description, (mergedBillItems.get(item.description) || 0) + item.amount);
+            });
+        });
+
+        const tableBody = Array.from(mergedBillItems.entries()).map(([description, amount]) => [description, formatCurrency(amount)]);
+        const totalAmount = Array.from(mergedBillItems.values()).reduce((acc, amount) => acc + amount, 0);
+
+        (doc as any).autoTable({
+            startY: 45,
+            head: [['Item Description', 'Amount']],
+            body: tableBody,
+            foot: [['Total Due', formatCurrency(totalAmount)]],
+            footStyles: { fontStyle: 'bold' }
+        });
+        
+        return doc;
+    };
+
+
+    const handleApprove = async (bill: TermlyBill) => {
         if (!user) return;
-        updateTermlyBillStatus(bill.bill_number, 'Approved', user.id);
-        prepareBills(bill.assigned_classes, bill.assigned_students, bill.items, bill.term, user.id, bill.bill_number);
+        setIsLoading(true);
+
+        const studentsToBill = getStudentProfiles().filter(p => 
+            bill.assigned_students.includes(p.student.student_no) || 
+            bill.assigned_classes.includes(p.admissionDetails.class_assigned)
+        );
+
+        await generateAndDownloadInvoices(bill, studentsToBill);
+
+        prepareBills(bill, user.id);
+        
         fetchBills();
-        toast({ title: 'Bill Approved', description: `Bill ${bill.bill_number} has been approved and applied to student accounts.` });
+        setIsLoading(false);
+        toast({ title: 'Bill Approved', description: `Bill ${bill.bill_number} has been approved and applied to student accounts. Invoices are being downloaded.` });
     };
 
     const handleReject = (bill: TermlyBill) => {
@@ -440,8 +538,8 @@ export function TermlyBillManagement() {
                                 <TableCell className="text-right space-x-1">
                                     {bill.status === 'Pending' && isAdmin && (
                                         <>
-                                            <Button variant="ghost" size="icon" onClick={() => handleApprove(bill)}>
-                                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                            <Button variant="ghost" size="icon" onClick={() => handleApprove(bill)} disabled={isLoading}>
+                                                {isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <CheckCircle className="h-4 w-4 text-green-600" />}
                                             </Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleReject(bill)}>
                                                 <XCircle className="h-4 w-4 text-red-600" />
