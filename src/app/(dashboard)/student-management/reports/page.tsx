@@ -2,10 +2,11 @@
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
 import { ReportCardGenerator } from '@/components/student-management/reports/report-card-generator';
+import { Suspense } from 'react';
 
-export default function ReportGenerationPage() {
+function ReportGenerationPageContent() {
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Headmaster']}>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">Report Card Generation</h1>
@@ -17,4 +18,13 @@ export default function ReportGenerationPage() {
       </div>
     </ProtectedRoute>
   );
+}
+
+
+export default function ReportGenerationPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ReportGenerationPageContent />
+        </Suspense>
+    )
 }

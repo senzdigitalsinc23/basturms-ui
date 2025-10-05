@@ -28,7 +28,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useEffect, useRef, useState } from 'react';
 import { StudentDisplay } from './student-management';
-import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2, FileDown, FileBadge } from 'lucide-react';
+import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2, FileDown, FileBadge, FileText } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -214,6 +214,7 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
   }
   
   const bulkGenerateUrl = `/id-cards?type=student&ids=${encodeURIComponent(JSON.stringify(selectedStudentIds))}`;
+  const bulkGenerateReportUrl = `/student-management/reports?student_ids=${encodeURIComponent(JSON.stringify(selectedStudentIds))}`;
 
 
   return (
@@ -331,6 +332,11 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
                             <DropdownMenuItem asChild>
                                <Link href={bulkGenerateUrl}>
                                     <FileBadge className="mr-2 h-4 w-4" /> Generate ID Cards
+                                </Link>
+                            </DropdownMenuItem>
+                             <DropdownMenuItem asChild>
+                               <Link href={bulkGenerateReportUrl}>
+                                    <FileText className="mr-2 h-4 w-4" /> Generate Report Cards
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleExportCSV}>Export Selected (CSV)</DropdownMenuItem>
