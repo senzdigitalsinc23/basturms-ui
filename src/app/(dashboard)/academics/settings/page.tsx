@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SubjectManagement } from '@/components/academics/subjects/subject-management';
 import { AssignmentActivityManagement } from '@/components/academics/assignments/assignment-activity-management';
+import { PromotionCriteriaSettings } from '@/components/settings/promotion-criteria-settings';
 
 export default function AcademicSettingsPage() {
   return (
@@ -21,11 +22,12 @@ export default function AcademicSettingsPage() {
         </div>
         
         <Tabs defaultValue="academic-year">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="academic-year">Academic Year</TabsTrigger>
                 <TabsTrigger value="subjects">Subjects</TabsTrigger>
                 <TabsTrigger value="assignments">Assignments</TabsTrigger>
                 <TabsTrigger value="grading-scheme">Grading Scheme</TabsTrigger>
+                <TabsTrigger value="promotion">Promotion Criteria</TabsTrigger>
             </TabsList>
 
             <TabsContent value="academic-year">
@@ -72,6 +74,17 @@ export default function AcademicSettingsPage() {
                     </CardHeader>
                     <CardContent>
                         <GradingSchemeSettings />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="promotion">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Promotion Criteria</CardTitle>
+                        <CardDescription>Set the rules for student promotion to the next class.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <PromotionCriteriaSettings />
                     </CardContent>
                 </Card>
             </TabsContent>

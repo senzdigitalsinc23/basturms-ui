@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -40,6 +41,7 @@ import {
   Landmark,
   Clipboard,
   FileText,
+  Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -103,6 +105,7 @@ const menuItems: Record<Role, NavItem[]> = {
       items: [
         { href: '/academics/calendar', label: 'Academic Calendar' },
         { href: '/academics/classes', label: 'Class Subjects' },
+        { href: '/academics/ranking', label: 'Ranking' },
         { href: '/academics/grading', label: 'Score Entry' },
         { href: '/academics/settings', label: 'Academic Settings' },
         { href: '/academics/timetable', label: 'Timetable' },
@@ -271,6 +274,9 @@ const menuItems: Record<Role, NavItem[]> = {
    Accountant: [
     { href: '/dashboard/accountant', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/bill-preparation', label: 'Bill Preparation' },
+    { href: '/financials/fee-collection', label: 'Collections' },
+    { href: '/financials/reports', label: 'Reports' },
   ]
 };
 
@@ -299,7 +305,7 @@ export function SidebarNav() {
   const navItems = user ? getRoleNavItems(user.role) : [];
 
   useEffect(() => {
-    const activeItem = navItems.findIndex(item => item.items?.some(subItem => subItem.href === pathname));
+    const activeItem = navItems.findIndex(item => item.items?.some(subItem => pathname.startsWith(subItem.href || '---')));
     if (activeItem !== -1) {
       setActiveAccordionItem(`item-${activeItem}`);
     }
