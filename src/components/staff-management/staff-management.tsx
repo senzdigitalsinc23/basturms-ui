@@ -1,5 +1,4 @@
 
-
 'use client';
 import { useEffect, useState } from 'react';
 import { addStaff as storeAddStaff, getStaff, getUsers, updateStaff as storeUpdateStaff, addStaffAcademicHistory, addStaffAppointmentHistory, addStaffDocument, deleteStaff as storeDeleteStaff, bulkDeleteStaff as storeBulkDeleteStaff, toggleEmploymentStatus as storeToggleEmploymentStatus } from '@/lib/store';
@@ -11,9 +10,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { AddStaffForm } from './add-staff-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export type StaffDisplay = {
   user?: User; // User can be optional
@@ -30,7 +26,6 @@ export function StaffManagement() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
-  const [isSalaryFormOpen, setIsSalaryFormOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
 
   const refreshStaff = () => {
@@ -66,16 +61,6 @@ export function StaffManagement() {
     setEditingStaff(null);
   }
   
-  const handleUpdateSalary = (staffId: string, salary: number) => {
-    if (!currentUser) return;
-    const staffToUpdate = getStaff().find(s => s.staff_id === staffId);
-    if(staffToUpdate) {
-        storeUpdateStaff(staffId, { ...staffToUpdate, salary }, currentUser.id);
-        refreshStaff();
-        toast({ title: 'Salary Updated', description: `Salary for ${staffToUpdate.first_name} has been set.` });
-    }
-  }
-
   const handleDelete = (staffId: string) => {
     if (!currentUser) return;
     const success = storeDeleteStaff(staffId, currentUser.id);
@@ -102,11 +87,6 @@ export function StaffManagement() {
     setEditingStaff(staffToEdit);
     setIsEditFormOpen(true);
   };
-
-  const handleSalaryEdit = (staffToEdit: Staff) => {
-    setEditingStaff(staffToEdit);
-    setIsSalaryFormOpen(true);
-  }
   
   const handleToggleStatus = (staffId: string) => {
     if (!currentUser) return;
@@ -129,57 +109,11 @@ export function StaffManagement() {
 
   return (
     <>
-    <Tabs defaultValue="list">
-        <TabsList>
-            <TabsTrigger value="list">Staff List</TabsTrigger>
-            <TabsTrigger value="salaries">Salary Setup</TabsTrigger>
-        </TabsList>
-        <TabsContent value="list">
-             <StaffDataTable
-              columns={columns({ onEdit: handleEdit, onDelete: handleDelete, onToggleStatus: handleToggleStatus })}
-              data={staff}
-              onBulkDelete={handleBulkDelete}
-            />
-        </TabsContent>
-        <TabsContent value="salaries">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Staff Salary Setup</CardTitle>
-                    <CardDescription>Set the base salary for each staff member.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Staff Name</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>Salary (GHS)</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {staff.map(s => (
-                                    <TableRow key={s.staff_id}>
-                                        <TableCell className="font-medium">{s.staff.first_name} {s.staff.last_name}</TableCell>
-                                        <TableCell>{s.roles.join(', ')}</TableCell>
-                                        <TableCell>
-                                            <Input 
-                                                type="number" 
-                                                className="w-40" 
-                                                defaultValue={s.salary || ''} 
-                                                onBlur={(e) => handleUpdateSalary(s.staff_id, Number(e.target.value))}
-                                                placeholder="Set salary"
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-        </TabsContent>
-    </Tabs>
+      <StaffDataTable
+        columns={columns({ onEdit: handleEdit, onDelete: handleDelete, onToggleStatus: handleToggleStatus })}
+        data={staff}
+        onBulkDelete={handleBulkDelete}
+      />
    
      <Dialog open={isEditFormOpen} onOpenChange={(isOpen) => {
         if (!isOpen) setEditingStaff(null);

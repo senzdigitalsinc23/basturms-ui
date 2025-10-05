@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { getStaff, getPayrolls, savePayroll, Payroll, PayrollStatus, addExpense, addAuditLog, getUserById } from '@/lib/store';
+import { getStaff, getPayrolls, savePayroll, Payroll, PayrollStatus, addExpense, addAuditLog, getUserById, updateStaff as storeUpdateStaff } from '@/lib/store';
 import { Staff } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '../ui/input';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
@@ -32,9 +34,13 @@ export function PayrollManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
+  const refreshData = () => {
     setPayrolls(getPayrolls());
     setStaff(getStaff().filter(s => s.status === 'Active'));
+  }
+
+  useEffect(() => {
+    refreshData();
   }, []);
 
   const handleGeneratePayroll = () => {
@@ -53,7 +59,7 @@ export function PayrollManagement() {
         staff_id: s.staff_id,
         staff_name: `${s.first_name} ${s.last_name}`,
         base_salary: s.salary || 0,
-        deductions: 0,
+        deductions: 0, // Placeholder for future implementation
         net_salary: s.salary || 0,
     }));
     
@@ -117,13 +123,28 @@ export function PayrollManagement() {
     setPayrolls(updatedPayrolls);
   };
   
+  const handleUpdateSalary = (staffId: string, salary: number) => {
+    if (!user) return;
+    const staffToUpdate = getStaff().find(s => s.staff_id === staffId);
+    if(staffToUpdate) {
+        storeUpdateStaff(staffId, { ...staffToUpdate, salary }, user.id);
+        refreshData();
+        toast({ title: 'Salary Updated', description: `Salary for ${staffToUpdate.first_name} has been set.` });
+    }
+  }
+
   const canGenerate = !payrolls.some(p => p.month === format(new Date(selectedYear, selectedMonth), 'MMMM yyyy'));
   const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
 
 
   return (
-    <div className="space-y-6">
-       <Card>
+    <Tabs defaultValue="payroll">
+      <TabsList>
+        <TabsTrigger value="payroll">Payroll Runs</TabsTrigger>
+        <TabsTrigger value="salaries">Salary Setup</TabsTrigger>
+      </TabsList>
+      <TabsContent value="payroll" className="space-y-6">
+        <Card>
             <CardHeader>
                 <CardTitle>Generate New Payroll</CardTitle>
                 <CardDescription>Select a month and year to generate a new payroll for all active staff.</CardDescription>
@@ -206,6 +227,45 @@ export function PayrollManagement() {
                 </div>
             </CardContent>
         </Card>
-    </div>
+      </TabsContent>
+      <TabsContent value="salaries">
+        <Card>
+            <CardHeader>
+                <CardTitle>Staff Salary Setup</CardTitle>
+                <CardDescription>Set the base salary for each staff member.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Staff Name</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Salary (GHS)</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {staff.map(s => (
+                                <TableRow key={s.staff_id}>
+                                    <TableCell className="font-medium">{s.first_name} {s.last_name}</TableCell>
+                                    <TableCell>{s.roles.join(', ')}</TableCell>
+                                    <TableCell>
+                                        <Input 
+                                            type="number" 
+                                            className="w-40" 
+                                            defaultValue={s.salary || ''} 
+                                            onBlur={(e) => handleUpdateSalary(s.staff_id, Number(e.target.value))}
+                                            placeholder="Set salary"
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 }

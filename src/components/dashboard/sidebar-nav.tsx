@@ -44,6 +44,7 @@ import {
   Trophy,
   WalletCards,
   TrendingUp,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -147,10 +148,13 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/financials/fee-setup', label: 'Fee Setup' },
         { href: '/financials/bill-preparation', label: 'Bill Preparation' },
         { href: '/financials/fee-collection', label: 'Collections' },
+        { href: '/financials/payroll', label: 'Payroll' },
         { href: '/financials/reports', label: 'Reports' },
       ],
     },
     { href: '/expenses', label: 'Expense Management', icon: WalletCards },
+    { href: '/announcements', label: 'Announcements', icon: Megaphone },
+    { href: '/communications', label: 'Communications', icon: MessageSquare },
     { href: '/notifications', label: 'Notifications', icon: Bell },
      {
       label: 'Attendance',
@@ -160,11 +164,6 @@ const menuItems: Record<Role, NavItem[]> = {
           { href: '/staff-management/attendance', label: 'Staff Register' },
           { href: '/attendance/history', label: 'Attendance History' },
       ]
-    },
-    {
-      label: 'Announcements',
-      icon: Megaphone,
-      items: [{ href: '/#', label: 'Generate Notice' }],
     },
      {
       label: 'Logs',
@@ -192,6 +191,8 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/my-classes', label: 'My Classes & Students', icon: Users },
     { href: '/student-management/reports', label: 'Report Generation', icon: FileText },
     { href: '/academics/lesson-notes', label: 'Lesson Notes', icon: Clipboard },
+    { href: '/announcements', label: 'Announcements', icon: Megaphone },
+    { href: '/communications', label: 'Communications', icon: MessageSquare },
     { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
   Student: [
@@ -281,6 +282,7 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/financials/bill-preparation', label: 'Bill Preparation' },
     { href: '/financials/fee-collection', label: 'Collections' },
+    { href: '/financials/payroll', label: 'Payroll' },
     { href: '/financials/reports', label: 'Reports' },
     { href: '/expenses', label: 'Expense Management', icon: WalletCards },
   ],

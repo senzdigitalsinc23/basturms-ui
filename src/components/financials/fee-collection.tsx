@@ -21,7 +21,7 @@ import 'jspdf-autotable';
 import { generateInvoicePdf } from './student-financials';
 
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', currencyDisplay: 'symbol' }).format(amount);
 
 const generateReceipt = (student: StudentProfile, payment: {amount: number, method: string, receipt_number?: string, paid_by?: string}, latestTermPayment?: TermPayment) => {
     const doc = new jsPDF();
@@ -79,7 +79,7 @@ const generateReceipt = (student: StudentProfile, payment: {amount: number, meth
         }
     });
     
-    const previousBalance = (student.financialDetails?.account_balance || 0) + payment.amount;
+    const previousBalance = (student.financialDetails?.account_balance || 0);
 
     // Total and Balance
     (doc as any).autoTable({
@@ -87,7 +87,7 @@ const generateReceipt = (student: StudentProfile, payment: {amount: number, meth
         body: [
             ['Previous Balance', formatCurrency(Math.abs(previousBalance))],
             ['Amount Paid', formatCurrency(payment.amount)],
-            ['New Outstanding Balance', formatCurrency(Math.abs(student.financialDetails?.account_balance || 0))]
+            ['New Outstanding Balance', formatCurrency(Math.abs(previousBalance - payment.amount))]
         ],
         theme: 'plain',
         styles: {
@@ -174,13 +174,15 @@ export function FeeCollection() {
             receipt_number: paymentMethod === 'Cash' ? receiptNumber : undefined,
             paid_by: paymentMethod === 'Cash' ? paidBy : undefined,
         };
+        
+        // We pass the current student state to the receipt generator
+        // so it has the balance BEFORE the payment is recorded.
+        generateReceipt(selectedStudent, paymentDetails, selectedStudent.financialDetails?.payment_history.slice(-1)[0]);
+
 
         const updatedProfile = recordPayment(selectedStudent.student.student_no, paymentDetails, user.id);
         
         if (updatedProfile) {
-            const latestTermPayment = updatedProfile.financialDetails?.payment_history
-                .sort((a, b) => new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime())[0];
-
             setSelectedStudent(updatedProfile);
             toast({ title: 'Payment Recorded', description: `Payment of ${formatCurrency(paymentAmount)} recorded for ${updatedProfile.student.first_name}.` });
             addAuditLog({
@@ -189,8 +191,6 @@ export function FeeCollection() {
                 action: 'Record Payment',
                 details: `Recorded payment of ${formatCurrency(paymentAmount)} for student ${updatedProfile.student.student_no}`
             });
-            
-            generateReceipt(updatedProfile, paymentDetails, latestTermPayment);
 
             setIsPaymentDialogOpen(false);
             setPaymentAmount('');
