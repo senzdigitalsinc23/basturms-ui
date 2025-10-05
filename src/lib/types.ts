@@ -4,6 +4,7 @@
 
 
 
+
 export type StudentReport = {
     student: StudentProfile;
     term: string;
@@ -51,7 +52,8 @@ export type Role =
   | 'Proprietor'
   | 'I.T Manager'
   | 'I.T Support'
-  | 'Accountant';
+  | 'Accountant'
+  | 'Guest';
 
 export const ALL_ROLES: Role[] = [
   'Admin',
@@ -67,6 +69,7 @@ export const ALL_ROLES: Role[] = [
   'I.T Manager',
   'I.T Support',
   'Accountant',
+  'Guest',
 ];
 
 export const ALL_ACCOUNTANT_ROLES: Role[] = ['Accountant'];
