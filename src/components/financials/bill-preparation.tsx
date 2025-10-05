@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill, getClassSchoolLevel } from '@/lib/store';
+import { getFeeStructures, getClasses, getStudentProfiles, prepareBills, addAuditLog, getAcademicYears, getTermlyBills, saveTermlyBills, deleteTermlyBill, getClassSchoolLevel, updateTermlyBillStatus } from '@/lib/store';
 import { FeeStructureItem, Class, StudentProfile, AcademicYear, Term, TermlyBill, SchoolLevel, ALL_SCHOOL_LEVELS } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Trash2, ArrowRight, Loader2, Users, User, Check, ChevronsUpDown, MoreHorizontal, Pencil, Plus } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowRight, Loader2, Users, User, Check, ChevronsUpDown, MoreHorizontal, Pencil, Plus, CheckCircle, XCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,16 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { styl
 function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at'>) => void, existingBill?: TermlyBill | null }) {
     const [step, setStep] = useState(1);
     const [feeStructures, setFeeStructures] = useState<FeeStructureItem[]>([]);
-    const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => ({...i, id: i.description, name: i.description, amount: i.amount, levelAmounts: {}, isMiscellaneous: true })) || []);
+    const [billItems, setBillItems] = useState<(FeeStructureItem & { amount: number | '' })[]>(existingBill?.items.map(i => {
+        const feeItem = getFeeStructures().find(fs => fs.name === i.description);
+        return {
+            id: feeItem?.id || i.description,
+            name: i.description,
+            amount: i.amount,
+            levelAmounts: feeItem?.levelAmounts || {},
+            isMiscellaneous: feeItem?.isMiscellaneous || !feeItem
+        };
+    }) || []);
     const [termName, setTermName] = useState(existingBill?.term || '');
     
     const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -61,11 +70,19 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     useEffect(() => {
         if (selectedLevel) {
             const standardItems = feeStructures.filter(item => !item.isMiscellaneous);
+            const miscItemsFromStructure = feeStructures.filter(item => item.isMiscellaneous);
+            
             const itemsForLevel = standardItems.map(item => ({
                 ...item,
                 amount: item.levelAmounts[selectedLevel] || 0
             }));
-            setBillItems(itemsForLevel);
+
+            const miscItemsForLevel = miscItemsFromStructure.map(item => ({
+                ...item,
+                amount: item.levelAmounts[selectedLevel] || 0
+            }));
+
+            setBillItems([...itemsForLevel, ...miscItemsForLevel]);
         } else {
             // If no level is selected, clear the standard items
             setBillItems(billItems.filter(item => item.isMiscellaneous));
@@ -74,8 +91,9 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
 
     const addBillItem = (item: FeeStructureItem) => {
         if (!billItems.some(bi => bi.id === item.id)) {
-            // Amount is set to 0 initially, it will be calculated based on class
-            setBillItems([...billItems, { ...item, amount: 0 }]);
+            const level = selectedLevel || 'JHS'; // Default to a level to get some amount
+            const amount = item.levelAmounts[level] || 0;
+            setBillItems([...billItems, { ...item, amount }]);
         }
     };
     
@@ -107,10 +125,8 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
         return billItems.reduce((acc, item) => {
             let amount = 0;
             if (item.isMiscellaneous) {
-                amount = Number(item.amount) || 0;
+                amount = Number(item.amount) || (schoolLevel ? item.levelAmounts[schoolLevel] || 0 : 0);
             } else if (schoolLevel) {
-                // If a level is selected for the bill, use the amount defined for that item
-                // otherwise it should already be in the item.amount
                  amount = item.amount || item.levelAmounts[schoolLevel] || 0;
             }
             return acc + amount;
@@ -138,7 +154,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
     const handlePrepareBill = () => {
         const billDataForStore = {
             term: termName,
-            items: billItems.map(item => ({...item, amount: item.amount || 0})),
+            items: billItems.map(item => ({description: item.name, amount: item.amount || 0})),
             assigned_classes: selectedClasses,
             assigned_students: selectedStudents,
         };
@@ -302,37 +318,37 @@ export function TermlyBillManagement() {
         fetchBills();
     }, []);
 
-    const handleSave = (billData: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at' | 'billed_student_ids' | 'total_amount'> & { items: FeeStructureItem[] }) => {
+    const handleSave = (billData: Omit<TermlyBill, 'bill_number' | 'created_by' | 'created_at' | 'billed_student_ids'> & { items: FeeStructureItem[] }) => {
         if (!user) return;
         setIsLoading(true);
 
         const allBills = getTermlyBills();
         let action: 'created' | 'updated' = 'created';
         
-        let finalBillNumber: string;
+        let finalBill: TermlyBill;
 
         if (editingBill) {
             action = 'updated';
-            finalBillNumber = editingBill.bill_number;
-            const updatedBill = { ...editingBill, ...billData, bill_number: finalBillNumber };
-            const newBills = allBills.map(b => b.bill_number === editingBill.bill_number ? updatedBill : b);
-            saveTermlyBills(newBills as TermlyBill[]);
-            prepareBills(updatedBill.assigned_classes, updatedBill.assigned_students, billData.items, billData.term, user.id, finalBillNumber);
-
+            const billToUpdate = { 
+                ...editingBill, 
+                ...billData, 
+                items: billData.items.map(i => ({ description: i.name, amount: i.amount || 0 })) 
+            };
+            const newBills = allBills.map(b => b.bill_number === editingBill.bill_number ? billToUpdate : b);
+            saveTermlyBills(newBills);
+            finalBill = billToUpdate;
         } else {
-            finalBillNumber = `BILL-${Date.now()}`;
-            const newBill: TermlyBill = {
+            finalBill = {
                 ...billData,
-                bill_number: finalBillNumber,
+                bill_number: `BILL-${Date.now()}`,
                 created_at: new Date().toISOString(),
                 created_by: user.id,
-                billed_student_ids: [], // This will be populated by prepareBills
-                total_amount: 0, // This is now per-student
+                billed_student_ids: [], 
+                status: 'Pending',
                 items: billData.items.map(i => ({ description: i.name, amount: i.amount || 0 }))
-            }
-            const newBills = [...allBills, newBill];
+            };
+            const newBills = [...allBills, finalBill];
             saveTermlyBills(newBills);
-            prepareBills(billData.assigned_classes, billData.assigned_students, billData.items, billData.term, user.id, finalBillNumber);
         }
 
         setTimeout(() => {
@@ -340,20 +356,41 @@ export function TermlyBillManagement() {
             fetchBills();
             setIsFormOpen(false);
             setEditingBill(null);
-            toast({ title: 'Bill Saved', description: `The bill for term "${billData.term}" has been ${action}.` });
+            toast({ title: `Bill ${action}`, description: `The bill for term "${billData.term}" has been saved with Pending status.` });
             addAuditLog({
                 user: user.email, name: user.name, action: `Bill ${action}`,
                 details: `${action} bill for term "${billData.term}".`
             });
-        }, 1000);
+        }, 500);
     }
     
-    const handleDelete = (billNumber: string) => {
+    const handleDelete = (bill: TermlyBill) => {
         if (!user) return;
-        deleteTermlyBill(billNumber, user.id);
+        if (bill.status === 'Approved' && user.role === 'Accountant') {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'Approved bills cannot be deleted by an accountant.'});
+            return;
+        }
+        deleteTermlyBill(bill.bill_number, user.id);
         fetchBills();
         toast({ title: "Bill Deleted", description: "The termly bill and associated student records have been removed." });
     }
+
+    const handleApprove = (bill: TermlyBill) => {
+        if (!user) return;
+        updateTermlyBillStatus(bill.bill_number, 'Approved', user.id);
+        prepareBills(bill.assigned_classes, bill.assigned_students, bill.items, bill.term, user.id, bill.bill_number);
+        fetchBills();
+        toast({ title: 'Bill Approved', description: `Bill ${bill.bill_number} has been approved and applied to student accounts.` });
+    };
+
+    const handleReject = (bill: TermlyBill) => {
+        if (!user) return;
+        updateTermlyBillStatus(bill.bill_number, 'Rejected', user.id);
+        fetchBills();
+        toast({ title: 'Bill Rejected', description: `Bill ${bill.bill_number} has been rejected.` });
+    };
+
+    const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
 
     return (
         <div className="space-y-6">
@@ -382,6 +419,7 @@ export function TermlyBillManagement() {
                         <TableRow>
                             <TableHead>Bill Number</TableHead>
                             <TableHead>Term</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead>Students Billed</TableHead>
                             <TableHead>Date Created</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -392,24 +430,39 @@ export function TermlyBillManagement() {
                             <TableRow key={bill.bill_number}>
                                 <TableCell className="font-mono">{bill.bill_number}</TableCell>
                                 <TableCell className="font-medium">{bill.term}</TableCell>
+                                <TableCell>
+                                    <Badge variant={bill.status === 'Approved' ? 'secondary' : bill.status === 'Pending' ? 'default' : 'destructive'}>
+                                        {bill.status}
+                                    </Badge>
+                                </TableCell>
                                 <TableCell>{bill.billed_student_ids.length}</TableCell>
                                 <TableCell>{format(new Date(bill.created_at), 'PPP')}</TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => { setEditingBill(bill); setIsFormOpen(true); }}>
+                                <TableCell className="text-right space-x-1">
+                                    {bill.status === 'Pending' && isAdmin && (
+                                        <>
+                                            <Button variant="ghost" size="icon" onClick={() => handleApprove(bill)}>
+                                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleReject(bill)}>
+                                                <XCircle className="h-4 w-4 text-red-600" />
+                                            </Button>
+                                        </>
+                                    )}
+                                    <Button variant="ghost" size="icon" onClick={() => { setEditingBill(bill); setIsFormOpen(true); }} disabled={bill.status === 'Approved' && !isAdmin}>
                                         <Pencil className="h-4 w-4" />
                                     </Button>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={bill.status === 'Approved' && !isAdmin}><Trash2 className="h-4 w-4" /></Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>This will delete the bill for {bill.term} and remove the associated charges from all {bill.billed_student_ids.length} students. This action is irreversible.</AlertDialogDescription>
+                                                <AlertDialogDescription>This will delete the bill for {bill.term}. {bill.status === 'Approved' && 'This will also reverse all associated charges for students.'} This action is irreversible.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(bill.bill_number)}>Delete</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => handleDelete(bill)}>Delete</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
