@@ -1,8 +1,8 @@
 
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { getStudentProfiles, getClasses } from '@/lib/store';
-import { StudentProfile, Class, TermPayment } from '@/lib/types';
+import { getStudentProfiles, getClasses, getTermlyBills } from '@/lib/store';
+import { StudentProfile, Class, TermPayment, TermlyBill } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Calendar as CalendarIcon, Download, Search, X } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, isWithinInterval } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
 import jsPDF from 'jspdf';
@@ -44,7 +44,8 @@ type DebtorRecord = {
 export function FinancialReports() {
     const [allProfiles, setAllProfiles] = useState<StudentProfile[]>([]);
     const [allClasses, setAllClasses] = useState<Class[]>([]);
-    const [filteredRecords, setFilteredRecords] = useState<PaymentRecord[]>([]);
+    const [allBills, setAllBills] = useState<TermlyBill[]>([]);
+    const [filteredPaymentRecords, setFilteredPaymentRecords] = useState<PaymentRecord[]>([]);
     const [debtorsList, setDebtorsList] = useState<DebtorRecord[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [selectedClass, setSelectedClass] = useState<string>('all');
@@ -53,24 +54,25 @@ export function FinancialReports() {
     useEffect(() => {
         setAllProfiles(getStudentProfiles());
         setAllClasses(getClasses());
+        setAllBills(getTermlyBills());
     }, []);
 
     const classMap = useMemo(() => new Map(allClasses.map(c => [c.id, c.name])), [allClasses]);
+
+    const filteredProfiles = useMemo(() => {
+        return allProfiles.filter(p => {
+            const inClass = selectedClass === 'all' || p.admissionDetails.class_assigned === selectedClass;
+            const matchesSearch = !searchTerm || `${p.student.first_name} ${p.student.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) || p.student.student_no.toLowerCase().includes(searchTerm.toLowerCase());
+            return inClass && matchesSearch;
+        });
+    }, [allProfiles, selectedClass, searchTerm]);
 
     useEffect(() => {
         const allPayments: PaymentRecord[] = [];
         const allDebtors: DebtorRecord[] = [];
 
-        const filteredProfiles = allProfiles.filter(p => {
-            const inClass = selectedClass === 'all' || p.admissionDetails.class_assigned === selectedClass;
-            const matchesSearch = !searchTerm || `${p.student.first_name} ${p.student.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) || p.student.student_no.toLowerCase().includes(searchTerm.toLowerCase());
-            return inClass && matchesSearch;
-        });
-
         filteredProfiles.forEach(profile => {
-            let hasOutstanding = false;
             profile.financialDetails?.payment_history.forEach(termPayment => {
-                
                 termPayment.payments.forEach(payment => {
                     const paymentDate = new Date(payment.date);
                     const inDateRange = !dateRange?.from || (paymentDate >= dateRange.from && (!dateRange.to || paymentDate <= dateRange.to));
@@ -89,10 +91,6 @@ export function FinancialReports() {
                         });
                     }
                 });
-
-                if (termPayment.outstanding > 0) {
-                    hasOutstanding = true;
-                }
             });
 
             if (profile.financialDetails && profile.financialDetails.account_balance < 0) {
@@ -105,33 +103,40 @@ export function FinancialReports() {
             }
         });
 
-        setFilteredRecords(allPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()));
-        setDebtorsList(allDebtors.sort((a,b) => b.outstandingBalance - a.outstandingBalance));
+        setFilteredPaymentRecords(allPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()));
+        setDebtorsList(allDebtors.sort((a, b) => b.outstandingBalance - a.outstandingBalance));
 
-    }, [dateRange, selectedClass, searchTerm, allProfiles, classMap]);
+    }, [dateRange, filteredProfiles, classMap]);
     
     const summary = useMemo(() => {
-        let totalPaid = 0;
+        const totalPaid = filteredPaymentRecords.reduce((acc, rec) => acc + rec.amount, 0);
+
         let totalExpected = 0;
-        
-        const uniqueBills = new Set<string>();
+        const processedTerms = new Set<string>();
 
-        filteredRecords.forEach(rec => {
-            totalPaid += rec.amount;
-            if (!uniqueBills.has(rec.billNumber)) {
-                totalExpected += rec.totalBilled;
-                uniqueBills.add(rec.billNumber);
-            }
+        filteredProfiles.forEach(profile => {
+            profile.financialDetails?.payment_history.forEach(termPayment => {
+                const termKey = `${profile.student.student_no}-${termPayment.term}`;
+                const paymentDate = termPayment.payment_date ? new Date(termPayment.payment_date) : new Date(termPayment.bill_number.split('-')[1]);
+                
+                const inDateRange = !dateRange?.from || (paymentDate >= dateRange.from && (!dateRange.to || paymentDate <= dateRange.to));
+
+                if (inDateRange && !processedTerms.has(termKey)) {
+                    totalExpected += termPayment.total_fees;
+                    processedTerms.add(termKey);
+                }
+            });
         });
-
-        const outstanding = debtorsList.reduce((acc, debtor) => acc + debtor.outstandingBalance, 0);
+        
+        const totalOutstanding = debtorsList.reduce((acc, debtor) => acc + debtor.outstandingBalance, 0);
 
         return {
             totalPaid,
             totalExpected,
-            outstanding,
+            totalOutstanding
         }
-    }, [filteredRecords, debtorsList]);
+    }, [filteredPaymentRecords, debtorsList, filteredProfiles, dateRange]);
+
 
     const handleClearFilters = () => {
         setDateRange(undefined);
@@ -146,7 +151,7 @@ export function FinancialReports() {
             doc.text("Fee Collection Report", 14, 15);
             (doc as any).autoTable({
                 head: [['Date', 'Student Name', 'Class', 'Billed', 'Paid', 'Method']],
-                body: filteredRecords.map(rec => [
+                body: filteredPaymentRecords.map(rec => [
                     format(new Date(rec.paymentDate), 'yyyy-MM-dd'),
                     rec.studentName,
                     rec.className,
@@ -171,7 +176,7 @@ export function FinancialReports() {
     };
 
     const handleExportCSV = (reportType: 'collection' | 'debtors') => {
-        const dataToExport = reportType === 'collection' ? filteredRecords : debtorsList;
+        const dataToExport = reportType === 'collection' ? filteredPaymentRecords : debtorsList;
         const csv = Papa.unparse(dataToExport);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
@@ -266,7 +271,7 @@ export function FinancialReports() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(summary.totalExpected)}</div>
-                             <p className="text-xs text-muted-foreground">(For bills with payments in date range)</p>
+                             <p className="text-xs text-muted-foreground">In selected date range</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -291,20 +296,20 @@ export function FinancialReports() {
                                         <TableHead>Payment Date</TableHead>
                                         <TableHead>Student</TableHead>
                                         <TableHead>Class</TableHead>
-                                        <TableHead>Total Billed</TableHead>
                                         <TableHead>Amount Paid</TableHead>
+                                        <TableHead>Total Billed (Term)</TableHead>
                                         <TableHead>Method</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredRecords.length > 0 ? (
-                                        filteredRecords.map(rec => (
+                                    {filteredPaymentRecords.length > 0 ? (
+                                        filteredPaymentRecords.map(rec => (
                                             <TableRow key={`${rec.studentId}-${rec.paymentDate}-${rec.amount}`}>
                                                 <TableCell>{format(new Date(rec.paymentDate), 'PPP')}</TableCell>
                                                 <TableCell>{rec.studentName}</TableCell>
                                                 <TableCell>{rec.className}</TableCell>
+                                                <TableCell className="font-medium text-green-600">{formatCurrency(rec.amount)}</TableCell>
                                                 <TableCell>{formatCurrency(rec.totalBilled)}</TableCell>
-                                                <TableCell className="font-medium">{formatCurrency(rec.amount)}</TableCell>
                                                 <TableCell>{rec.method}</TableCell>
                                             </TableRow>
                                         ))
@@ -328,7 +333,7 @@ export function FinancialReports() {
                             <CardTitle className="text-sm font-medium text-destructive">Total Outstanding Balance</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-destructive">{formatCurrency(summary.outstanding)}</div>
+                            <div className="text-2xl font-bold text-destructive">{formatCurrency(summary.totalOutstanding)}</div>
                             <p className="text-xs text-muted-foreground">Across all filtered students</p>
                         </CardContent>
                     </Card>

@@ -1,6 +1,7 @@
+
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { getStaff, getStudentProfiles, getClasses, getStaffAttendanceRecords } from '@/lib/store';
+import { getStaff, getStudentProfiles, getClasses, getStaffAttendanceRecords, getStaffAppointmentHistory } from '@/lib/store';
 import { Staff, StudentProfile, Class, StaffAttendanceRecord } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,7 +28,6 @@ const WEIGHTS = {
 export function TeacherPerformanceEvaluation() {
   const [teachers, setTeachers] = useState<Staff[]>([]);
   const [students, setStudents] = useState<StudentProfile[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
   const [staffAttendance, setStaffAttendance] = useState<StaffAttendanceRecord[]>([]);
   const [performanceData, setPerformanceData] = useState<TeacherPerformance[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<string | 'all'>('all');
@@ -35,52 +35,47 @@ export function TeacherPerformanceEvaluation() {
   useEffect(() => {
     setTeachers(getStaff().filter(s => s.roles.includes('Teacher')));
     setStudents(getStudentProfiles());
-    setClasses(getClasses());
     setStaffAttendance(getStaffAttendanceRecords());
   }, []);
 
   const calculatePerformance = useMemo(() => {
-    return teachers.map(teacher => {
-        // 1. Student Academic Performance
-        const teacherClassIds = new Set<string>();
-        const teacherStudentIds = new Set<string>();
-        students.forEach(s => {
-            const teachesThisClass = s.assignmentScores?.some(score => score.class_id && teacher.staff_id);
-            if(teachesThisClass){
-                teacherClassIds.add(s.admissionDetails.class_assigned);
-                teacherStudentIds.add(s.student.student_no);
-            }
-        });
+    const appointments = getStaffAppointmentHistory();
 
+    return teachers.map(teacher => {
+        const latestAppointment = appointments
+            .filter(a => a.staff_id === teacher.staff_id)
+            .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+        
+        const teacherClassIds = latestAppointment?.class_assigned || [];
+        
+        const teacherStudents = students.filter(s => teacherClassIds.includes(s.admissionDetails.class_assigned));
+        
+        // 1. Student Academic Performance
         let totalScore = 0;
         let scoreCount = 0;
-        students.forEach(student => {
-            if(teacherStudentIds.has(student.student.student_no)){
-                student.assignmentScores?.forEach(score => {
-                    totalScore += score.score;
-                    scoreCount++;
-                });
-            }
+        teacherStudents.forEach(student => {
+            student.assignmentScores?.forEach(score => {
+                totalScore += score.score;
+                scoreCount++;
+            });
         });
         const avgStudentScore = scoreCount > 0 ? totalScore / scoreCount : 0;
         
         // 2. Class Attendance
-        let totalClassAttendance = 0;
+        let totalAttendance = 0;
         let attendanceDays = 0;
-        students.forEach(student => {
-            if(teacherStudentIds.has(student.student.student_no)) {
-                student.attendanceRecords?.forEach(rec => {
-                    if(rec.status === 'Present' || rec.status === 'Late') totalClassAttendance++;
-                    attendanceDays++;
-                });
-            }
+        teacherStudents.forEach(student => {
+            student.attendanceRecords?.forEach(rec => {
+                if(rec.status === 'Present' || rec.status === 'Late') totalAttendance++;
+                attendanceDays++;
+            });
         });
-        const avgClassAttendance = attendanceDays > 0 ? (totalClassAttendance / attendanceDays) * 100 : 0;
+        const avgClassAttendance = attendanceDays > 0 ? (totalAttendance / attendanceDays) * 100 : 0;
 
         // 3. Punctuality (Teacher's own attendance)
         const teacherRecords = staffAttendance.filter(rec => rec.staff_id === teacher.staff_id);
         const presentOrLate = teacherRecords.filter(r => r.status === 'Present' || r.status === 'Late').length;
-        const punctualityScore = teacherRecords.length > 0 ? (presentOrLate / teacherRecords.length) * 100 : 0;
+        const punctualityScore = teacherRecords.length > 0 ? (presentOrLate / teacherRecords.length) * 100 : 100; // Default to 100 if no records
 
         // 4. Overall Score
         const overallScore = (avgStudentScore * WEIGHTS.STUDENT_SCORE) + (avgClassAttendance * WEIGHTS.CLASS_ATTENDANCE) + (punctualityScore * WEIGHTS.PUNCTUALITY);
@@ -91,7 +86,7 @@ export function TeacherPerformanceEvaluation() {
             avgStudentScore,
             avgClassAttendance,
             punctualityScore,
-            overallScore: Math.min(100, overallScore), // Cap at 100
+            overallScore: Math.min(100, overallScore),
         };
     }).sort((a, b) => b.overallScore - a.overallScore);
   }, [teachers, students, staffAttendance]);
