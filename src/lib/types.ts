@@ -1,5 +1,36 @@
 
 
+export type Announcement = {
+  id: string;
+  title: string;
+  content: string;
+  audience: Audience;
+  created_at: string; // ISO string
+  author_id: string; // user id
+  author_name: string; // user name for display
+};
+
+export type Audience = 'All School' | 'Teachers' | 'Parents' | 'Students';
+
+
+export type PayrollStatus = 'Pending' | 'Approved' | 'Rejected';
+export interface Payroll {
+    id: string;
+    month: string; // e.g., "June 2024"
+    generated_at: string;
+    generated_by: string; // user id
+    status: PayrollStatus;
+    items: {
+        staff_id: string;
+        staff_name: string;
+        base_salary: number;
+        deductions: number;
+        net_salary: number;
+    }[];
+    total_amount: number;
+    approved_by?: string; // user id
+    approved_at?: string;
+}
 
 export type ExpenseCategory = 'Salaries' | 'Utilities' | 'Maintenance' | 'Supplies' | 'Procurement' | 'Miscellaneous';
 
@@ -458,6 +489,7 @@ export interface Staff {
         house_no: string;
         gps_no: string;
     };
+    salary?: number;
 }
 
 export interface StaffAcademicHistory {
@@ -546,3 +578,5 @@ export interface TeacherSubject {
     staff_id: string;
     subject_id: string;
 }
+
+    

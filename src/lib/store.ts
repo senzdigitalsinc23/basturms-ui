@@ -1,6 +1,4 @@
 
-
-
 'use client';
 
 import {
@@ -50,6 +48,8 @@ import {
   SchoolLevel,
   PromotionCriteria,
   Expense,
+  Payroll,
+  Announcement,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -103,6 +103,8 @@ const TERMLY_BILLS_KEY = 'campusconnect_termly_bills';
 const TIMETABLE_KEY = 'campusconnect_timetable';
 const STUDENT_REPORTS_KEY = 'campusconnect_student_reports';
 const EXPENSES_KEY = 'campusconnect_expenses';
+const PAYROLLS_KEY = 'campusconnect_payrolls';
+const ANNOUNCEMENTS_KEY = 'campusconnect_announcements';
 
 
 // Settings Keys
@@ -479,6 +481,8 @@ export const initializeStore = () => {
         saveToStorage(TERMLY_BILLS_KEY, []);
         saveToStorage(TIMETABLE_KEY, {});
         saveToStorage(EXPENSES_KEY, []);
+        saveToStorage(PAYROLLS_KEY, []);
+        saveToStorage(ANNOUNCEMENTS_KEY, []);
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
         saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
@@ -501,8 +505,47 @@ export const initializeStore = () => {
   }
 };
 
+export const getPayrolls = (): Payroll[] => getFromStorage<Payroll[]>(PAYROLLS_KEY, []);
+export const savePayroll = (payrolls: Payroll[]): void => saveToStorage(PAYROLLS_KEY, payrolls);
+
 export const getExpenses = (): Expense[] => getFromStorage<Expense[]>(EXPENSES_KEY, []);
 export const saveExpenses = (expenses: Expense[]): void => saveToStorage(EXPENSES_KEY, expenses);
+export const addExpense = (expense: Expense): void => {
+    const expenses = getExpenses();
+    saveExpenses([...expenses, expense]);
+};
+
+
+export const getAnnouncements = (): Announcement[] => getFromStorage<Announcement[]>(ANNOUNCEMENTS_KEY, []);
+
+export const addAnnouncement = (announcementData: Omit<Announcement, 'id' | 'created_at' | 'author_name'>, idToUpdate?: string): void => {
+    const announcements = getAnnouncements();
+    const author = getUserById(announcementData.author_id);
+    if (!author) return;
+
+    if (idToUpdate) {
+        const index = announcements.findIndex(a => a.id === idToUpdate);
+        if (index !== -1) {
+            announcements[index] = { ...announcements[index], ...announcementData, author_name: author.name };
+        }
+    } else {
+        const newAnnouncement: Announcement = {
+            id: `ann-${Date.now()}`,
+            ...announcementData,
+            created_at: new Date().toISOString(),
+            author_name: author.name,
+        };
+        announcements.unshift(newAnnouncement);
+    }
+    saveToStorage(ANNOUNCEMENTS_KEY, announcements);
+};
+
+export const deleteAnnouncement = (id: string): void => {
+    const announcements = getAnnouncements();
+    const updatedAnnouncements = announcements.filter(a => a.id !== id);
+    saveToStorage(ANNOUNCEMENTS_KEY, updatedAnnouncements);
+};
+
 
 export const saveStudentReport = (report: StudentReport): void => {
     const reports = getFromStorage<StudentReport[]>(STUDENT_REPORTS_KEY, []);
@@ -1895,3 +1938,5 @@ export const toggleEmploymentStatus = (staffId: string, editorId: string): Staff
 
     return staff;
 }
+
+    
