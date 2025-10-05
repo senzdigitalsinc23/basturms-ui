@@ -172,7 +172,7 @@ function BillPreparationForm({ onSave, existingBill }: { onSave: (bill: Omit<Ter
                                         </Select>
                                     </div>
                                     <div>
-                                        <Label htmlFor="school-level">Target School Level (Optional)</Label>
+                                        <Label htmlFor="school-level">Target School Level (Template)</Label>
                                         <Select value={selectedLevel} onValueChange={(val: SchoolLevel) => setSelectedLevel(val)}>
                                             <SelectTrigger id="school-level">
                                                 <SelectValue placeholder="Select level to auto-fill amounts" />

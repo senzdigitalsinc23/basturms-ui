@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -80,6 +81,10 @@ export type StudentReport = {
     schoolProfile: SchoolProfileData | null;
     className: string;
     status: 'Provisional' | 'Final';
+    classTeacherId?: string;
+    headTeacherId?: string;
+    classTeacherSignature?: string | null;
+    headTeacherSignature?: string | null;
 };
 
 
@@ -710,7 +715,7 @@ export const prepareBills = (
             
             const studentBillItems = billItems.map(item => ({
                 description: item.name,
-                amount: item.amount,
+                amount: item.isMiscellaneous ? Number(item.amount) : (schoolLevel ? item.levelAmounts[schoolLevel] || 0 : Number(item.amount) || 0),
             }));
             
             const totalBillAmount = studentBillItems.reduce((acc, item) => acc + item.amount, 0);

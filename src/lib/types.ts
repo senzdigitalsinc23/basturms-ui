@@ -2,6 +2,7 @@
 
 
 
+
 export type StudentReport = {
     student: StudentProfile;
     term: string;
@@ -29,6 +30,8 @@ export type StudentReport = {
     schoolProfile: any; // Using 'any' for now, can be SchoolProfileData
     className: string;
     status: 'Provisional' | 'Final';
+    classTeacherId?: string;
+    headTeacherId?: string;
     classTeacherSignature?: string | null;
     headTeacherSignature?: string | null;
 };
