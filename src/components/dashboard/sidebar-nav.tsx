@@ -42,6 +42,8 @@ import {
   Clipboard,
   FileText,
   Trophy,
+  WalletCards,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -130,6 +132,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/add', label: 'Add Staff' },
         { href: '/staff-management/assignments', label: 'Assign Class/Subjects' },
         { href: '/staff-management/leave', label: 'Leave Management' },
+        { href: '/staff-management/performance', label: 'Performance' },
       ]
     },
     {
@@ -147,6 +150,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/financials/reports', label: 'Reports' },
       ],
     },
+    { href: '/expenses', label: 'Expense Management', icon: WalletCards },
     { href: '/notifications', label: 'Notifications', icon: Bell },
      {
       label: 'Attendance',
@@ -216,6 +220,7 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/assignments', label: 'Assign Class/Subjects' },
         { href: '/staff-management/attendance', label: 'Staff Attendance' },
         { href: '/staff-management/leave', label: 'Leave Management' },
+        { href: '/staff-management/performance', label: 'Performance' },
       ]
     },
     { href: '/#', label: 'Curriculum', icon: BookUser },
@@ -277,7 +282,12 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/financials/bill-preparation', label: 'Bill Preparation' },
     { href: '/financials/fee-collection', label: 'Collections' },
     { href: '/financials/reports', label: 'Reports' },
-  ]
+    { href: '/expenses', label: 'Expense Management', icon: WalletCards },
+  ],
+  Guest: [
+    { href: '/dashboard/guest', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/settings', label: 'Backup & Recovery', icon: History }
+  ],
 };
 
 const getRoleNavItems = (role: Role) => {

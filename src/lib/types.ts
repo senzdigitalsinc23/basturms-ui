@@ -1,5 +1,17 @@
 
 
+export type ExpenseCategory = 'Salaries' | 'Utilities' | 'Maintenance' | 'Supplies' | 'Procurement' | 'Miscellaneous';
+
+export interface Expense {
+  id: string;
+  date: string; // ISO string
+  description: string;
+  category: ExpenseCategory;
+  amount: number;
+  vendor?: string;
+  paymentMethod: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Cheque';
+  recorded_by: string; // user id
+}
 
 
 
@@ -354,6 +366,7 @@ export interface FeeStructureItem {
     name: string;
     description?: string;
     levelAmounts: Partial<Record<SchoolLevel, number>>;
+    amount?: number; // For miscellaneous items
     isMiscellaneous?: boolean;
 }
 
@@ -365,7 +378,6 @@ export type FeeItem = {
 export type TermlyBill = {
     bill_number: string;
     term: string;
-    total_amount: number; // This might become dynamic based on class
     items: FeeItem[];
     assigned_classes: string[];
     assigned_students: string[];

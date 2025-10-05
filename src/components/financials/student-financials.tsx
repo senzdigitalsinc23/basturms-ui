@@ -1,14 +1,16 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getStudentProfileByUserId, getStudentProfiles } from '@/lib/store';
-import { StudentProfile, TermPayment } from '@/lib/types';
+import { getStudentProfileByUserId, getStudentProfiles, getSchoolProfile } from '@/lib/store';
+import { StudentProfile, TermPayment, FeeItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Landmark } from 'lucide-react';
+import { Landmark, Printer } from 'lucide-react';
+import { Button } from '../ui/button';
+import { generateInvoicePdf } from './fee-collection';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
@@ -20,18 +22,26 @@ export function StudentFinancials() {
         if (user) {
             let studentProfile;
             if (user.role === 'Student') {
-                 // The user is the student, find their profile by user ID
                 const studentUser = getStudentProfiles().find(p => p.contactDetails.email === user.email);
                 if (studentUser) {
                     studentProfile = studentUser;
                 }
             } else if (user.role === 'Parent') {
-                // The user is a parent, find a student linked to them (simple logic for now)
                 studentProfile = getStudentProfiles().find(p => p.guardianInfo.guardian_email === user.email);
+            } else if (user.role === 'Admin') {
+                // For demo purposes, admin can see the first student's profile.
+                // A real app would have a search/selection mechanism.
+                studentProfile = getStudentProfiles()[0];
             }
              setProfile(studentProfile || null);
         }
     }, [user]);
+
+    const handlePrintInvoice = (termPayment: TermPayment) => {
+        if (!profile) return;
+        const pdf = generateInvoicePdf(profile, termPayment);
+        pdf.save(`Invoice_${profile.student.last_name}_${termPayment.term.replace(/\s/g, '_')}.pdf`);
+    }
 
     if (!profile) {
         return (
@@ -74,18 +84,17 @@ export function StudentFinancials() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Term</TableHead>
-                                        <TableHead>Bill Number</TableHead>
                                         <TableHead>Total Billed</TableHead>
                                         <TableHead>Amount Paid</TableHead>
                                         <TableHead>Outstanding</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {financialDetails.payment_history.map((rec, i) => (
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{rec.term}</TableCell>
-                                            <TableCell className="font-mono">{rec.bill_number}</TableCell>
                                             <TableCell>{formatCurrency(rec.total_fees)}</TableCell>
                                             <TableCell className="text-green-600">{formatCurrency(rec.amount_paid)}</TableCell>
                                             <TableCell className="text-red-600">{formatCurrency(rec.outstanding)}</TableCell>
@@ -93,6 +102,11 @@ export function StudentFinancials() {
                                                 <Badge variant={rec.status === 'Paid' ? 'secondary' : (rec.status === 'Partially Paid' ? 'default' : 'destructive')}>
                                                     {rec.status}
                                                 </Badge>
+                                            </TableCell>
+                                             <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handlePrintInvoice(rec)}>
+                                                    <Printer className="h-4 w-4"/>
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
