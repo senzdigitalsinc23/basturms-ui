@@ -3,6 +3,7 @@
 
 
 
+
 export type StudentReport = {
     student: StudentProfile;
     term: string;
@@ -205,6 +206,12 @@ export interface ClassAssignmentActivity {
     activity_id: string;
 }
 
+export interface PromotionCriteria {
+    minAverageScore: number;
+    coreSubjects: string[];
+    minCoreSubjectsToPass: number;
+}
+
 // Student Management Types
 export type AdmissionStatus = 'Admitted' | 'Pending' | 'Graduated' | 'Stopped' | 'Transferred' | 'Suspended' | 'Withdrawn';
 
@@ -362,6 +369,10 @@ export type TermlyBill = {
     billed_student_ids: string[];
     created_at: string;
     created_by: string; // user id
+    status: 'Pending' | 'Approved' | 'Rejected';
+    approved_by?: string; // user id
+    approved_at?: string;
+    approver_comments?: string;
 }
 
 export type TermPayment = {

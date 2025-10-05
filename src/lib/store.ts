@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import {
@@ -48,6 +47,7 @@ import {
   TermPayment,
   TermlyBill,
   SchoolLevel,
+  PromotionCriteria,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -110,6 +110,7 @@ const ROLE_PERMISSIONS_KEY = 'campusconnect_role_permissions';
 const BACKUP_SETTINGS_KEY = 'campusconnect_backup_settings';
 const ASSIGNMENT_ACTIVITIES_KEY = 'campusconnect_assignment_activities';
 const CLASS_ASSIGNMENT_ACTIVITIES_KEY = 'campusconnect_class_assignment_activities';
+const PROMOTION_CRITERIA_KEY = 'campusconnect_promotion_criteria';
 
 
 // New keys for staff management
@@ -448,7 +449,7 @@ export const initializeStore = () => {
         ROLES_KEY, USERS_KEY, LOGS_KEY, AUTH_LOGS_KEY, STUDENTS_KEY,
         CLASSES_KEY, STAFF_PROFILES_KEY, FEE_STRUCTURES_KEY, TERMLY_BILLS_KEY,
         TIMETABLE_KEY, STUDENT_REPORTS_KEY, ACADEMIC_YEARS_KEY, CALENDAR_EVENTS_KEY,
-        GRADING_SCHEME_KEY, ROLE_PERMISSIONS_KEY, BACKUP_SETTINGS_KEY,
+        GRADING_SCHEME_KEY, ROLE_PERMISSIONS_KEY, BACKUP_SETTINGS_KEY, PROMOTION_CRITERIA_KEY,
         ASSIGNMENT_ACTIVITIES_KEY, CLASS_ASSIGNMENT_ACTIVITIES_KEY, LEAVE_REQUESTS_KEY,
         STAFF_KEY, DECLINED_STAFF_KEY, STAFF_ACADEMIC_HISTORY_KEY, STAFF_DOCUMENTS_KEY,
         STAFF_APPOINTMENT_HISTORY_KEY, STAFF_ATTENDANCE_RECORDS_KEY, SUBJECTS_KEY,
@@ -485,6 +486,7 @@ export const initializeStore = () => {
         saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
         saveToStorage(LEAVE_REQUESTS_KEY, getInitialLeaveRequests());
         saveToStorage(BACKUP_SETTINGS_KEY, { autoBackupEnabled: true, frequency: 'daily', backupTime: '00:00', lastBackup: null });
+        saveToStorage(PROMOTION_CRITERIA_KEY, { minAverageScore: 50, coreSubjects: [], minCoreSubjectsToPass: 0 });
         saveToStorage(STAFF_KEY, getInitialStaff());
         saveToStorage(DECLINED_STAFF_KEY, []);
         saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, []);
@@ -894,6 +896,8 @@ export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSettin
 export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
 export const getRolePermissions = (): RolePermissions => getFromStorage<RolePermissions>(ROLE_PERMISSIONS_KEY, {});
 export const saveRolePermissions = (permissions: RolePermissions): void => saveToStorage(ROLE_PERMISSIONS_KEY, permissions);
+export const getPromotionCriteria = (): PromotionCriteria | null => getFromStorage<PromotionCriteria | null>(PROMOTION_CRITERIA_KEY, null);
+export const savePromotionCriteria = (criteria: PromotionCriteria): void => saveToStorage(PROMOTION_CRITERIA_KEY, criteria);
 
 // Assignment Activity Functions
 export const getAssignmentActivities = (): AssignmentActivity[] => getFromStorage<AssignmentActivity[]>(ASSIGNMENT_ACTIVITIES_KEY, []);
