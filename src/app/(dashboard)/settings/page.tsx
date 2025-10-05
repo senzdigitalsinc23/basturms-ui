@@ -8,6 +8,7 @@ import { RolesPermissionsSettings } from '@/components/settings/roles-permission
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { BackupSettings } from '@/components/settings/backup-settings';
 import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
   const { user } = useAuth();
