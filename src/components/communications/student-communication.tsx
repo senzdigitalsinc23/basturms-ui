@@ -27,12 +27,15 @@ export function StudentCommunication() {
     useEffect(() => {
         if (!selectedStudent && filteredStudents.length > 0) {
             setSelectedStudent(filteredStudents[0]);
+        } else if (selectedStudent && !filteredStudents.find(s => s.student.student_no === selectedStudent.student.student_no)) {
+            // If the selected student is filtered out, select the new first one
+            setSelectedStudent(filteredStudents[0] || null);
         }
     }, [filteredStudents, selectedStudent]);
 
     return (
         <Card className="grid grid-cols-[300px_1fr] h-[calc(100vh-12rem)]">
-            <div className="border-r">
+            <div className="border-r flex flex-col">
                 <div className="p-4 border-b">
                     <div className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -44,7 +47,7 @@ export function StudentCommunication() {
                         />
                     </div>
                 </div>
-                <ScrollArea className="h-[calc(100%-4.5rem)]">
+                <ScrollArea className="flex-1">
                     {filteredStudents.map(student => (
                         <button
                             key={student.student.student_no}
