@@ -1,8 +1,7 @@
 
-
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
-import { StudentCommunication } from '@/components/communications/student-communication';
+import { MessagingInterface } from '@/components/communications/messaging-interface';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,8 +70,12 @@ function NotificationsList() {
 
 export default function CommunicationsPage() {
   const { user } = useAuth();
+  const isAdminOrHeadmaster = user?.role === 'Admin' || user?.role === 'Headmaster';
   
-  if (user?.role === 'Admin' || user?.role === 'Headmaster') {
+  const communicationTabs = ['Announcements', 'Messaging', 'Notifications'];
+  const teacherTabs = ['Announcements', 'Messaging'];
+
+  if (isAdminOrHeadmaster) {
     return (
       <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Headmaster']}>
         <div className="space-y-6">
@@ -82,17 +85,17 @@ export default function CommunicationsPage() {
                     Manage all school communications, including internal messaging and system-wide notifications.
                 </p>
             </div>
-            <Tabs defaultValue="messaging">
+            <Tabs defaultValue="announcements" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="messaging">Student Messaging</TabsTrigger>
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
+                    <TabsTrigger value="messaging">Internal Messaging</TabsTrigger>
                     <TabsTrigger value="notifications">System Notifications</TabsTrigger>
                 </TabsList>
-                <TabsContent value="messaging">
-                    <StudentCommunication />
-                </TabsContent>
                  <TabsContent value="announcements">
                     <AnnouncementManagement />
+                </TabsContent>
+                <TabsContent value="messaging">
+                    <MessagingInterface />
                 </TabsContent>
                 <TabsContent value="notifications">
                     <NotificationsList />
@@ -103,30 +106,29 @@ export default function CommunicationsPage() {
     );
   }
 
-  // Default view for Teachers (and other roles)
+  // Default view for Teachers
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
        <div className="space-y-6">
             <div>
                 <h1 className="text-3xl font-bold font-headline">Communications</h1>
                 <p className="text-muted-foreground">
-                    View announcements and messages.
+                    View announcements and send messages to students, parents, and staff.
                 </p>
             </div>
              <Tabs defaultValue="announcements">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
-                    <TabsTrigger value="messaging">Student Messaging</TabsTrigger>
+                    <TabsTrigger value="messaging">Internal Messaging</TabsTrigger>
                 </TabsList>
                 <TabsContent value="announcements">
                     <AnnouncementManagement />
                 </TabsContent>
                 <TabsContent value="messaging">
-                    <StudentCommunication />
+                    <MessagingInterface />
                 </TabsContent>
             </Tabs>
         </div>
     </ProtectedRoute>
   );
 }
-

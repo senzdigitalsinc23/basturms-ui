@@ -33,6 +33,8 @@ export function AnnouncementManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const canCreate = user?.role === 'Admin' || user?.role === 'Headmaster';
+
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementSchema),
   });
@@ -80,11 +82,13 @@ export function AnnouncementManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => handleOpenForm()}>
-          <PlusCircle className="mr-2" /> Create Announcement
-        </Button>
-      </div>
+      {canCreate && (
+        <div className="flex justify-end">
+            <Button onClick={() => handleOpenForm()}>
+            <PlusCircle className="mr-2" /> Create Announcement
+            </Button>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {announcements.map(announcement => (
