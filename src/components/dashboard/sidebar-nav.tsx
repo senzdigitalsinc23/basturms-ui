@@ -157,9 +157,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Communications',
       icon: MessageSquare,
       items: [
-        { href: '/communications', label: 'Student Messaging' },
-        { href: '/announcements', label: 'Announcements' },
-        { href: '/notifications', label: 'System Notifications' },
+        { href: '/communications', label: 'Messaging & Alerts' },
       ],
     },
      {
@@ -201,8 +199,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Communications',
       icon: MessageSquare,
       items: [
-        { href: '/communications', label: 'Student Messaging' },
-        { href: '/announcements', label: 'Announcements' },
+        { href: '/communications', label: 'Announcements & Messages' },
       ],
     },
     { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },

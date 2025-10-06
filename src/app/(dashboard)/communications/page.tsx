@@ -1,4 +1,5 @@
 
+
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
 import { StudentCommunication } from '@/components/communications/student-communication';
@@ -8,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Check, Mail, Bell, CheckCheck } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Notification, useNotifications, toggleNotificationRead, markAllAsRead as globalMarkAllAsRead } from '@/lib/notifications';
+import { useNotifications, toggleNotificationRead, markAllAsRead as globalMarkAllAsRead } from '@/lib/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AnnouncementManagement } from '@/components/communications/announcements';
 
 
 function NotificationsList() {
@@ -20,7 +22,7 @@ function NotificationsList() {
     };
 
     const markAllAsRead = () => {
-        globalMarkAllAsRead();
+        globalMarkAllAsRead(notifications);
     };
     
     return (
@@ -70,9 +72,9 @@ function NotificationsList() {
 export default function CommunicationsPage() {
   const { user } = useAuth();
   
-  if (user?.role === 'Admin') {
+  if (user?.role === 'Admin' || user?.role === 'Headmaster') {
     return (
-      <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
+      <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Headmaster']}>
         <div className="space-y-6">
             <div>
                 <h1 className="text-3xl font-bold font-headline">Communications</h1>
@@ -81,12 +83,16 @@ export default function CommunicationsPage() {
                 </p>
             </div>
             <Tabs defaultValue="messaging">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="messaging">Student Messaging</TabsTrigger>
+                    <TabsTrigger value="announcements">Announcements</TabsTrigger>
                     <TabsTrigger value="notifications">System Notifications</TabsTrigger>
                 </TabsList>
                 <TabsContent value="messaging">
                     <StudentCommunication />
+                </TabsContent>
+                 <TabsContent value="announcements">
+                    <AnnouncementManagement />
                 </TabsContent>
                 <TabsContent value="notifications">
                     <NotificationsList />
@@ -101,14 +107,26 @@ export default function CommunicationsPage() {
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
        <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold font-headline">Student Communications</h1>
-          <p className="text-muted-foreground">
-            View and respond to messages from students.
-          </p>
+            <div>
+                <h1 className="text-3xl font-bold font-headline">Communications</h1>
+                <p className="text-muted-foreground">
+                    View announcements and messages.
+                </p>
+            </div>
+             <Tabs defaultValue="announcements">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="announcements">Announcements</TabsTrigger>
+                    <TabsTrigger value="messaging">Student Messaging</TabsTrigger>
+                </TabsList>
+                <TabsContent value="announcements">
+                    <AnnouncementManagement />
+                </TabsContent>
+                <TabsContent value="messaging">
+                    <StudentCommunication />
+                </TabsContent>
+            </Tabs>
         </div>
-        <StudentCommunication />
-      </div>
     </ProtectedRoute>
   );
 }
+
