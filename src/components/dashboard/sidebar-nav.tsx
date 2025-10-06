@@ -153,9 +153,15 @@ const menuItems: Record<Role, NavItem[]> = {
       ],
     },
     { href: '/expenses', label: 'Expense Management', icon: WalletCards },
-    { href: '/announcements', label: 'Announcements', icon: Megaphone },
-    { href: '/communications', label: 'Communications', icon: MessageSquare },
-    { href: '/notifications', label: 'Notifications', icon: Bell },
+    {
+      label: 'Communications',
+      icon: MessageSquare,
+      items: [
+        { href: '/communications', label: 'Student Messaging' },
+        { href: '/announcements', label: 'Announcements' },
+        { href: '/notifications', label: 'System Notifications' },
+      ],
+    },
      {
       label: 'Attendance',
       icon: CalendarCheck,
@@ -191,8 +197,14 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/my-classes', label: 'My Classes & Students', icon: Users },
     { href: '/student-management/reports', label: 'Report Generation', icon: FileText },
     { href: '/academics/lesson-notes', label: 'Lesson Notes', icon: Clipboard },
-    { href: '/announcements', label: 'Announcements', icon: Megaphone },
-    { href: '/communications', label: 'Communications', icon: MessageSquare },
+    {
+      label: 'Communications',
+      icon: MessageSquare,
+      items: [
+        { href: '/communications', label: 'Student Messaging' },
+        { href: '/announcements', label: 'Announcements' },
+      ],
+    },
     { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
   Student: [
