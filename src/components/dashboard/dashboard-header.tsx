@@ -1,4 +1,3 @@
-
 'use client';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserNav } from './user-nav';
@@ -7,6 +6,7 @@ import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useNotifications, markAllAsRead } from '@/lib/notifications';
 import Link from 'next/link';
+import { Badge } from '../ui/badge';
 
 export function DashboardHeader() {
   const currentNotifications = useNotifications();
