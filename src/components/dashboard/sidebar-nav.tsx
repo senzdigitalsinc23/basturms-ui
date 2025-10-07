@@ -43,7 +43,6 @@ import {
   FileText,
   Trophy,
   WalletCards,
-  TrendingUp,
   MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -158,13 +157,14 @@ const menuItems: Record<Role, NavItem[]> = {
       icon: Library,
       items: [
         { href: '/extra-curricular/clubs', label: 'Clubs & Societies' },
+        { href: '/extra-curricular/sports', label: 'Sports Teams' },
       ],
     },
     {
       label: 'Communications',
       icon: MessageSquare,
       items: [
-        { href: '/communications', label: 'Messaging & Alerts' },
+        { href: '/communications', label: 'Announcements & Messages' },
       ],
     },
      {
