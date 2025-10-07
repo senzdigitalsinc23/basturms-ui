@@ -1,4 +1,3 @@
-
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
 import { AssetManagement } from '@/components/inventory/assets/asset-management';

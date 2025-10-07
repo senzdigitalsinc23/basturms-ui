@@ -1,11 +1,9 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import {
   getAssets,
   saveAssets,
   addAuditLog,
-  getUsers,
 } from '@/lib/store';
 import { Asset, AssetCategory, AssetCondition, AssetStatus, ALL_ASSET_CATEGORIES, ALL_ASSET_CONDITIONS, ALL_ASSET_STATUSES } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
@@ -38,15 +36,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { CalendarIcon, PlusCircle, Trash2, Edit } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { DataTable } from './data-table';
 import { columns } from './columns';
 import { cn } from '@/lib/utils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-
 
 const assetSchema = z.object({
   name: z.string().min(1, 'Asset name is required.'),
@@ -124,7 +120,6 @@ function AssetForm({ onSave, existingAsset, isEditMode }: { onSave: (data: Asset
     </Form>
   )
 }
-
 
 export function AssetManagement() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -213,4 +208,3 @@ export function AssetManagement() {
     </>
   );
 }
-
