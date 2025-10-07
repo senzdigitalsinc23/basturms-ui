@@ -206,6 +206,7 @@ const menuItems: Record<Role, NavItem[]> = {
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/attendance/my-classes', label: 'Student Attendance', icon: CalendarCheck },
     { href: '/attendance/history', label: 'Attendance History', icon: History },
     { href: '/academics/grading', label: 'Grading &amp; Scores', icon: PenSquare },
@@ -238,6 +239,7 @@ const menuItems: Record<Role, NavItem[]> = {
   Headmaster: [
     { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
      {
       label: 'Staff Management',
       icon: BookUser,
@@ -258,12 +260,14 @@ const menuItems: Record<Role, NavItem[]> = {
   Librarian: [
     { href: '/dashboard/librarian', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/#', label: 'Book Catalogue', icon: Book },
     { href: '/#', label: 'Checkouts', icon: History },
   ],
   Security: [
     { href: '/dashboard/security', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/#', label: 'Campus Alerts', icon: Shield },
     { href: '/#', label: 'Visitor Logs', icon: BookUser },
   ],
@@ -274,6 +278,7 @@ const menuItems: Record<Role, NavItem[]> = {
       icon: LayoutDashboard,
     },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/#', label: 'Purchase Orders', icon: Truck },
     { href: '/#', label: 'Suppliers', icon: Building },
     { href: '/inventory/assets', label: 'Asset Register', icon: Package },
@@ -285,6 +290,7 @@ const menuItems: Record<Role, NavItem[]> = {
       icon: LayoutDashboard,
     },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     {
       label: 'Inventory &amp; Assets',
       icon: Package,
@@ -298,24 +304,28 @@ const menuItems: Record<Role, NavItem[]> = {
   Proprietor: [
     { href: '/dashboard/proprietor', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/#', label: 'Financials', icon: Briefcase },
     { href: '/#', label: 'School Analytics', icon: History },
   ],
   'I.T Manager': [
     { href: '/dashboard/i.t-manager', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/#', label: 'System Status', icon: Laptop },
     { href: '/#', label: 'User Support', icon: Users },
   ],
   'I.T Support': [
     { href: '/dashboard/i.t-support', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/#', label: 'Open Tickets', icon: Laptop },
     { href: '/#', label: 'Knowledge Base', icon: Book },
   ],
    Accountant: [
     { href: '/dashboard/accountant', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/financials/bill-preparation', label: 'Bill Preparation' },
     { href: '/financials/fee-collection', label: 'Collections' },
     { href: '/financials/payroll', label: 'Payroll' },
