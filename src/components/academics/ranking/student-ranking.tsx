@@ -172,4 +172,3 @@ export function StudentRanking() {
         </div>
     );
 }
-

@@ -1,3 +1,4 @@
+
 'use client';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';

@@ -58,7 +58,7 @@ export function PromotionSuggestions() {
         return (
              <Card id="promotions">
                 <CardHeader>
-                    <CardTitle>Automatic Promotion & Graduation</CardTitle>
+                    <CardTitle>Automatic Promotion &amp; Graduation</CardTitle>
                     <CardDescription>The following classes have active students and are ready for end-of-year processing.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -78,7 +78,7 @@ export function PromotionSuggestions() {
         <Card id="promotions">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle>Automatic Promotion & Graduation</CardTitle>
+                    <CardTitle>Automatic Promotion &amp; Graduation</CardTitle>
                     <CardDescription>The following classes have active students and are ready for end-of-year processing.</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>

@@ -154,7 +154,7 @@ const menuItems: Record<Role, NavItem[]> = {
     },
     { href: '/expenses', label: 'Expense Management', icon: WalletCards },
     {
-      label: 'Inventory & Assets',
+      label: 'Inventory &amp; Assets',
       icon: Package,
       items: [
         { href: '/inventory/assets', label: 'Asset Register' },
@@ -166,7 +166,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Extra Curricular',
       icon: Library,
       items: [
-        { href: '/extra-curricular/clubs', label: 'Clubs & Societies' },
+        { href: '/extra-curricular/clubs', label: 'Clubs &amp; Societies' },
         { href: '/extra-curricular/sports', label: 'Sports Teams' },
       ],
     },
@@ -174,7 +174,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Communications',
       icon: MessageSquare,
       items: [
-        { href: '/communications', label: 'Announcements & Messages' },
+        { href: '/communications', label: 'Announcements &amp; Messages' },
       ],
     },
      {
@@ -208,15 +208,15 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/attendance/my-classes', label: 'Student Attendance', icon: CalendarCheck },
     { href: '/attendance/history', label: 'Attendance History', icon: History },
-    { href: '/academics/grading', label: 'Grading & Scores', icon: PenSquare },
-    { href: '/my-classes', label: 'My Classes & Students', icon: Users },
+    { href: '/academics/grading', label: 'Grading &amp; Scores', icon: PenSquare },
+    { href: '/my-classes', label: 'My Classes &amp; Students', icon: Users },
     { href: '/student-management/reports', label: 'Report Generation', icon: FileText },
     { href: '/academics/lesson-notes', label: 'Lesson Notes', icon: Clipboard },
     {
       label: 'Communications',
       icon: MessageSquare,
       items: [
-        { href: '/communications', label: 'Announcements & Messages' },
+        { href: '/communications', label: 'Announcements &amp; Messages' },
       ],
     },
     { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
@@ -250,7 +250,9 @@ const menuItems: Record<Role, NavItem[]> = {
         { href: '/staff-management/performance', label: 'Performance' },
       ]
     },
-    { href: '/#', label: 'Curriculum', icon: BookUser },
+    { href: '/academics/ranking', label: 'Academic Ranking', icon: Trophy },
+    { href: '/financials/reports', label: 'Financial Reports', icon: FileText },
+    { href: '/attendance/history', label: 'Attendance History', icon: History },
     { href: '/academics/calendar', label: 'Academic Calendar', icon: Calendar },
   ],
   Librarian: [
@@ -284,7 +286,7 @@ const menuItems: Record<Role, NavItem[]> = {
     },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     {
-      label: 'Inventory & Assets',
+      label: 'Inventory &amp; Assets',
       icon: Package,
       items: [
         { href: '/inventory/assets', label: 'Asset Register' },
@@ -322,7 +324,7 @@ const menuItems: Record<Role, NavItem[]> = {
   ],
   Guest: [
     { href: '/dashboard/guest', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/settings', label: 'Backup & Recovery', icon: History }
+    { href: '/settings', label: 'Backup &amp; Recovery', icon: History }
   ],
 };
 
