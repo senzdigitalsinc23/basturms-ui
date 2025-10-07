@@ -1,112 +1,5 @@
 
 
-
-export type Club = {
-  id: string;
-  name: string;
-  description?: string;
-  teacher_id: string; // Staff ID
-  student_ids: string[]; // Student IDs
-};
-
-export type Sport = {
-  id: string;
-  name: string;
-  description?: string;
-  coach_id: string; // Staff ID
-  student_ids: string[]; // Student IDs
-};
-
-export type Achievement = {
-  id: string;
-  title: string;
-  description: string;
-  date: string; // ISO string
-};
-
-export type Announcement = {
-  id: string;
-  title: string;
-  content: string;
-  audience: Audience;
-  created_at: string; // ISO string
-  author_id: string; // user id
-  author_name: string; // user name for display
-};
-
-export type Audience = 'All School' | 'Teachers' | 'Parents' | 'Students';
-
-
-export type PayrollStatus = 'Pending' | 'Approved' | 'Rejected';
-export interface Payroll {
-    id: string;
-    month: string; // e.g., "June 2024"
-    generated_at: string;
-    generated_by: string; // user id
-    status: PayrollStatus;
-    items: {
-        staff_id: string;
-        staff_name: string;
-        base_salary: number;
-        deductions: number;
-        net_salary: number;
-    }[];
-    total_amount: number;
-    approved_by?: string; // user id
-    approved_at?: string;
-}
-
-export type ExpenseCategory = 'Salaries' | 'Utilities' | 'Maintenance' | 'Supplies' | 'Procurement' | 'Miscellaneous';
-
-export interface Expense {
-  id: string;
-  date: string; // ISO string
-  description: string;
-  category: ExpenseCategory;
-  amount: number;
-  vendor?: string;
-  paymentMethod: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Cheque';
-  recorded_by: string; // user id
-}
-
-
-
-
-
-export type StudentReport = {
-    student: StudentProfile;
-    term: string;
-    year: string;
-    nextTermBegins: string | null;
-    subjects: {
-        subjectName: string;
-        rawSbaScore: number;
-        sbaScore: number;
-        rawExamScore: number;
-        examScore: number;
-        totalScore: number;
-        grade: string;
-        position: number;
-        remarks: string;
-    }[];
-    attendance: {
-        daysAttended: number;
-        totalDays: number;
-    };
-    conduct: string;
-    talentAndInterest: string;
-    classTeacherRemarks: string;
-    headTeacherRemarks: string;
-    schoolProfile: any; // Using 'any' for now, can be SchoolProfileData
-    className: string;
-    status: 'Provisional' | 'Final';
-    classTeacherId?: string;
-    headTeacherId?: string;
-    classTeacherSignature?: string | null;
-    headTeacherSignature?: string | null;
-};
-
-
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -140,8 +33,6 @@ export const ALL_ROLES: Role[] = [
   'Guest',
 ];
 
-export const ALL_ACCOUNTANT_ROLES: Role[] = ['Accountant'];
-
 export const PERMISSIONS = {
   'student:create': 'Create Student',
   'student:view': 'View Student',
@@ -172,12 +63,156 @@ export const PERMISSIONS = {
   'financials:billing': 'Prepare and Send Bills',
   'financials:collect': 'Record Fee Payments',
   'financials:reports': 'View Financial Reports',
+  'inventory:view': 'View Inventory',
+  'inventory:create': 'Create Inventory Item',
+  'inventory:update': 'Update Inventory Item',
+  'inventory:delete': 'Delete Inventory Item',
+  'inventory:allocate': 'Allocate Inventory',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 export type RolePermissions = Partial<Record<Role, Permission[]>>;
 
+
+// Inventory Management Types
+export type AssetStatus = 'In Stock' | 'Allocated' | 'In Repair' | 'Disposed';
+export type AssetCondition = 'New' | 'Good' | 'Fair' | 'Poor';
+export type AssetCategory = 'IT Equipment' | 'Furniture' | 'Lab Equipment' | 'Office Supplies' | 'Vehicle' | 'Other';
+
+export const ALL_ASSET_STATUSES: AssetStatus[] = ['In Stock', 'Allocated', 'In Repair', 'Disposed'];
+export const ALL_ASSET_CONDITIONS: AssetCondition[] = ['New', 'Good', 'Fair', 'Poor'];
+export const ALL_ASSET_CATEGORIES: AssetCategory[] = ['IT Equipment', 'Furniture', 'Lab Equipment', 'Office Supplies', 'Vehicle', 'Other'];
+
+export type AssetLog = {
+    date: string; // ISO string
+    type: 'Maintenance' | 'Depreciation' | 'Status Change';
+    details: string;
+    cost?: number;
+    recorded_by: string; // user id
+};
+
+export type AssetAllocation = {
+    assetId: string;
+    allocatedTo: string; // Can be a Staff ID or Class ID
+    allocationType: 'Staff' | 'Class';
+    date: string; // ISO string
+    condition: AssetCondition;
+    notes?: string;
+};
+
+export interface Asset {
+    id: string;
+    name: string;
+    category: AssetCategory;
+    purchaseDate: string; // ISO string
+    purchaseCost: number;
+    quantity: number;
+    status: AssetStatus;
+    currentLocation: string; // e.g. 'Main Store', 'Class 5B', 'Staff - John Doe'
+    condition: AssetCondition;
+    logs: AssetLog[];
+}
+
+
+export type Club = {
+  id: string;
+  name: string;
+  description?: string;
+  teacher_id: string; // Staff ID
+  student_ids: string[]; // Student IDs
+};
+
+export type Sport = {
+  id: string;
+  name: string;
+  description?: string;
+  coach_id: string; // Staff ID
+  student_ids: string[]; // Student IDs
+};
+
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // ISO string
+};
+
+export type Audience = 'All School' | 'Teachers' | 'Parents' | 'Students';
+export type Announcement = {
+  id: string;
+  title: string;
+  content: string;
+  audience: Audience;
+  created_at: string; // ISO string
+  author_id: string; // user id
+  author_name: string; // user name for display
+};
+
+export type PayrollStatus = 'Pending' | 'Approved' | 'Rejected';
+export interface Payroll {
+    id: string;
+    month: string; // e.g., "June 2024"
+    generated_at: string;
+    generated_by: string; // user id
+    status: PayrollStatus;
+    items: {
+        staff_id: string;
+        staff_name: string;
+        base_salary: number;
+        deductions: number;
+        net_salary: number;
+    }[];
+    total_amount: number;
+    approved_by?: string; // user id
+    approved_at?: string;
+}
+
+export type ExpenseCategory = 'Salaries' | 'Utilities' | 'Maintenance' | 'Supplies' | 'Procurement' | 'Miscellaneous';
+
+export interface Expense {
+  id: string;
+  date: string; // ISO string
+  description: string;
+  category: ExpenseCategory;
+  amount: number;
+  vendor?: string;
+  paymentMethod: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Cheque';
+  recorded_by: string; // user id
+}
+
+export type StudentReport = {
+    student: StudentProfile;
+    term: string;
+    year: string;
+    nextTermBegins: string | null;
+    subjects: {
+        subjectName: string;
+        rawSbaScore: number;
+        sbaScore: number;
+        rawExamScore: number;
+        examScore: number;
+        totalScore: number;
+        grade: string;
+        position: number;
+        remarks: string;
+    }[];
+    attendance: {
+        daysAttended: number;
+        totalDays: number;
+    };
+    conduct: string;
+    talentAndInterest: string;
+    classTeacherRemarks: string;
+    headTeacherRemarks: string;
+    schoolProfile: any; // Using 'any' for now, can be SchoolProfileData
+    className: string;
+    status: 'Provisional' | 'Final';
+    classTeacherId?: string;
+    headTeacherId?: string;
+    classTeacherSignature?: string | null;
+    headTeacherSignature?: string | null;
+};
 
 export interface Class {
   id: string;

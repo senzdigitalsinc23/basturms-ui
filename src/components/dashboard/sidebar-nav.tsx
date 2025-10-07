@@ -44,6 +44,7 @@ import {
   Trophy,
   WalletCards,
   MessageSquare,
+  Package,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -152,6 +153,15 @@ const menuItems: Record<Role, NavItem[]> = {
       ],
     },
     { href: '/expenses', label: 'Expense Management', icon: WalletCards },
+    {
+      label: 'Inventory & Assets',
+      icon: Package,
+      items: [
+        { href: '/inventory/assets', label: 'Asset Register' },
+        { href: '/inventory/allocations', label: 'Asset Allocations' },
+        { href: '/inventory/maintenance', label: 'Maintenance Logs' },
+      ],
+    },
     {
       label: 'Extra Curricular',
       icon: Library,
@@ -264,6 +274,7 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/#', label: 'Purchase Orders', icon: Truck },
     { href: '/#', label: 'Suppliers', icon: Building },
+    { href: '/inventory/assets', label: 'Asset Register', icon: Package },
   ],
   'Stores Manager': [
     {
@@ -272,8 +283,15 @@ const menuItems: Record<Role, NavItem[]> = {
       icon: LayoutDashboard,
     },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
-    { href: '/#', label: 'Inventory', icon: Warehouse },
-    { href: '/#', label: 'Requisitions', icon: History },
+    {
+      label: 'Inventory & Assets',
+      icon: Package,
+      items: [
+        { href: '/inventory/assets', label: 'Asset Register' },
+        { href: '/inventory/allocations', label: 'Asset Allocations' },
+        { href: '/inventory/maintenance', label: 'Maintenance Logs' },
+      ],
+    },
   ],
   Proprietor: [
     { href: '/dashboard/proprietor', label: 'Dashboard', icon: LayoutDashboard },
