@@ -1,4 +1,25 @@
 
+export type Club = {
+  id: string;
+  name: string;
+  description?: string;
+  teacher_id: string; // Staff ID
+  student_ids: string[]; // Student IDs
+};
+
+export type Sport = {
+  id: string;
+  name: string;
+  coach_id: string; // Staff ID
+  student_ids: string[]; // Student IDs
+};
+
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // ISO string
+};
 
 export type Announcement = {
   id: string;
@@ -118,12 +139,6 @@ export const ALL_ROLES: Role[] = [
 
 export const ALL_ACCOUNTANT_ROLES: Role[] = ['Accountant'];
 
-export interface RoleStorage {
-  id: string;
-  name: Role;
-}
-
-// Permissions
 export const PERMISSIONS = {
   'student:create': 'Create Student',
   'student:view': 'View Student',
@@ -460,6 +475,7 @@ export interface StudentProfile {
     communicationLogs?: CommunicationLog[];
     uploadedDocuments?: UploadedDocument[];
     financialDetails?: FinancialDetails;
+    achievements?: Achievement[];
 }
 
 // Staff Management Types
@@ -578,5 +594,3 @@ export interface TeacherSubject {
     staff_id: string;
     subject_id: string;
 }
-
-    
