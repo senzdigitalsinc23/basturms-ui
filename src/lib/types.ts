@@ -93,8 +93,11 @@ export type AssetLog = {
 };
 
 export type AssetAllocation = {
+    id: string;
     assetId: string;
-    allocatedTo: string; // Can be a Staff ID or Class ID
+    assetName: string;
+    allocatedToId: string; // Can be a Staff ID or Class ID
+    allocatedToName: string;
     allocationType: 'Staff' | 'Class';
     date: string; // ISO string
     condition: AssetCondition;
