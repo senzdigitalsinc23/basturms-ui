@@ -157,6 +157,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Inventory & Assets',
       icon: Package,
       items: [
+        { href: '/inventory/assets', label: 'Asset Register' },
         { href: '/inventory/allocations', label: 'Asset Allocations' },
         { href: '/inventory/maintenance', label: 'Maintenance Logs' },
       ],
@@ -286,6 +287,7 @@ const menuItems: Record<Role, NavItem[]> = {
       label: 'Inventory & Assets',
       icon: Package,
       items: [
+        { href: '/inventory/assets', label: 'Asset Register' },
         { href: '/inventory/allocations', label: 'Asset Allocations' },
         { href: '/inventory/maintenance', label: 'Maintenance Logs' },
       ],
