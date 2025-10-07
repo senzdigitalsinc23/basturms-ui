@@ -1,5 +1,6 @@
 
 
+
 export type Club = {
   id: string;
   name: string;
@@ -11,6 +12,7 @@ export type Club = {
 export type Sport = {
   id: string;
   name: string;
+  description?: string;
   coach_id: string; // Staff ID
   student_ids: string[]; // Student IDs
 };

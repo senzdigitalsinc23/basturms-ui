@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -52,6 +53,7 @@ import {
   Payroll,
   Announcement,
   Club,
+  Sport,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -108,6 +110,7 @@ const EXPENSES_KEY = 'campusconnect_expenses';
 const PAYROLLS_KEY = 'campusconnect_payrolls';
 const ANNOUNCEMENTS_KEY = 'campusconnect_announcements';
 const CLUBS_KEY = 'campusconnect_clubs';
+const SPORTS_KEY = 'campusconnect_sports';
 
 
 // Settings Keys
@@ -487,6 +490,7 @@ export const initializeStore = () => {
         saveToStorage(PAYROLLS_KEY, []);
         saveToStorage(ANNOUNCEMENTS_KEY, []);
         saveToStorage(CLUBS_KEY, []);
+        saveToStorage(SPORTS_KEY, []);
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
         saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
@@ -521,6 +525,9 @@ export const addExpense = (expense: Expense): void => {
 
 export const getClubs = (): Club[] => getFromStorage<Club[]>(CLUBS_KEY, []);
 export const saveClubs = (clubs: Club[]): void => saveToStorage(CLUBS_KEY, clubs);
+
+export const getSports = (): Sport[] => getFromStorage<Sport[]>(SPORTS_KEY, []);
+export const saveSports = (sports: Sport[]): void => saveToStorage(SPORTS_KEY, sports);
 
 export const getAnnouncements = (): Announcement[] => getFromStorage<Announcement[]>(ANNOUNCEMENTS_KEY, []);
 
