@@ -153,19 +153,24 @@ export type Announcement = {
 };
 
 export type PayrollStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface PayrollItem {
+    staff_id: string;
+    staff_name: string;
+    base_salary: number;
+    allowances: number;
+    bonuses: number;
+    gross_salary: number;
+    deductions: number;
+    net_salary: number;
+}
 export interface Payroll {
     id: string;
     month: string; // e.g., "June 2024"
     generated_at: string;
     generated_by: string; // user id
     status: PayrollStatus;
-    items: {
-        staff_id: string;
-        staff_name: string;
-        base_salary: number;
-        deductions: number;
-        net_salary: number;
-    }[];
+    items: PayrollItem[];
     total_amount: number;
     approved_by?: string; // user id
     approved_at?: string;
@@ -524,6 +529,15 @@ export type EmploymentStatus = 'Active' | 'On-leave' | 'Inactive';
 export const ALL_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['Active', 'On-leave', 'Inactive'];
 export type ContractType = 'Full-time' | 'Part-time' | 'Contract';
 
+export interface SalaryAdvance {
+    id: string;
+    amount: number;
+    date_requested: string;
+    repayment_months: number;
+    monthly_deduction: number;
+    repayments_made: number;
+}
+
 export interface Staff {
     staff_id: string;
     user_id: string; // links to User.id
@@ -547,6 +561,7 @@ export interface Staff {
         gps_no: string;
     };
     salary?: number;
+    salary_advances?: SalaryAdvance[];
 }
 
 export interface StaffAcademicHistory {
@@ -635,3 +650,4 @@ export interface TeacherSubject {
     staff_id: string;
     subject_id: string;
 }
+

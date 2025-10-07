@@ -1,21 +1,27 @@
 
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { getStaff, getPayrolls, savePayroll, Payroll, PayrollStatus, addExpense, addAuditLog, getUserById, updateStaff as storeUpdateStaff } from '@/lib/store';
-import { Staff } from '@/lib/types';
+import { getStaff, getPayrolls, savePayroll, Payroll, PayrollStatus, addExpense, addAuditLog, getUserById, updateStaff as storeUpdateStaff, saveStaff } from '@/lib/store';
+import { Staff, PayrollItem, SalaryAdvance } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Loader2, CheckCircle, XCircle, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Loader2, CheckCircle, XCircle, MoreHorizontal, Trash2, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../ui/alert-dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../ui/dropdown-menu';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { DialogContent } from '@radix-ui/react-dialog';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
@@ -25,12 +31,106 @@ const statusColors: Record<PayrollStatus, string> = {
   Rejected: 'bg-red-100 text-red-800',
 };
 
+function PayrollDetailsDialog({ payroll, open, onOpenChange, onUpdate, onGeneratePayslip }: { payroll: Payroll | null, open: boolean, onOpenChange: (open: boolean) => void, onUpdate: (payroll: Payroll) => void, onGeneratePayslip: (item: PayrollItem, payroll: Payroll) => void }) {
+    const [editingItems, setEditingItems] = useState<Record<string, Partial<PayrollItem>>>({});
+
+    useEffect(() => {
+        if (payroll) {
+            const initialEdits: Record<string, Partial<PayrollItem>> = {};
+            payroll.items.forEach(item => {
+                initialEdits[item.staff_id] = { allowances: item.allowances || 0, bonuses: item.bonuses || 0 };
+            });
+            setEditingItems(initialEdits);
+        }
+    }, [payroll]);
+
+    if (!payroll) return null;
+    
+    const handleItemChange = (staffId: string, field: 'allowances' | 'bonuses', value: number) => {
+        setEditingItems(prev => ({
+            ...prev,
+            [staffId]: { ...prev[staffId], [field]: value }
+        }));
+    };
+
+    const handleSave = () => {
+        const updatedItems = payroll.items.map(item => {
+            const edits = editingItems[item.staff_id];
+            if (edits) {
+                const updatedItem = { ...item, ...edits };
+                const grossSalary = (updatedItem.base_salary || 0) + (updatedItem.allowances || 0) + (updatedItem.bonuses || 0);
+                const netSalary = grossSalary - (updatedItem.deductions || 0);
+                return { ...updatedItem, gross_salary: grossSalary, net_salary: netSalary };
+            }
+            return item;
+        });
+        const total_amount = updatedItems.reduce((acc, item) => acc + (item.net_salary || 0), 0);
+        onUpdate({ ...payroll, items: updatedItems, total_amount });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-6xl">
+                <DialogHeader>
+                    <DialogTitle>Payroll Details for {payroll.month}</DialogTitle>
+                    <DialogDescription>Review and adjust allowances or bonuses for this payroll run. Any changes will require re-approval.</DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[70vh] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Staff Name</TableHead>
+                                <TableHead>Base Salary</TableHead>
+                                <TableHead>Allowances</TableHead>
+                                <TableHead>Bonuses</TableHead>
+                                <TableHead>Deductions</TableHead>
+                                <TableHead>Net Salary</TableHead>
+                                <TableHead>Payslip</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {payroll.items.map(item => (
+                                <TableRow key={item.staff_id}>
+                                    <TableCell>{item.staff_name}</TableCell>
+                                    <TableCell>{formatCurrency(item.base_salary)}</TableCell>
+                                    <TableCell>
+                                        <Input type="number" className="w-28" value={editingItems[item.staff_id]?.allowances || 0} onChange={(e) => handleItemChange(item.staff_id, 'allowances', Number(e.target.value))} disabled={payroll.status !== 'Pending'}/>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Input type="number" className="w-28" value={editingItems[item.staff_id]?.bonuses || 0} onChange={(e) => handleItemChange(item.staff_id, 'bonuses', Number(e.target.value))} disabled={payroll.status !== 'Pending'}/>
+                                    </TableCell>
+                                    <TableCell>{formatCurrency(item.deductions || 0)}</TableCell>
+                                    <TableCell>{formatCurrency(item.net_salary)}</TableCell>
+                                    <TableCell>
+                                        <Button variant="ghost" size="icon" onClick={() => onGeneratePayslip(item, payroll)} disabled={payroll.status !== 'Approved'}>
+                                            <Download className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                {payroll.status === 'Pending' && <div className="flex justify-end pt-4"><Button onClick={handleSave}>Save Changes</Button></div>}
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export function PayrollManagement() {
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
+  const [isAdvanceOpen, setIsAdvanceOpen] = useState(false);
+  const [selectedStaffForAdvance, setSelectedStaffForAdvance] = useState<string | undefined>();
+  const [advanceAmount, setAdvanceAmount] = useState<number | ''>('');
+  const [repaymentMonths, setRepaymentMonths] = useState<number | ''>('');
+
+
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -42,6 +142,19 @@ export function PayrollManagement() {
   useEffect(() => {
     refreshData();
   }, []);
+
+  const calculateDeductions = (staffId: string): number => {
+    const s = getStaff().find(st => st.staff_id === staffId);
+    if (!s || !s.salary_advances) return 0;
+    
+    let totalDeduction = 0;
+    s.salary_advances.forEach(adv => {
+        if(adv.repayments_made < adv.repayment_months) {
+            totalDeduction += adv.monthly_deduction;
+        }
+    });
+    return totalDeduction;
+  }
 
   const handleGeneratePayroll = () => {
     if (!user) return;
@@ -55,13 +168,23 @@ export function PayrollManagement() {
         return;
     }
 
-    const payrollItems = staff.map(s => ({
-        staff_id: s.staff_id,
-        staff_name: `${s.first_name} ${s.last_name}`,
-        base_salary: s.salary || 0,
-        deductions: 0, // Placeholder for future implementation
-        net_salary: s.salary || 0,
-    }));
+    const payrollItems = staff.map(s => {
+        const base_salary = s.salary || 0;
+        const deductions = calculateDeductions(s.staff_id);
+        const gross_salary = base_salary; // Allowances/Bonuses are added later
+        const net_salary = gross_salary - deductions;
+
+        return {
+            staff_id: s.staff_id,
+            staff_name: `${s.first_name} ${s.last_name}`,
+            base_salary,
+            allowances: 0,
+            bonuses: 0,
+            gross_salary,
+            deductions,
+            net_salary,
+        }
+    });
     
     const total_amount = payrollItems.reduce((acc, item) => acc + item.net_salary, 0);
 
@@ -77,7 +200,7 @@ export function PayrollManagement() {
     
     const updatedPayrolls = [...payrolls, newPayroll];
     savePayroll(updatedPayrolls);
-    setPayrolls(updatedPayrolls);
+    refreshData();
     
     addAuditLog({
         user: user.email, name: user.name,
@@ -89,38 +212,73 @@ export function PayrollManagement() {
     toast({ title: 'Payroll Generated', description: `Payroll for ${monthStr} has been created and is pending approval.` });
   };
 
+  const handleUpdatePayroll = (updatedPayroll: Payroll) => {
+    const updatedPayrolls = payrolls.map(p => p.id === updatedPayroll.id ? {...updatedPayroll, status: 'Pending'} : p);
+    savePayroll(updatedPayrolls);
+    refreshData();
+    setIsDetailsOpen(false);
+    toast({ title: 'Payroll Updated', description: 'Changes have been saved. The payroll requires re-approval.'});
+  }
+  
+  const handleDeletePayroll = (payrollId: string) => {
+    if (!user || user.role !== 'Admin') {
+        toast({variant: 'destructive', title: 'Permission Denied'});
+        return;
+    }
+    const updatedPayrolls = payrolls.filter(p => p.id !== payrollId);
+    savePayroll(updatedPayrolls);
+    refreshData();
+    toast({title: 'Payroll Deleted'});
+  }
+
   const handleUpdateStatus = (payrollId: string, status: PayrollStatus) => {
     if (!user) return;
-    const updatedPayrolls = payrolls.map(p => {
-        if (p.id === payrollId) {
-            const updatedPayroll = { ...p, status, approved_by: user.id, approved_at: new Date().toISOString() };
-            
-            if (status === 'Approved') {
-                addExpense({
-                    id: `exp_payroll_${p.id}`,
-                    date: new Date().toISOString(),
-                    description: `Salary payment for ${p.month}`,
-                    category: 'Salaries',
-                    amount: p.total_amount,
-                    paymentMethod: 'Bank Transfer',
-                    recorded_by: user.id
-                });
-                toast({ title: 'Payroll Approved', description: `An expense of ${formatCurrency(p.total_amount)} for ${p.month} salaries has been recorded.` });
-            } else {
-                 toast({ title: 'Payroll Rejected', description: `Payroll for ${p.month} has been rejected.` });
-            }
+    const payroll = payrolls.find(p => p.id === payrollId);
+    if (!payroll) return;
 
-             addAuditLog({
-                user: user.email, name: user.name,
-                action: `Payroll ${status}`,
-                details: `${status} payroll for ${p.month}.`
-            });
-            return updatedPayroll;
-        }
-        return p;
-    });
+    const updatedPayrolls = payrolls.map(p => p.id === payrollId ? { ...p, status, approved_by: user.id, approved_at: new Date().toISOString() } : p);
+
+    if (status === 'Approved') {
+        addExpense({
+            id: `exp_payroll_${payroll.id}`,
+            date: new Date().toISOString(),
+            description: `Salary payment for ${payroll.month}`,
+            category: 'Salaries',
+            amount: payroll.total_amount,
+            paymentMethod: 'Bank Transfer',
+            recorded_by: user.id
+        });
+        
+        // Update salary advance repayments
+        const staffList = getStaff();
+        payroll.items.forEach(item => {
+            if(item.deductions && item.deductions > 0) {
+                const staffMember = staffList.find(s => s.staff_id === item.staff_id);
+                if (staffMember && staffMember.salary_advances) {
+                    staffMember.salary_advances.forEach(adv => {
+                        if (adv.repayments_made < adv.repayment_months) {
+                            adv.repayments_made += 1;
+                        }
+                    });
+                }
+            }
+        });
+        saveStaff(staffList);
+
+
+        toast({ title: 'Payroll Approved', description: `An expense of ${formatCurrency(payroll.total_amount)} for ${payroll.month} salaries has been recorded.` });
+    } else {
+        toast({ title: 'Payroll Rejected', description: `Payroll for ${payroll.month} has been rejected.` });
+    }
+    
     savePayroll(updatedPayrolls);
-    setPayrolls(updatedPayrolls);
+    refreshData();
+
+    addAuditLog({
+        user: user.email, name: user.name,
+        action: `Payroll ${status}`,
+        details: `${status} payroll for ${payroll.month}.`
+    });
   };
   
   const handleUpdateSalary = (staffId: string, salary: number) => {
@@ -133,15 +291,81 @@ export function PayrollManagement() {
     }
   }
 
+  const handleGeneratePayslip = (item: PayrollItem, payroll: Payroll) => {
+    const doc = new jsPDF();
+    const schoolProfile = getSchoolProfile();
+    doc.setFontSize(18);
+    doc.text(schoolProfile?.schoolName || "CampusConnect School", 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Payslip for ${payroll.month}`, 105, 30, { align: 'center' });
+
+    (doc as any).autoTable({
+        startY: 40,
+        body: [
+            ['Staff Name', item.staff_name],
+            ['Staff ID', item.staff_id],
+        ],
+        theme: 'plain'
+    });
+
+    (doc as any).autoTable({
+        startY: (doc as any).lastAutoTable.finalY + 5,
+        head: [['Earnings', 'Amount', 'Deductions', 'Amount']],
+        body: [
+            ['Base Salary', formatCurrency(item.base_salary), 'Salary Advance', formatCurrency(item.deductions || 0)],
+            ['Allowances', formatCurrency(item.allowances || 0), '', ''],
+            ['Bonuses', formatCurrency(item.bonuses || 0), '', ''],
+        ],
+        foot: [
+            ['Gross Salary', formatCurrency(item.gross_salary || item.base_salary), 'Total Deductions', formatCurrency(item.deductions || 0)],
+            [{ content: `Net Salary: ${formatCurrency(item.net_salary)}`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'center' }}]
+        ],
+        theme: 'striped',
+    });
+    
+    doc.save(`Payslip_${item.staff_name.replace(' ', '_')}_${payroll.month}.pdf`);
+  }
+
+  const handleAddSalaryAdvance = () => {
+    if (!user || !selectedStaffForAdvance || !advanceAmount || !repaymentMonths) return;
+
+    const staffList = getStaff();
+    const staffIndex = staffList.findIndex(s => s.staff_id === selectedStaffForAdvance);
+    if (staffIndex === -1) return;
+
+    const newAdvance: SalaryAdvance = {
+        id: `ADV-${Date.now()}`,
+        amount: advanceAmount,
+        date_requested: new Date().toISOString(),
+        repayment_months: repaymentMonths,
+        monthly_deduction: advanceAmount / repaymentMonths,
+        repayments_made: 0,
+    };
+
+    if (!staffList[staffIndex].salary_advances) {
+        staffList[staffIndex].salary_advances = [];
+    }
+    staffList[staffIndex].salary_advances!.push(newAdvance);
+    saveStaff(staffList);
+    refreshData();
+
+    toast({title: "Salary Advance Recorded"});
+    setIsAdvanceOpen(false);
+    setSelectedStaffForAdvance(undefined);
+    setAdvanceAmount('');
+    setRepaymentMonths('');
+  }
+
   const canGenerate = !payrolls.some(p => p.month === format(new Date(selectedYear, selectedMonth), 'MMMM yyyy'));
   const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
 
 
   return (
     <Tabs defaultValue="payroll">
-      <TabsList>
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="payroll">Payroll Runs</TabsTrigger>
         <TabsTrigger value="salaries">Salary Setup</TabsTrigger>
+        <TabsTrigger value="advances">Salary Advance</TabsTrigger>
       </TabsList>
       <TabsContent value="payroll" className="space-y-6">
         <Card>
@@ -201,22 +425,37 @@ export function PayrollManagement() {
                                         <Badge className={statusColors[p.status]}>{p.status}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {p.status === 'Pending' && isAdmin && (
-                                            <div className="flex gap-1 justify-end">
-                                                <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => handleUpdateStatus(p.id, 'Approved')}>
-                                                    <CheckCircle className="mr-2 h-4 w-4"/> Approve
-                                                </Button>
-                                                <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => handleUpdateStatus(p.id, 'Rejected')}>
-                                                    <XCircle className="mr-2 h-4 w-4"/> Reject
-                                                </Button>
-                                            </div>
-                                        )}
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent>
-                                                <DropdownMenuItem>View Details</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { setSelectedPayroll(p); setIsDetailsOpen(true); }}>View Details</DropdownMenuItem>
+                                                <DropdownMenuSeparator/>
+                                                {p.status === 'Pending' && isAdmin && (
+                                                    <>
+                                                        <DropdownMenuItem onClick={() => handleUpdateStatus(p.id, 'Approved')} className="text-green-600 focus:text-green-600">Approve</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleUpdateStatus(p.id, 'Rejected')} className="text-red-600 focus:text-red-600">Reject</DropdownMenuItem>
+                                                        <DropdownMenuSeparator/>
+                                                    </>
+                                                )}
+                                                {isAdmin && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>This will permanently delete the payroll for {p.month}. This action cannot be undone.</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeletePayroll(p.id)}>Delete</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -232,7 +471,7 @@ export function PayrollManagement() {
         <Card>
             <CardHeader>
                 <CardTitle>Staff Salary Setup</CardTitle>
-                <CardDescription>Set the base salary for each staff member.</CardDescription>
+                <CardDescription>Set the base salary for each staff member. This is the foundational amount used for payroll generation.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="rounded-md border">
@@ -241,7 +480,7 @@ export function PayrollManagement() {
                             <TableRow>
                                 <TableHead>Staff Name</TableHead>
                                 <TableHead>Role</TableHead>
-                                <TableHead>Salary (GHS)</TableHead>
+                                <TableHead>Base Salary (GHS)</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -266,6 +505,29 @@ export function PayrollManagement() {
             </CardContent>
         </Card>
       </TabsContent>
+      <TabsContent value="advances">
+        <Card>
+            <CardHeader>
+                <CardTitle>Salary Advance</CardTitle>
+                <CardDescription>Provide a salary advance to a staff member and set up a repayment plan.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Select value={selectedStaffForAdvance} onValueChange={setSelectedStaffForAdvance}>
+                        <SelectTrigger><SelectValue placeholder="Select Staff Member" /></SelectTrigger>
+                        <SelectContent>
+                            {staff.map(s => <SelectItem key={s.staff_id} value={s.staff_id}>{s.first_name} {s.last_name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Input type="number" placeholder="Advance Amount (GHS)" value={advanceAmount} onChange={(e) => setAdvanceAmount(Number(e.target.value) || '')} />
+                    <Input type="number" placeholder="Repayment Months" value={repaymentMonths} onChange={(e) => setRepaymentMonths(Number(e.target.value) || '')}/>
+                 </div>
+                 <Button onClick={handleAddSalaryAdvance} disabled={!selectedStaffForAdvance || !advanceAmount || !repaymentMonths}>Record Advance</Button>
+            </CardContent>
+        </Card>
+      </TabsContent>
+
+       <PayrollDetailsDialog payroll={selectedPayroll} open={isDetailsOpen} onOpenChange={setIsDetailsOpen} onUpdate={handleUpdatePayroll} onGeneratePayslip={handleGeneratePayslip}/>
     </Tabs>
   );
 }
