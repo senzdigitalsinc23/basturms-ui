@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Loader2, CheckCircle, XCircle, MoreHorizontal, Trash2, Download } from 'lucide-react';
+import { PlusCircle, Loader2, CheckCircle, XCircle, MoreHorizontal, Trash2, Download, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
@@ -95,10 +95,10 @@ function PayrollDetailsDialog({ payroll, open, onOpenChange, onUpdate, onGenerat
                                     <TableCell>{item.staff_name}</TableCell>
                                     <TableCell>{formatCurrency(item.base_salary)}</TableCell>
                                     <TableCell>
-                                        <Input type="number" className="w-28" value={editingItems[item.staff_id]?.allowances || 0} onChange={(e) => handleItemChange(item.staff_id, 'allowances', Number(e.target.value))} disabled={payroll.status !== 'Pending'}/>
+                                        <Input type="number" min="0" className="w-28" value={editingItems[item.staff_id]?.allowances || 0} onChange={(e) => handleItemChange(item.staff_id, 'allowances', Number(e.target.value))} disabled={payroll.status !== 'Pending'}/>
                                     </TableCell>
                                     <TableCell>
-                                        <Input type="number" className="w-28" value={editingItems[item.staff_id]?.bonuses || 0} onChange={(e) => handleItemChange(item.staff_id, 'bonuses', Number(e.target.value))} disabled={payroll.status !== 'Pending'}/>
+                                        <Input type="number" min="0" className="w-28" value={editingItems[item.staff_id]?.bonuses || 0} onChange={(e) => handleItemChange(item.staff_id, 'bonuses', Number(e.target.value))} disabled={payroll.status !== 'Pending'}/>
                                     </TableCell>
                                     <TableCell>{formatCurrency(item.deductions || 0)}</TableCell>
                                     <TableCell>{formatCurrency(item.net_salary)}</TableCell>
@@ -130,14 +130,22 @@ export function PayrollManagement() {
   const [selectedStaffForAdvance, setSelectedStaffForAdvance] = useState<string | undefined>();
   const [advanceAmount, setAdvanceAmount] = useState<number | ''>('');
   const [repaymentMonths, setRepaymentMonths] = useState<number | ''>('');
+  const [salaryInputs, setSalaryInputs] = useState<Record<string, number | string>>({});
 
 
   const { user } = useAuth();
   const { toast } = useToast();
 
   const refreshData = () => {
+    const allStaff = getStaff().filter(s => s.status === 'Active');
     setPayrolls(getPayrolls());
-    setStaff(getStaff().filter(s => s.status === 'Active'));
+    setStaff(allStaff);
+
+    const initialSalaries: Record<string, number | string> = {};
+    allStaff.forEach(s => {
+        initialSalaries[s.staff_id] = s.salary || '';
+    });
+    setSalaryInputs(initialSalaries);
   }
 
   useEffect(() => {
@@ -282,15 +290,25 @@ export function PayrollManagement() {
     });
   };
   
-  const handleUpdateSalary = (staffId: string, salary: number) => {
-    if (!user) return;
-    const staffToUpdate = getStaff().find(s => s.staff_id === staffId);
-    if(staffToUpdate) {
-        storeUpdateStaff(staffId, { ...staffToUpdate, salary }, user.id);
-        refreshData();
-        toast({ title: 'Salary Updated', description: `Salary for ${staffToUpdate.first_name} has been set.` });
+    const handleSalaryInputChange = (staffId: string, value: string) => {
+        setSalaryInputs(prev => ({ ...prev, [staffId]: value }));
+    };
+  
+    const handleUpdateSalary = (staffId: string) => {
+        if (!user) return;
+        const salaryValue = Number(salaryInputs[staffId]);
+        if (isNaN(salaryValue) || salaryValue < 0) {
+            toast({ variant: 'destructive', title: 'Invalid Salary', description: 'Please enter a valid, non-negative salary.' });
+            return;
+        }
+
+        const staffToUpdate = getStaff().find(s => s.staff_id === staffId);
+        if(staffToUpdate) {
+            storeUpdateStaff(staffId, { ...staffToUpdate, salary: salaryValue }, user.id);
+            refreshData();
+            toast({ title: 'Salary Updated', description: `Salary for ${staffToUpdate.first_name} has been set.` });
+        }
     }
-  }
 
   const handleGeneratePayslip = (item: PayrollItem, payroll: Payroll) => {
     const doc = new jsPDF();
@@ -313,8 +331,8 @@ export function PayrollManagement() {
         startY: (doc as any).lastAutoTable.finalY + 5,
         head: [['Earnings', 'Amount', 'Deductions', 'Amount']],
         body: [
-            ['Base Salary', formatCurrency(item.base_salary), 'Salary Advance', formatCurrency(item.deductions || 0)],
-            ['Allowances', formatCurrency(item.allowances || 0), '', ''],
+            ['Base Salary', formatCurrency(item.base_salary)],
+            ['Allowances', formatCurrency(item.allowances || 0), 'Salary Advance', formatCurrency(item.deductions || 0)],
             ['Bonuses', formatCurrency(item.bonuses || 0), '', ''],
         ],
         foot: [
@@ -368,7 +386,7 @@ export function PayrollManagement() {
         <TabsTrigger value="salaries">Salary Setup</TabsTrigger>
         <TabsTrigger value="advances">Salary Advance</TabsTrigger>
       </TabsList>
-      <TabsContent value="payroll" className="space-y-6">
+      <TabsContent value="payroll" className="space-y-6 pt-4">
         <Card>
             <CardHeader>
                 <CardTitle>Generate New Payroll</CardTitle>
@@ -468,7 +486,7 @@ export function PayrollManagement() {
             </CardContent>
         </Card>
       </TabsContent>
-      <TabsContent value="salaries">
+      <TabsContent value="salaries" className="pt-4">
         <Card>
             <CardHeader>
                 <CardTitle>Staff Salary Setup</CardTitle>
@@ -482,6 +500,7 @@ export function PayrollManagement() {
                                 <TableHead>Staff Name</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Base Salary (GHS)</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -491,12 +510,19 @@ export function PayrollManagement() {
                                     <TableCell>{s.roles.join(', ')}</TableCell>
                                     <TableCell>
                                         <Input 
-                                            type="number" 
+                                            type="number"
+                                            min="0"
                                             className="w-40" 
-                                            defaultValue={s.salary || ''} 
-                                            onBlur={(e) => handleUpdateSalary(s.staff_id, Number(e.target.value))}
+                                            value={salaryInputs[s.staff_id] || ''}
+                                            onChange={(e) => handleSalaryInputChange(s.staff_id, e.target.value)}
                                             placeholder="Set salary"
                                         />
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button size="sm" onClick={() => handleUpdateSalary(s.staff_id)}>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            Save
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -506,7 +532,7 @@ export function PayrollManagement() {
             </CardContent>
         </Card>
       </TabsContent>
-      <TabsContent value="advances">
+      <TabsContent value="advances" className="pt-4">
         <Card>
             <CardHeader>
                 <CardTitle>Salary Advance</CardTitle>
@@ -520,8 +546,8 @@ export function PayrollManagement() {
                             {staff.map(s => <SelectItem key={s.staff_id} value={s.staff_id}>{s.first_name} {s.last_name}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <Input type="number" placeholder="Advance Amount (GHS)" value={advanceAmount} onChange={(e) => setAdvanceAmount(Number(e.target.value) || '')} />
-                    <Input type="number" placeholder="Repayment Months" value={repaymentMonths} onChange={(e) => setRepaymentMonths(Number(e.target.value) || '')}/>
+                    <Input type="number" min="0" placeholder="Advance Amount (GHS)" value={advanceAmount} onChange={(e) => setAdvanceAmount(Number(e.target.value) || '')} />
+                    <Input type="number" min="1" placeholder="Repayment Months" value={repaymentMonths} onChange={(e) => setRepaymentMonths(Number(e.target.value) || '')}/>
                  </div>
                  <Button onClick={handleAddSalaryAdvance} disabled={!selectedStaffForAdvance || !advanceAmount || !repaymentMonths}>Record Advance</Button>
             </CardContent>
