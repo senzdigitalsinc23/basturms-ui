@@ -1,12 +1,30 @@
+
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OnboardingTips } from '@/components/dashboard/onboarding-tips';
 import { BookCopy, GraduationCap, PenSquare } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
+import { useEffect, useState } from 'react';
+import { getStudentProfileByUserId, getStudentProfiles } from '@/lib/store';
+import { StudentProfile } from '@/lib/types';
 
 export default function StudentDashboardPage() {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+
+  useEffect(() => {
+    if (user) {
+        const studentProfiles = getStudentProfiles();
+        const currentProfile = studentProfiles.find(p => p.contactDetails.email === user.email);
+        setProfile(currentProfile || null);
+    }
+  }, [user]);
+
+  const overallGrade = profile?.academicRecords?.[0]?.grade || 'N/A';
+  const gpa = '3.7'; // Placeholder
+  const coursesCount = profile?.academicRecords?.length || 0;
+  const assignmentsDue = 3; // Placeholder
 
   return (
     <ProtectedRoute allowedRoles={['Student']}>
@@ -27,7 +45,7 @@ export default function StudentDashboardPage() {
               <BookCopy className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">6</div>
+              <div className="text-2xl font-bold">{coursesCount}</div>
               <p className="text-xs text-muted-foreground">
                 Enrolled this semester
               </p>
@@ -41,9 +59,9 @@ export default function StudentDashboardPage() {
               <GraduationCap className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">A-</div>
+              <div className="text-2xl font-bold">{overallGrade}</div>
               <p className="text-xs text-muted-foreground">
-                GPA: 3.7
+                GPA: {gpa}
               </p>
             </CardContent>
           </Card>
@@ -55,7 +73,7 @@ export default function StudentDashboardPage() {
               <PenSquare className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">{assignmentsDue}</div>
               <p className="text-xs text-muted-foreground">
                 Due this week
               </p>

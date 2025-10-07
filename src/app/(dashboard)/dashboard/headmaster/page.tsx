@@ -1,12 +1,31 @@
+
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OnboardingTips } from '@/components/dashboard/onboarding-tips';
 import { Users, BookCopy, GraduationCap } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
+import { useEffect, useState } from 'react';
+import { getStaff, getStudentProfiles } from '@/lib/store';
 
 export default function HeadmasterDashboardPage() {
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalStaff: 0,
+    totalStudents: 0,
+    curriculumCoverage: '88%', // Placeholder
+  });
+
+  useEffect(() => {
+    const allStaff = getStaff();
+    const allStudents = getStudentProfiles();
+
+    setStats(prev => ({
+        ...prev,
+        totalStaff: allStaff.length,
+        totalStudents: allStudents.length,
+    }));
+  }, []);
 
   return (
     <ProtectedRoute allowedRoles={['Headmaster']}>
@@ -23,8 +42,7 @@ export default function HeadmasterDashboardPage() {
               <Users className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">42</div>
-              <p className="text-xs text-muted-foreground">+2 since last month</p>
+              <div className="text-2xl font-bold">{stats.totalStaff}</div>
             </CardContent>
           </Card>
           <Card>
@@ -33,8 +51,7 @@ export default function HeadmasterDashboardPage() {
               <GraduationCap className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">512</div>
-              <p className="text-xs text-muted-foreground">+30 since last year</p>
+              <div className="text-2xl font-bold">{stats.totalStudents}</div>
             </CardContent>
           </Card>
           <Card>
@@ -43,7 +60,7 @@ export default function HeadmasterDashboardPage() {
               <BookCopy className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">88%</div>
+              <div className="text-2xl font-bold">{stats.curriculumCoverage}</div>
               <p className="text-xs text-muted-foreground">On track for the semester</p>
             </CardContent>
           </Card>

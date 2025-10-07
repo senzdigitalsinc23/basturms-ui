@@ -1,13 +1,29 @@
+
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OnboardingTips } from '@/components/dashboard/onboarding-tips';
 import { GraduationCap, ShieldCheck, User } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
+import { useEffect, useState } from 'react';
+import { getStudentProfiles } from '@/lib/store';
+import { StudentProfile } from '@/lib/types';
 
 export default function ParentDashboardPage() {
   const { user } = useAuth();
+  const [childProfile, setChildProfile] = useState<StudentProfile | null>(null);
 
+  useEffect(() => {
+    if (user) {
+        const studentProfiles = getStudentProfiles();
+        const profile = studentProfiles.find(p => p.guardianInfo.guardian_email === user.email);
+        setChildProfile(profile || null);
+    }
+  }, [user]);
+
+  const gpa = '3.4'; // Placeholder
+  const attendancePercentage = '98%'; // Placeholder
+  
   return (
     <ProtectedRoute allowedRoles={['Parent']}>
       <div className="flex flex-col gap-6">
@@ -27,9 +43,9 @@ export default function ParentDashboardPage() {
               <User className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Student Johnson</div>
+              <div className="text-2xl font-bold">{childProfile ? `${childProfile.student.first_name} ${childProfile.student.last_name}` : 'N/A'}</div>
               <p className="text-xs text-muted-foreground">
-                10th Grade
+                {childProfile?.admissionDetails.class_assigned || 'N/A'}
               </p>
             </CardContent>
           </Card>
@@ -41,9 +57,9 @@ export default function ParentDashboardPage() {
               <GraduationCap className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">B+</div>
+              <div className="text-2xl font-bold">{childProfile?.academicRecords?.[0]?.grade || 'N/A'}</div>
               <p className="text-xs text-muted-foreground">
-                Overall GPA: 3.4
+                Overall GPA: {gpa}
               </p>
             </CardContent>
           </Card>
@@ -55,7 +71,7 @@ export default function ParentDashboardPage() {
               <ShieldCheck className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">98%</div>
+              <div className="text-2xl font-bold">{attendancePercentage}</div>
               <p className="text-xs text-muted-foreground">
                 1 absence this month
               </p>
