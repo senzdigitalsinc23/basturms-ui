@@ -154,6 +154,13 @@ const menuItems: Record<Role, NavItem[]> = {
     },
     { href: '/expenses', label: 'Expense Management', icon: WalletCards },
     {
+      label: 'Extra Curricular',
+      icon: Library,
+      items: [
+        { href: '/extra-curricular/clubs', label: 'Clubs & Societies' },
+      ],
+    },
+    {
       label: 'Communications',
       icon: MessageSquare,
       items: [
