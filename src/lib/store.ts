@@ -128,7 +128,7 @@ const PROMOTION_CRITERIA_KEY = 'campusconnect_promotion_criteria';
 
 
 // New keys for staff management
-const STAFF_KEY = 'campusconnect_staff';
+export const STAFF_KEY = 'campusconnect_staff';
 export const DECLINED_STAFF_KEY = 'campusconnect_declined_staff';
 export const STAFF_ACADEMIC_HISTORY_KEY = 'campusconnect_staff_academic_history';
 export const STAFF_DOCUMENTS_KEY = 'campusconnect_staff_documents';

@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { getStaff, getPayrolls, savePayroll, Payroll, PayrollStatus, addExpense, addAuditLog, getUserById, updateStaff as storeUpdateStaff, saveStaff } from '@/lib/store';
+import { getStaff, getPayrolls, savePayroll, Payroll, PayrollStatus, addExpense, addAuditLog, getUserById, updateStaff as storeUpdateStaff, saveToStorage, STAFF_KEY } from '@/lib/store';
 import { Staff, PayrollItem, SalaryAdvance } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { Label } from '../ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { getSchoolProfile } from '@/lib/store';
 
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
@@ -263,7 +264,7 @@ export function PayrollManagement() {
                 }
             }
         });
-        saveStaff(staffList);
+        saveToStorage(STAFF_KEY, staffList);
 
 
         toast({ title: 'Payroll Approved', description: `An expense of ${formatCurrency(payroll.total_amount)} for ${payroll.month} salaries has been recorded.` });
@@ -346,7 +347,7 @@ export function PayrollManagement() {
         staffList[staffIndex].salary_advances = [];
     }
     staffList[staffIndex].salary_advances!.push(newAdvance);
-    saveStaff(staffList);
+    saveToStorage(STAFF_KEY, staffList);
     refreshData();
 
     toast({title: "Salary Advance Recorded"});
