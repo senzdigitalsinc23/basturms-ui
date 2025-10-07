@@ -112,7 +112,7 @@ export interface Asset {
     purchaseCost: number;
     quantity: number;
     status: AssetStatus;
-    currentLocation: string; // e.g. 'Main Store', 'Class 5B', 'Staff - John Doe'
+    currentLocation: string; // e.g., 'Main Store', 'Class 5B', 'Staff - John Doe'
     condition: AssetCondition;
     logs: AssetLog[];
 }

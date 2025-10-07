@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import {
@@ -54,6 +53,8 @@ import {
   Announcement,
   Club,
   Sport,
+  Asset,
+  AssetAllocation,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -111,6 +112,8 @@ const PAYROLLS_KEY = 'campusconnect_payrolls';
 const ANNOUNCEMENTS_KEY = 'campusconnect_announcements';
 const CLUBS_KEY = 'campusconnect_clubs';
 const SPORTS_KEY = 'campusconnect_sports';
+const ASSETS_KEY = 'campusconnect_assets';
+const ASSET_ALLOCATIONS_KEY = 'campusconnect_asset_allocations';
 
 
 // Settings Keys
@@ -491,6 +494,8 @@ export const initializeStore = () => {
         saveToStorage(ANNOUNCEMENTS_KEY, []);
         saveToStorage(CLUBS_KEY, []);
         saveToStorage(SPORTS_KEY, []);
+        saveToStorage(ASSETS_KEY, []);
+        saveToStorage(ASSET_ALLOCATIONS_KEY, []);
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
         saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
@@ -512,6 +517,24 @@ export const initializeStore = () => {
     }
   }
 };
+
+export const getAssets = (): Asset[] => getFromStorage<Asset[]>(ASSETS_KEY, []);
+export const saveAssets = (assets: Asset[]): void => saveToStorage(ASSETS_KEY, assets);
+
+export const getAssetAllocations = (): AssetAllocation[] => getFromStorage<AssetAllocation[]>(ASSET_ALLOCATIONS_KEY, []);
+export const saveAssetAllocations = (allocations: AssetAllocation[]): void => saveToStorage(ASSET_ALLOCATIONS_KEY, allocations);
+
+export const addAssetAllocation = (allocation: Omit<AssetAllocation, 'id' | 'date'>): AssetAllocation => {
+    const allocations = getAssetAllocations();
+    const newAllocation: AssetAllocation = {
+        ...allocation,
+        id: `ALLOC-${Date.now()}`,
+        date: new Date().toISOString(),
+    };
+    saveToStorage(ASSET_ALLOCATIONS_KEY, [...allocations, newAllocation]);
+    return newAllocation;
+};
+
 
 export const getPayrolls = (): Payroll[] => getFromStorage<Payroll[]>(PAYROLLS_KEY, []);
 export const savePayroll = (payrolls: Payroll[]): void => saveToStorage(PAYROLLS_KEY, payrolls);
