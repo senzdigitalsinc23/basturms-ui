@@ -302,7 +302,8 @@ export function PayrollManagement() {
             return;
         }
 
-        const staffToUpdate = getStaff().find(s => s.staff_id === staffId);
+        const staffList = getStaff();
+        const staffToUpdate = staffList.find(s => s.staff_id === staffId);
         if(staffToUpdate) {
             storeUpdateStaff(staffId, { ...staffToUpdate, salary: salaryValue }, user.id);
             refreshData();
@@ -549,7 +550,7 @@ export function PayrollManagement() {
                     <Input type="number" min="0" placeholder="Advance Amount (GHS)" value={advanceAmount} onChange={(e) => setAdvanceAmount(Number(e.target.value) || '')} />
                     <Input type="number" min="1" placeholder="Repayment Months" value={repaymentMonths} onChange={(e) => setRepaymentMonths(Number(e.target.value) || '')}/>
                  </div>
-                 <Button onClick={handleAddSalaryAdvance} disabled={!selectedStaffForAdvance || !advanceAmount || !repaymentMonths}>Record Advance</Button>
+                 <Button onClick={handleAddSalaryAdvance} disabled={!selectedStaffForAdvance || !advanceAmount || !repaymentMonths || advanceAmount <= 0 || repaymentMonths <= 0}>Record Advance</Button>
             </CardContent>
         </Card>
       </TabsContent>
