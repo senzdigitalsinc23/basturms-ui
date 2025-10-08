@@ -1,10 +1,11 @@
 
+
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getClasses, getStudentProfiles } from '@/lib/store';
-import { Class } from '@/lib/types';
+import { getClasses, getStudentProfiles, getPromotionCriteria, getClassSchoolLevel } from '@/lib/store';
+import { Class, StudentProfile, PromotionCriteria, PromotionRule } from '@/lib/types';
 import Link from 'next/link';
 import { ArrowRight, GraduationCap, Users, RefreshCw } from 'lucide-react';
 
@@ -12,6 +13,7 @@ type PromotionSuggestion = {
     classId: string;
     className: string;
     studentCount: number;
+    promotionReadyCount: number;
     isGraduation: boolean;
 };
 
@@ -25,22 +27,64 @@ export function PromotionSuggestions() {
         setLoading(true);
         const classes = getClasses();
         const students = getStudentProfiles();
-        const studentCountByClass = students.reduce((acc, student) => {
-            const classId = student.admissionDetails.class_assigned;
-            if (student.admissionDetails.admission_status === 'Admitted') {
-                acc[classId] = (acc[classId] || 0) + 1;
-            }
-            return acc;
-        }, {} as Record<string, number>);
-
+        const criteria = getPromotionCriteria();
+        
         const promotionSuggestions: PromotionSuggestion[] = classes
-            .map(c => ({
-                classId: c.id,
-                className: c.name,
-                studentCount: studentCountByClass[c.id] || 0,
-                isGraduation: c.id === FINAL_CLASS_ID,
-            }))
-            .filter(c => c.studentCount > 0);
+            .map(c => {
+                const studentsInClass = students.filter(s => s.admissionDetails.class_assigned === c.id && s.admissionDetails.admission_status === 'Admitted');
+                
+                if (studentsInClass.length === 0) return null;
+
+                const schoolLevel = getClassSchoolLevel(c.id);
+                const rule = schoolLevel ? criteria[schoolLevel] : null;
+
+                let promotionReadyCount = 0;
+                if(rule) {
+                    studentsInClass.forEach(student => {
+                        const totalScore = student.assignmentScores?.reduce((acc, s) => acc + s.score, 0) || 0;
+                        const avgScore = totalScore > 0 ? totalScore / (student.assignmentScores?.length || 1) : 0;
+                        
+                        if (avgScore < rule.minAverageScore) return;
+
+                        const compulsoryPassed = rule.compulsorySubjects?.every(subId => {
+                            const scoresForSub = student.assignmentScores?.filter(s => s.subject_id === subId);
+                            if (!scoresForSub || scoresForSub.length === 0) return false;
+                            const avgSubScore = scoresForSub.reduce((acc, s) => acc + s.score, 0) / scoresForSub.length;
+                            return avgSubScore >= rule.minPassMark;
+                        });
+
+                        if (compulsoryPassed === false) return; // Use explicit false check as it can be undefined
+
+                        if (rule.electiveSubjects && rule.minElectivesToPass) {
+                            const electivesPassedCount = rule.electiveSubjects.reduce((count, subId) => {
+                                const scoresForSub = student.assignmentScores?.filter(s => s.subject_id === subId);
+                                if (!scoresForSub || scoresForSub.length === 0) return count;
+                                const avgSubScore = scoresForSub.reduce((acc, s) => acc + s.score, 0) / scoresForSub.length;
+                                if (avgSubScore >= rule.minPassMark) {
+                                    return count + 1;
+                                }
+                                return count;
+                            }, 0);
+                            
+                            if (electivesPassedCount < rule.minElectivesToPass) return;
+                        }
+
+                        promotionReadyCount++;
+                    });
+                } else {
+                    // Fallback if no criteria: all students are ready
+                    promotionReadyCount = studentsInClass.length;
+                }
+
+                return {
+                    classId: c.id,
+                    className: c.name,
+                    studentCount: studentsInClass.length,
+                    promotionReadyCount,
+                    isGraduation: c.id === FINAL_CLASS_ID,
+                };
+            })
+            .filter((item): item is PromotionSuggestion => item !== null);
         
         setSuggestions(promotionSuggestions);
         setLoading(false);
@@ -79,7 +123,7 @@ export function PromotionSuggestions() {
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle>Automatic Promotion &amp; Graduation</CardTitle>
-                    <CardDescription>The following classes have active students and are ready for end-of-year processing.</CardDescription>
+                    <CardDescription>Review classes with students who meet the promotion criteria.</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
                     <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -101,7 +145,7 @@ export function PromotionSuggestions() {
                                         <h4 className="font-semibold">{suggestion.className}</h4>
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <Users className="h-4 w-4" />
-                                            <span>{suggestion.studentCount} student(s) ready</span>
+                                            <span>{suggestion.promotionReadyCount} of {suggestion.studentCount} student(s) ready</span>
                                         </div>
                                     </div>
                                 </div>

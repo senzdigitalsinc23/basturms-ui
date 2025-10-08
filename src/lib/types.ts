@@ -222,6 +222,7 @@ export type StudentReport = {
     headTeacherSignature?: string | null;
 };
 
+
 export interface Class {
   id: string;
   name: string;
@@ -314,11 +315,15 @@ export interface ClassAssignmentActivity {
     activity_id: string;
 }
 
-export interface PromotionCriteria {
+export type PromotionRule = {
     minAverageScore: number;
-    coreSubjects: string[];
-    minCoreSubjectsToPass: number;
-}
+    minPassMark: number;
+    compulsorySubjects: string[]; // Subjects that MUST be passed
+    electiveSubjects: string[]; // A pool of other subjects
+    minElectivesToPass: number; // How many from the elective pool must be passed
+};
+
+export type PromotionCriteria = Partial<Record<SchoolLevel, PromotionRule>>;
 
 // Student Management Types
 export type AdmissionStatus = 'Admitted' | 'Pending' | 'Graduated' | 'Stopped' | 'Transferred' | 'Suspended' | 'Withdrawn';
@@ -651,3 +656,5 @@ export interface TeacherSubject {
     subject_id: string;
 }
 
+
+export const ALL_ACCOUNTANT_ROLES: Role[] = ['Accountant'];
