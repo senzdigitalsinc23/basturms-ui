@@ -1,3 +1,4 @@
+
 'use client';
 
 import { DepartmentRequest, DepartmentRequestStatus } from "@/lib/types";
@@ -129,8 +130,8 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                             <TableRow>
                                 <TableHead>Asset</TableHead>
                                 <TableHead>Qty Req.</TableHead>
-                                {isAdmin && <TableHead>Qty Appr.</TableHead>}
-                                {isStoreManager && <TableHead>Qty Served</TableHead>}
+                                {canApprove && <TableHead>Qty Appr.</TableHead>}
+                                {canServe && <TableHead>Qty Served</TableHead>}
                                 <TableHead>Requester</TableHead>
                                 <TableHead>Department</TableHead>
                                 <TableHead>Date</TableHead>
@@ -141,14 +142,12 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                         <TableBody>
                             {requests.length > 0 ? requests.map(req => {
                                 const StatusIcon = statusConfig[req.status].icon;
-                                const isAdmin = canApprove;
-                                const isStoreManager = canServe;
                                 return (
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium">{req.asset_name}</TableCell>
                                     <TableCell>{req.quantity_requested}</TableCell>
-                                    {isAdmin && <TableCell>{req.quantity_approved || '-'}</TableCell>}
-                                    {isStoreManager && <TableCell>{req.quantity_served || '-'}</TableCell>}
+                                    {canApprove && <TableCell>{req.quantity_approved || '-'}</TableCell>}
+                                    {canServe && <TableCell>{req.quantity_served || '-'}</TableCell>}
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <User className="h-4 w-4 text-muted-foreground" />
@@ -182,7 +181,7 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                                 </TableRow>
                             )}) : (
                                 <TableRow>
-                                    <TableCell colSpan={isAdmin || isStoreManager ? 9 : 7} className="h-24 text-center">
+                                    <TableCell colSpan={canApprove || canServe ? 9 : 7} className="h-24 text-center">
                                         No requests found in this category.
                                     </TableCell>
                                 </TableRow>
