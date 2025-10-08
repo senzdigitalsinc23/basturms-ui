@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getDepartmentRequests, addDepartmentRequest, updateDepartmentRequestStatus, getAssets, getStaff, getClasses } from '@/lib/store';
+import { getDepartmentRequests, addDepartmentRequest, updateDepartmentRequestStatus, getAssets, getStaff, getClasses, bulkUpdateDepartmentRequestStatus } from '@/lib/store';
 import { DepartmentRequest, Asset, Staff, Role, DepartmentRequestStatus, Class } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -11,13 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit, Trash2, CheckCircle, XCircle, Truck } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, CheckCircle, XCircle, Truck, ChevronsUpDown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RequestList } from './request-list';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger as AlertDialogTriggerChild } from '@/components/ui/alert-dialog';
 
 
 const requestSchema = z.object({
@@ -117,6 +120,11 @@ export function DepartmentRequests() {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [classes, setClasses] = useState<Class[]>([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
+    const [isBulkAlertOpen, setIsBulkAlertOpen] = useState(false);
+    const [bulkAction, setBulkAction] = useState<'Approve' | 'Reject' | 'Serve' | 'Not Served' | null>(null);
+    const [bulkComments, setBulkComments] = useState('');
+
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -131,6 +139,7 @@ export function DepartmentRequests() {
         setRequests(getDepartmentRequests());
         setAssets(getAssets());
         setClasses(getClasses());
+        setSelectedRequestIds([]);
     }
 
     const handleSaveRequest = (data: RequestFormValues) => {
@@ -157,6 +166,26 @@ export function DepartmentRequests() {
         fetchData();
     };
 
+    const handleBulkUpdate = () => {
+        if (!user || !bulkAction || selectedRequestIds.length === 0) return;
+        
+        bulkUpdateDepartmentRequestStatus(selectedRequestIds, bulkAction, user.id, user.name, { comments: bulkComments });
+
+        toast({
+            title: 'Bulk Update Successful',
+            description: `${selectedRequestIds.length} requests have been updated to ${bulkAction}.`
+        });
+        
+        setIsBulkAlertOpen(false);
+        setBulkComments('');
+        fetchData();
+    };
+    
+    const handleBulkActionClick = (action: 'Approve' | 'Reject' | 'Serve' | 'Not Served') => {
+        setBulkAction(action);
+        setIsBulkAlertOpen(true);
+    }
+
     const myRequests = requests.filter(r => r.requested_by_id === user?.id);
     const pendingRequests = requests.filter(r => r.status === 'Pending');
     const approvedRequests = requests.filter(r => r.status === 'Approved');
@@ -171,18 +200,38 @@ export function DepartmentRequests() {
                     {isStoreManager && <TabsTrigger value="to-be-served">To Be Served</TabsTrigger>}
                     {(isAdmin || isStoreManager) && <TabsTrigger value="history">Full History</TabsTrigger>}
                 </TabsList>
-                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> New Request</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>New Departmental Request</DialogTitle>
-                            <DialogDescription>Request an item from the store. This will be sent to an administrator for approval.</DialogDescription>
-                        </DialogHeader>
-                        <RequestForm assets={assets} classes={classes} onSave={handleSaveRequest} />
-                    </DialogContent>
-                </Dialog>
+                <div className="flex items-center gap-2">
+                    {selectedRequestIds.length > 0 && (
+                        <>
+                            <span className="text-sm text-muted-foreground">{selectedRequestIds.length} selected</span>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        Bulk Actions <ChevronsUpDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    {isAdmin && <DropdownMenuItem onSelect={() => handleBulkActionClick('Approve')}>Approve Selected</DropdownMenuItem>}
+                                    {isAdmin && <DropdownMenuItem onSelect={() => handleBulkActionClick('Reject')} className="text-destructive">Reject Selected</DropdownMenuItem>}
+                                    {isStoreManager && <DropdownMenuItem onSelect={() => handleBulkActionClick('Serve')}>Serve Selected</DropdownMenuItem>}
+                                    {isStoreManager && <DropdownMenuItem onSelect={() => handleBulkActionClick('Not Served')} className="text-destructive">Mark as Not Served</DropdownMenuItem>}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </>
+                    )}
+                    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> New Request</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>New Departmental Request</DialogTitle>
+                                <DialogDescription>Request an item from the store. This will be sent to an administrator for approval.</DialogDescription>
+                            </DialogHeader>
+                            <RequestForm assets={assets} classes={classes} onSave={handleSaveRequest} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
             <TabsContent value="my-requests">
                 <RequestList title="My Requests" requests={myRequests} />
@@ -202,6 +251,19 @@ export function DepartmentRequests() {
                      <RequestList title="All Departmental Requests" requests={allOtherRequests} />
                 </TabsContent>
              )}
+             <AlertDialog open={isBulkAlertOpen} onOpenChange={setIsBulkAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Bulk Action</AlertDialogTitle>
+                        <AlertDialogDescription>You are about to {bulkAction?.toLowerCase()} {selectedRequestIds.length} request(s). Please add any comments below.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <Textarea placeholder="Bulk action comments..." value={bulkComments} onChange={e => setBulkComments(e.target.value)} />
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBulkUpdate}>Confirm</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+             </AlertDialog>
         </Tabs>
     )
 }

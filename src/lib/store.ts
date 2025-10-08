@@ -575,9 +575,8 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
         if (assetIndex !== -1) {
             const asset = assets[assetIndex];
             asset.quantity -= quantityToServe;
-            if (asset.quantity <= 0) {
-                asset.status = 'Disposed';
-            }
+            if (asset.quantity < 0) asset.quantity = 0;
+            
             asset.logs.push({
                 date: now,
                 type: 'Stock Update',
@@ -592,11 +591,11 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
             assetId: request.asset_id,
             assetName: request.asset_name,
             quantity: quantityToServe,
-            allocatedToId: request.department, // Using department as ID and Name
+            allocatedToId: request.department,
             allocatedToName: request.department,
             allocationType: 'Department',
-            condition: 'Good', // Assuming good condition on serving
-            notes: `Served for request ${request.id}.`
+            condition: 'Good',
+            notes: `Served for request ${request.id}. Comments: ${data?.comments || 'N/A'}`
         });
 
     }
@@ -611,6 +610,30 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
     saveDepartmentRequests(requests);
     return request;
 };
+
+export const bulkUpdateDepartmentRequestStatus = (requestIds: string[], status: DepartmentRequestStatus, editorId: string, editorName: string, data?: { comments?: string }): void => {
+    const requests = getDepartmentRequests();
+    
+    requestIds.forEach(id => {
+        const requestIndex = requests.findIndex(r => r.id === id);
+        if (requestIndex !== -1) {
+            const request = requests[requestIndex];
+
+            // Only update if the status transition is valid
+            const canApprove = request.status === 'Pending' && (status === 'Approved' || status === 'Rejected');
+            const canServe = request.status === 'Approved' && (status === 'Served' || status === 'Not Served');
+
+            if (canApprove || canServe) {
+                 updateDepartmentRequestStatus(id, status, editorId, editorName, { 
+                    // For bulk actions, we assume full quantity approval/serving
+                    quantity: status === 'Approved' ? request.quantity_requested : request.quantity_approved,
+                    comments: data?.comments 
+                });
+            }
+        }
+    });
+};
+
 
 export const getAssets = (): Asset[] => getFromStorage<Asset[]>(ASSETS_KEY, []);
 export const saveAssets = (assets: Asset[]): void => saveToStorage(ASSETS_KEY, assets);
