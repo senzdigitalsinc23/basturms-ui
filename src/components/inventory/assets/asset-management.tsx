@@ -1,39 +1,14 @@
-
 'use client';
 import { useState, useEffect } from 'react';
-import {
-  getAssets,
-  saveAssets,
-  addAuditLog,
-} from '@/lib/store';
-import { Asset, AssetCategory, AssetStatus, ALL_ASSET_CATEGORIES, ALL_ASSET_STATUSES } from '@/lib/types';
+import { getAssets, saveAssets, addAuditLog } from '@/lib/store';
+import { Asset, AssetCategory, AssetStatus, ALL_ASSET_CATEGORIES, ALL_ASSET_STATUSES, StoreLocation, ALL_STORE_LOCATIONS, ALL_ASSET_CONDITIONS } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { DataTable } from './data-table';
 import { columns } from './columns';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
@@ -53,7 +28,7 @@ const assetSchema = z.object({
   purchaseCost: z.coerce.number().min(0, 'Cost must be a positive number.'),
   quantity: z.coerce.number().min(1, 'Quantity must be at least 1.'),
   status: z.enum(ALL_ASSET_STATUSES),
-  currentLocation: z.string().min(1, 'Location is required.'),
+  currentLocation: z.enum(ALL_STORE_LOCATIONS),
   condition: z.enum(['New', 'Good', 'Fair', 'Poor']),
 });
 
@@ -63,7 +38,7 @@ function AssetForm({ onSave, existingAsset }: { onSave: (data: any) => void; exi
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     defaultValues: existingAsset
-      ? { ...existingAsset, purchaseDate: new Date(existingAsset.purchaseDate) }
+      ? { ...existingAsset, purchaseDate: new Date(existingAsset.purchaseDate), currentLocation: existingAsset.currentLocation as StoreLocation }
       : {
           name: '',
           category: 'IT Equipment',
@@ -99,7 +74,14 @@ function AssetForm({ onSave, existingAsset }: { onSave: (data: any) => void; exi
           )} />
         </div>
          <FormField name="currentLocation" control={form.control} render={({ field }) => (
-          <FormItem><FormLabel>Current Location</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
+            <FormItem><FormLabel>Store Location</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select a store" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        {ALL_STORE_LOCATIONS.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            <FormMessage/></FormItem>
         )} />
         <DialogFooter>
           <Button type="submit">Save Asset</Button>

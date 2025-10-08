@@ -79,6 +79,9 @@ export type RolePermissions = Partial<Record<Role, Permission[]>>;
 export type AssetStatus = 'In Stock' | 'Allocated' | 'In Repair' | 'Disposed';
 export type AssetCondition = 'New' | 'Good' | 'Fair' | 'Poor';
 export type AssetCategory = 'IT Equipment' | 'Furniture' | 'Lab Equipment' | 'Office Supplies' | 'Vehicle' | 'Other';
+export type StoreLocation = 'Main Store' | 'Book Store' | 'Food Store';
+export const ALL_STORE_LOCATIONS: StoreLocation[] = ['Main Store', 'Book Store', 'Food Store'];
+
 
 export const ALL_ASSET_STATUSES: AssetStatus[] = ['In Stock', 'Allocated', 'In Repair', 'Disposed'];
 export const ALL_ASSET_CONDITIONS: AssetCondition[] = ['New', 'Good', 'Fair', 'Poor'];
@@ -86,7 +89,7 @@ export const ALL_ASSET_CATEGORIES: AssetCategory[] = ['IT Equipment', 'Furniture
 
 export type AssetLog = {
     date: string; // ISO string
-    type: 'Maintenance' | 'Depreciation' | 'Status Change';
+    type: 'Maintenance' | 'Depreciation' | 'Status Change' | 'Stock Update';
     details: string;
     cost?: number;
     recorded_by: string; // user id
@@ -96,6 +99,7 @@ export type AssetAllocation = {
     id: string;
     assetId: string;
     assetName: string;
+    quantity: number;
     allocatedToId: string; // Can be a Staff ID or Class ID
     allocatedToName: string;
     allocationType: 'Staff' | 'Class';
@@ -112,9 +116,30 @@ export interface Asset {
     purchaseCost: number;
     quantity: number;
     status: AssetStatus;
-    currentLocation: string; // e.g., 'Main Store', 'Class 5B', 'Staff - John Doe'
+    currentLocation: StoreLocation | string;
     condition: AssetCondition;
     logs: AssetLog[];
+}
+
+export type DepartmentRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Served';
+export interface DepartmentRequest {
+    id: string;
+    requested_by_id: string;
+    requested_by_name: string;
+    department: string;
+    asset_id: string;
+    asset_name: string;
+    quantity_requested: number;
+    reason: string;
+    status: DepartmentRequestStatus;
+    request_date: string; // ISO string
+    approved_by_id?: string;
+    approved_by_name?: string;
+    approval_date?: string;
+    served_by_id?: string;
+    served_by_name?: string;
+    served_date?: string;
+    comments?: string;
 }
 
 
@@ -658,3 +683,8 @@ export interface TeacherSubject {
 
 
 export const ALL_ACCOUNTANT_ROLES: Role[] = ['Accountant'];
+
+export interface RoleStorage {
+  id: string;
+  name: Role;
+}

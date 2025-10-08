@@ -1,4 +1,3 @@
-
 'use client';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal, ArrowUpDown, Trash2, User, Users } from 'lucide-react';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AssetAllocation } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 
 type ColumnsProps = {
@@ -17,6 +16,10 @@ export const columns = ({ onDelete }: ColumnsProps): ColumnDef<AssetAllocation>[
     {
         accessorKey: 'assetName',
         header: 'Asset',
+    },
+    {
+        accessorKey: 'quantity',
+        header: 'Quantity',
     },
     {
         accessorKey: 'allocatedToName',

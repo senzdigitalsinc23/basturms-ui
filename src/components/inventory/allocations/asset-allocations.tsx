@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import {
@@ -39,9 +38,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Input } from '@/components/ui/input';
 
 const allocationSchema = z.object({
   assetId: z.string().min(1, 'Please select an asset.'),
+  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
   allocationType: z.enum(['Staff', 'Class']),
   allocatedToId: z.string().min(1, 'Please select who to allocate to.'),
   condition: z.enum(ALL_ASSET_CONDITIONS),
@@ -66,10 +67,13 @@ function AllocationForm({
     defaultValues: {
         allocationType: 'Class',
         condition: 'Good',
+        quantity: 1,
     }
   });
 
   const allocationType = form.watch('allocationType');
+  const selectedAssetId = form.watch('assetId');
+  const selectedAsset = assets.find(a => a.id === selectedAssetId);
 
   return (
     <Form {...form}>
@@ -87,9 +91,9 @@ function AllocationForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {assets.filter(a => a.status === 'In Stock').map(asset => (
+                  {assets.filter(a => a.status === 'In Stock' && a.quantity > 0).map(asset => (
                     <SelectItem key={asset.id} value={asset.id}>
-                      {asset.name} ({asset.id})
+                      {asset.name} ({asset.id}) - In Stock: {asset.quantity}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -97,6 +101,19 @@ function AllocationForm({
               <FormMessage />
             </FormItem>
           )}
+        />
+        <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Quantity to Allocate</FormLabel>
+                    <FormControl>
+                        <Input type="number" {...field} min={1} max={selectedAsset?.quantity || 1} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
         />
         <div className="grid grid-cols-2 gap-4">
             <FormField
@@ -199,6 +216,11 @@ export function AssetAllocations() {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected asset not found.'});
         return;
     }
+
+    if (values.quantity > asset.quantity) {
+        toast({ variant: 'destructive', title: 'Error', description: `Cannot allocate ${values.quantity} items. Only ${asset.quantity} available in stock.`});
+        return;
+    }
     
     let allocatedToName: string;
     if (values.allocationType === 'Class') {
@@ -211,12 +233,15 @@ export function AssetAllocations() {
     const newAllocation = storeAddAssetAllocation({ ...values, assetName: asset.name, allocatedToName });
 
     // Update asset status and location
-    asset.status = 'Allocated';
-    asset.currentLocation = `${values.allocationType}: ${allocatedToName}`;
+    asset.quantity -= values.quantity;
+    if (asset.quantity <= 0) {
+        asset.status = 'Allocated';
+    }
+
     asset.logs.push({
         date: new Date().toISOString(),
         type: 'Status Change',
-        details: `Allocated to ${allocatedToName}. Condition: ${values.condition}. Notes: ${values.notes || 'N/A'}`,
+        details: `Allocated ${values.quantity} of ${asset.name} to ${allocatedToName}. Condition: ${values.condition}. Notes: ${values.notes || 'N/A'}`,
         recorded_by: user.id
     });
     
@@ -225,10 +250,10 @@ export function AssetAllocations() {
     
     fetchData();
     setIsFormOpen(false);
-    toast({ title: 'Asset Allocated', description: `${asset.name} has been allocated successfully.` });
+    toast({ title: 'Asset Allocated', description: `${values.quantity} of ${asset.name} has been allocated successfully.` });
     addAuditLog({
         user: user.email, name: user.name,
-        action: 'Allocate Asset', details: `Allocated ${asset.name} to ${allocatedToName}`
+        action: 'Allocate Asset', details: `Allocated ${values.quantity} of ${asset.name} to ${allocatedToName}`
     });
   }
 
@@ -241,12 +266,12 @@ export function AssetAllocations() {
     const allAssets = getAssets();
     const asset = allAssets.find(a => a.id === allocationToDelete.assetId);
     if (asset && user) {
+        asset.quantity += allocationToDelete.quantity;
         asset.status = 'In Stock';
-        asset.currentLocation = 'Main Store';
         asset.logs.push({
             date: new Date().toISOString(),
             type: 'Status Change',
-            details: `Allocation recalled from ${allocationToDelete.allocatedToName}`,
+            details: `Recalled ${allocationToDelete.quantity} of ${asset.name} from ${allocationToDelete.allocatedToName}`,
             recorded_by: user.id
         });
         saveAssets(allAssets);

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -45,6 +44,7 @@ import {
   WalletCards,
   MessageSquare,
   Package,
+  ShoppingBasket,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -154,12 +154,13 @@ const menuItems: Record<Role, NavItem[]> = {
     },
     { href: '/expenses', label: 'Expense Management', icon: WalletCards },
     {
-      label: 'Inventory &amp; Assets',
+      label: 'Inventory & Assets',
       icon: Package,
       items: [
         { href: '/inventory/assets', label: 'Asset Register' },
         { href: '/inventory/allocations', label: 'Asset Allocations' },
         { href: '/inventory/maintenance', label: 'Maintenance Logs' },
+        { href: '/inventory/requests', label: 'Department Requests' },
       ],
     },
     {
@@ -206,6 +207,7 @@ const menuItems: Record<Role, NavItem[]> = {
   Teacher: [
     { href: '/dashboard/teacher', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/inventory/requests', label: 'Make Request', icon: ShoppingBasket },
     { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/attendance/my-classes', label: 'Student Attendance', icon: CalendarCheck },
     { href: '/attendance/history', label: 'Attendance History', icon: History },
@@ -239,6 +241,7 @@ const menuItems: Record<Role, NavItem[]> = {
   Headmaster: [
     { href: '/dashboard/headmaster', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/inventory/requests', label: 'Department Requests', icon: ShoppingBasket },
     { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
      {
       label: 'Staff Management',
@@ -260,6 +263,7 @@ const menuItems: Record<Role, NavItem[]> = {
   Librarian: [
     { href: '/dashboard/librarian', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/inventory/requests', label: 'Make Request', icon: ShoppingBasket },
     { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/#', label: 'Book Catalogue', icon: Book },
     { href: '/#', label: 'Checkouts', icon: History },
@@ -279,6 +283,7 @@ const menuItems: Record<Role, NavItem[]> = {
     },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
+    { href: '/inventory/requests', label: 'Department Requests', icon: ShoppingBasket },
     { href: '/#', label: 'Purchase Orders', icon: Truck },
     { href: '/#', label: 'Suppliers', icon: Building },
     { href: '/inventory/assets', label: 'Asset Register', icon: Package },
@@ -291,6 +296,7 @@ const menuItems: Record<Role, NavItem[]> = {
     },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
+    { href: '/inventory/requests', label: 'Serve Requests', icon: ShoppingBasket },
     {
       label: 'Inventory &amp; Assets',
       icon: Package,
@@ -325,6 +331,7 @@ const menuItems: Record<Role, NavItem[]> = {
    Accountant: [
     { href: '/dashboard/accountant', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
+    { href: '/inventory/requests', label: 'Make Request', icon: ShoppingBasket },
     { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
     { href: '/financials/bill-preparation', label: 'Bill Preparation' },
     { href: '/financials/fee-collection', label: 'Collections' },
