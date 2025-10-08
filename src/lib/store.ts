@@ -55,6 +55,8 @@ import {
   Sport,
   Asset,
   AssetAllocation,
+  DepartmentRequest,
+  DepartmentRequestStatus,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -114,6 +116,7 @@ const CLUBS_KEY = 'campusconnect_clubs';
 const SPORTS_KEY = 'campusconnect_sports';
 const ASSETS_KEY = 'campusconnect_assets';
 const ASSET_ALLOCATIONS_KEY = 'campusconnect_asset_allocations';
+const DEPARTMENT_REQUESTS_KEY = 'campusconnect_department_requests';
 
 
 // Settings Keys
@@ -496,6 +499,7 @@ export const initializeStore = () => {
         saveToStorage(SPORTS_KEY, []);
         saveToStorage(ASSETS_KEY, []);
         saveToStorage(ASSET_ALLOCATIONS_KEY, []);
+        saveToStorage(DEPARTMENT_REQUESTS_KEY, []);
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
         saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
@@ -516,6 +520,64 @@ export const initializeStore = () => {
         saveToStorage(TEACHER_SUBJECTS_KEY, []);
     }
   }
+};
+
+export const getDepartmentRequests = (): DepartmentRequest[] => getFromStorage<DepartmentRequest[]>(DEPARTMENT_REQUESTS_KEY, []);
+export const saveDepartmentRequests = (requests: DepartmentRequest[]): void => saveToStorage(DEPARTMENT_REQUESTS_KEY, requests);
+
+export const addDepartmentRequest = (requestData: Omit<DepartmentRequest, 'id' | 'status' | 'request_date'>): DepartmentRequest => {
+    const requests = getDepartmentRequests();
+    const newRequest: DepartmentRequest = {
+        ...requestData,
+        id: `REQ-${Date.now()}`,
+        status: 'Pending',
+        request_date: new Date().toISOString(),
+    };
+    saveDepartmentRequests([...requests, newRequest]);
+    return newRequest;
+};
+
+export const updateDepartmentRequestStatus = (requestId: string, status: DepartmentRequestStatus, editorId: string, editorName: string): DepartmentRequest | null => {
+    const requests = getDepartmentRequests();
+    const requestIndex = requests.findIndex(r => r.id === requestId);
+    if (requestIndex === -1) return null;
+
+    const request = requests[requestIndex];
+    request.status = status;
+    const now = new Date().toISOString();
+
+    if (status === 'Approved' || status === 'Rejected') {
+        request.approved_by_id = editorId;
+        request.approved_by_name = editorName;
+        request.approval_date = now;
+    }
+
+    if (status === 'Served') {
+        request.served_by_id = editorId;
+        request.served_by_name = editorName;
+        request.served_date = now;
+
+        // Deduct from stock
+        const assets = getAssets();
+        const assetIndex = assets.findIndex(a => a.id === request.asset_id);
+        if (assetIndex !== -1) {
+            const asset = assets[assetIndex];
+            asset.quantity -= request.quantity_requested;
+            if (asset.quantity <= 0) {
+                asset.status = 'Disposed'; // Or another status to indicate it's out of stock
+            }
+            asset.logs.push({
+                date: now,
+                type: 'Stock Update',
+                details: `${request.quantity_requested} unit(s) served for request ${request.id}.`,
+                recorded_by: editorId,
+            });
+            saveAssets(assets);
+        }
+    }
+
+    saveDepartmentRequests(requests);
+    return request;
 };
 
 export const getAssets = (): Asset[] => getFromStorage<Asset[]>(ASSETS_KEY, []);
