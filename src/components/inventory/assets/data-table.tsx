@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import {
@@ -10,6 +11,8 @@ import {
   ColumnFiltersState,
   getSortedRowModel,
   SortingState,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
 } from '@tanstack/react-table';
 
 import {
