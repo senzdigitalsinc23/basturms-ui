@@ -6,8 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
-import { CheckCircle, Clock, Truck, User, XCircle } from "lucide-react";
+import { CheckCircle, Clock, Truck, User, XCircle, Ban } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 
 type RequestListProps = {
@@ -15,7 +18,7 @@ type RequestListProps = {
     requests: DepartmentRequest[];
     canApprove?: boolean;
     canServe?: boolean;
-    onUpdateStatus?: (requestId: string, status: DepartmentRequestStatus) => void;
+    onUpdateStatus?: (requestId: string, status: DepartmentRequestStatus, data?: { quantity?: number, comments?: string }) => void;
 };
 
 const statusConfig: Record<DepartmentRequestStatus, { color: string; icon: React.ElementType }> = {
@@ -23,12 +26,98 @@ const statusConfig: Record<DepartmentRequestStatus, { color: string; icon: React
     Approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
     Rejected: { color: 'bg-red-100 text-red-800', icon: XCircle },
     Served: { color: 'bg-blue-100 text-blue-800', icon: Truck },
+    'Not Served': { color: 'bg-gray-100 text-gray-800', icon: Ban },
 };
 
+function StatusDialog({ 
+    open, 
+    onOpenChange, 
+    request, 
+    action, 
+    onConfirm 
+}: { 
+    open: boolean, 
+    onOpenChange: (open: boolean) => void, 
+    request: DepartmentRequest | null, 
+    action: 'Approve' | 'Serve',
+    onConfirm: (quantity: number) => void 
+}) {
+    const [quantity, setQuantity] = useState<number | ''>('');
+    
+    if (!request) return null;
 
-export function RequestList({ title, requests, canApprove, canServe, onUpdateStatus }: RequestListProps) {
+    const maxQuantity = action === 'Approve' ? request.quantity_requested : (request.quantity_approved || request.quantity_requested);
 
     return (
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Request {action}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Please confirm the quantity for this action.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity to {action.toLowerCase()}</Label>
+                    <Input 
+                        id="quantity"
+                        type="number"
+                        defaultValue={maxQuantity}
+                        max={maxQuantity}
+                        min={1}
+                        onChange={(e) => setQuantity(Number(e.target.value))}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                        Max available to {action.toLowerCase()}: {maxQuantity}
+                    </p>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onConfirm(Number(quantity) || maxQuantity)}>Confirm</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
+export function RequestList({ title, requests, canApprove, canServe, onUpdateStatus }: RequestListProps) {
+    const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+    const [isServeDialogOpen, setIsServeDialogOpen] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState<DepartmentRequest | null>(null);
+
+    const handleActionClick = (req: DepartmentRequest, action: 'Approve' | 'Serve') => {
+        setSelectedRequest(req);
+        if (action === 'Approve') {
+            setIsApproveDialogOpen(true);
+        } else {
+            setIsServeDialogOpen(true);
+        }
+    };
+
+    const handleConfirmApproval = (quantity: number) => {
+        if (selectedRequest && onUpdateStatus) {
+            onUpdateStatus(selectedRequest.id, 'Approved', { quantity });
+        }
+        setIsApproveDialogOpen(false);
+        setSelectedRequest(null);
+    };
+
+    const handleConfirmServe = (quantity: number) => {
+        if (selectedRequest && onUpdateStatus) {
+            onUpdateStatus(selectedRequest.id, 'Served', { quantity });
+        }
+        setIsServeDialogOpen(false);
+        setSelectedRequest(null);
+    };
+
+    const handleSimpleStatusUpdate = (reqId: string, status: 'Rejected' | 'Not Served') => {
+        if(onUpdateStatus) {
+            onUpdateStatus(reqId, status);
+        }
+    }
+
+    return (
+        <>
         <Card>
             <CardHeader>
                 <CardTitle>{title}</CardTitle>
@@ -39,7 +128,9 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Asset</TableHead>
-                                <TableHead>Qty</TableHead>
+                                <TableHead>Qty Req.</TableHead>
+                                {isAdmin && <TableHead>Qty Appr.</TableHead>}
+                                {isStoreManager && <TableHead>Qty Served</TableHead>}
                                 <TableHead>Requester</TableHead>
                                 <TableHead>Department</TableHead>
                                 <TableHead>Date</TableHead>
@@ -50,10 +141,14 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                         <TableBody>
                             {requests.length > 0 ? requests.map(req => {
                                 const StatusIcon = statusConfig[req.status].icon;
+                                const isAdmin = canApprove;
+                                const isStoreManager = canServe;
                                 return (
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium">{req.asset_name}</TableCell>
                                     <TableCell>{req.quantity_requested}</TableCell>
+                                    {isAdmin && <TableCell>{req.quantity_approved || '-'}</TableCell>}
+                                    {isStoreManager && <TableCell>{req.quantity_served || '-'}</TableCell>}
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <User className="h-4 w-4 text-muted-foreground" />
@@ -69,38 +164,25 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {canApprove && req.status === 'Pending' && onUpdateStatus && (
+                                        {canApprove && req.status === 'Pending' && (
                                             <div className="flex gap-2 justify-end">
-                                                <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => onUpdateStatus(req.id, 'Approved')}>Approve</Button>
-                                                <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => onUpdateStatus(req.id, 'Rejected')}>Reject</Button>
+                                                <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => handleActionClick(req, 'Approve')}>Approve</Button>
+                                                <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => handleSimpleStatusUpdate(req.id, 'Rejected')}>Reject</Button>
                                             </div>
                                         )}
-                                         {canServe && req.status === 'Approved' && onUpdateStatus && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                     <Button size="sm" variant="outline">
-                                                        <Truck className="mr-2 h-4 w-4" /> Mark as Served
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Confirm Service</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This will mark the request for {req.quantity_requested} of "{req.asset_name}" as served and deduct the quantity from stock. This action cannot be undone.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => onUpdateStatus(req.id, 'Served')}>Confirm</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
+                                         {canServe && req.status === 'Approved' && (
+                                             <div className="flex gap-2 justify-end">
+                                                <Button size="sm" variant="outline" onClick={() => handleActionClick(req, 'Serve')}>
+                                                    <Truck className="mr-2 h-4 w-4" /> Mark as Served
+                                                </Button>
+                                                <Button size="sm" variant="destructive" onClick={() => handleSimpleStatusUpdate(req.id, 'Not Served')}>Not Served</Button>
+                                            </div>
                                         )}
                                     </TableCell>
                                 </TableRow>
                             )}) : (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">
+                                    <TableCell colSpan={isAdmin || isStoreManager ? 9 : 7} className="h-24 text-center">
                                         No requests found in this category.
                                     </TableCell>
                                 </TableRow>
@@ -110,5 +192,20 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                 </div>
             </CardContent>
         </Card>
+        <StatusDialog 
+            open={isApproveDialogOpen}
+            onOpenChange={setIsApproveDialogOpen}
+            request={selectedRequest}
+            action="Approve"
+            onConfirm={handleConfirmApproval}
+        />
+         <StatusDialog 
+            open={isServeDialogOpen}
+            onOpenChange={setIsServeDialogOpen}
+            request={selectedRequest}
+            action="Serve"
+            onConfirm={handleConfirmServe}
+        />
+        </>
     );
 }

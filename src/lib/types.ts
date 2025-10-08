@@ -1,5 +1,4 @@
 
-
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -121,7 +120,7 @@ export interface Asset {
     logs: AssetLog[];
 }
 
-export type DepartmentRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Served';
+export type DepartmentRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Served' | 'Not Served';
 export interface DepartmentRequest {
     id: string;
     requested_by_id: string;
@@ -133,9 +132,11 @@ export interface DepartmentRequest {
     reason: string;
     status: DepartmentRequestStatus;
     request_date: string; // ISO string
+    quantity_approved?: number;
     approved_by_id?: string;
     approved_by_name?: string;
     approval_date?: string;
+    quantity_served?: number;
     served_by_id?: string;
     served_by_name?: string;
     served_date?: string;

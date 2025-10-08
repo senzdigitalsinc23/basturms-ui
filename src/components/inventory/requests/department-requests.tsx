@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getDepartmentRequests, addDepartmentRequest, updateDepartmentRequestStatus, getAssets, getStaff } from '@/lib/store';
-import { DepartmentRequest, Asset, Staff, Role, DepartmentRequestStatus } from '@/lib/types';
+import { getDepartmentRequests, addDepartmentRequest, updateDepartmentRequestStatus, getAssets, getStaff, getClasses } from '@/lib/store';
+import { DepartmentRequest, Asset, Staff, Role, DepartmentRequestStatus, Class } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -28,11 +28,18 @@ const requestSchema = z.object({
 });
 type RequestFormValues = z.infer<typeof requestSchema>;
 
-function RequestForm({ onSave, assets }: { onSave: (data: RequestFormValues) => void, assets: Asset[] }) {
+function RequestForm({ onSave, assets, classes }: { onSave: (data: RequestFormValues) => void, assets: Asset[], classes: Class[] }) {
     const form = useForm<RequestFormValues>({
         resolver: zodResolver(requestSchema),
         defaultValues: { quantity_requested: 1 }
     });
+    
+    const departmentOptions = [
+        "Headmasters office",
+        "Kitchen",
+        "Account",
+        ...classes.map(c => c.name)
+    ];
     
     return (
         <Form {...form}>
@@ -69,13 +76,18 @@ function RequestForm({ onSave, assets }: { onSave: (data: RequestFormValues) => 
                             </FormItem>
                         )}
                     />
-                    <FormField
+                     <FormField
                         control={form.control}
                         name="department"
                         render={({ field }) => (
-                            <FormItem>
+                             <FormItem>
                                 <FormLabel>Department</FormLabel>
-                                <FormControl><Input placeholder="e.g., Science Department" {...field} /></FormControl>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select department..." /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {departmentOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -103,6 +115,7 @@ function RequestForm({ onSave, assets }: { onSave: (data: RequestFormValues) => 
 export function DepartmentRequests() {
     const [requests, setRequests] = useState<DepartmentRequest[]>([]);
     const [assets, setAssets] = useState<Asset[]>([]);
+    const [classes, setClasses] = useState<Class[]>([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const { user } = useAuth();
     const { toast } = useToast();
@@ -117,6 +130,7 @@ export function DepartmentRequests() {
     const fetchData = () => {
         setRequests(getDepartmentRequests());
         setAssets(getAssets());
+        setClasses(getClasses());
     }
 
     const handleSaveRequest = (data: RequestFormValues) => {
@@ -136,9 +150,9 @@ export function DepartmentRequests() {
         fetchData();
     };
     
-    const handleUpdateStatus = (requestId: string, status: DepartmentRequestStatus) => {
+    const handleUpdateStatus = (requestId: string, status: DepartmentRequestStatus, data?: { quantity?: number, comments?: string }) => {
         if (!user) return;
-        updateDepartmentRequestStatus(requestId, status, user.id, user.name);
+        updateDepartmentRequestStatus(requestId, status, user.id, user.name, data);
         toast({ title: 'Request Updated', description: `The request has been ${status.toLowerCase()}.` });
         fetchData();
     };
@@ -146,7 +160,6 @@ export function DepartmentRequests() {
     const myRequests = requests.filter(r => r.requested_by_id === user?.id);
     const pendingRequests = requests.filter(r => r.status === 'Pending');
     const approvedRequests = requests.filter(r => r.status === 'Approved');
-    const servedRequests = requests.filter(r => r.status === 'Served');
     const allOtherRequests = requests.filter(r => r.requested_by_id !== user?.id);
 
     return (
@@ -167,7 +180,7 @@ export function DepartmentRequests() {
                             <DialogTitle>New Departmental Request</DialogTitle>
                             <DialogDescription>Request an item from the store. This will be sent to an administrator for approval.</DialogDescription>
                         </DialogHeader>
-                        <RequestForm assets={assets} onSave={handleSaveRequest} />
+                        <RequestForm assets={assets} classes={classes} onSave={handleSaveRequest} />
                     </DialogContent>
                 </Dialog>
             </div>
