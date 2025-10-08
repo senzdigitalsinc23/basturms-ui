@@ -1,8 +1,7 @@
 
-
 'use client';
 import { useState, useEffect } from 'react';
-import { useForm, useFormContext } from 'react-hook-form';
+import { useForm, useFormContext, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getPromotionCriteria, savePromotionCriteria, getSubjects, addAuditLog } from '@/lib/store';
@@ -135,13 +134,13 @@ export function PromotionCriteriaSettings() {
         const criteria = getPromotionCriteria();
         
         const defaultValues: FormData = ALL_SCHOOL_LEVELS.reduce((acc, level) => {
+            const levelCriteria = criteria[level] || {};
             acc[level] = {
-                minAverageScore: 50,
-                minPassMark: 40,
-                compulsorySubjects: [],
-                electiveSubjects: [],
-                minElectivesToPass: 0,
-                ...criteria[level] // Override defaults with saved values
+                minAverageScore: levelCriteria.minAverageScore || 50,
+                minPassMark: levelCriteria.minPassMark || 40,
+                compulsorySubjects: levelCriteria.compulsorySubjects || [],
+                electiveSubjects: levelCriteria.electiveSubjects || [],
+                minElectivesToPass: levelCriteria.minElectivesToPass || 0,
             };
             return acc;
         }, {} as FormData);
@@ -168,7 +167,7 @@ export function PromotionCriteriaSettings() {
     return (
         <Card>
             <CardContent className="pt-6">
-                <Form {...form}>
+                <FormProvider {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <Accordion type="single" collapsible defaultValue="Lower Primary">
                             {ALL_SCHOOL_LEVELS.map(level => (
@@ -184,7 +183,7 @@ export function PromotionCriteriaSettings() {
                             <Button type="submit">Save All Criteria</Button>
                         </div>
                     </form>
-                </Form>
+                </FormProvider>
             </CardContent>
         </Card>
     );
