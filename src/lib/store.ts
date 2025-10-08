@@ -537,7 +537,7 @@ export const addDepartmentRequest = (requestData: Omit<DepartmentRequest, 'id' |
     return newRequest;
 };
 
-export const updateDepartmentRequestStatus = (requestId: string, status: DepartmentRequestStatus, editorId: string, editorName: string): DepartmentRequest | null => {
+export const updateDepartmentRequestStatus = (requestId: string, status: DepartmentRequestStatus, editorId: string, editorName: string, data?: { quantity?: number, comments?: string }): DepartmentRequest | null => {
     const requests = getDepartmentRequests();
     const requestIndex = requests.findIndex(r => r.id === requestId);
     if (requestIndex === -1) return null;
@@ -546,34 +546,66 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
     request.status = status;
     const now = new Date().toISOString();
 
-    if (status === 'Approved' || status === 'Rejected') {
+    if (status === 'Approved') {
         request.approved_by_id = editorId;
         request.approved_by_name = editorName;
         request.approval_date = now;
+        request.quantity_approved = data?.quantity;
+        request.comments = data?.comments;
     }
-
+     if (status === 'Rejected') {
+        request.approved_by_id = editorId;
+        request.approved_by_name = editorName;
+        request.approval_date = now;
+        request.comments = data?.comments;
+    }
+    
     if (status === 'Served') {
         request.served_by_id = editorId;
         request.served_by_name = editorName;
         request.served_date = now;
+        request.quantity_served = data?.quantity;
+        request.comments = data?.comments;
+
+        const quantityToServe = data?.quantity || request.quantity_approved || request.quantity_requested;
 
         // Deduct from stock
         const assets = getAssets();
         const assetIndex = assets.findIndex(a => a.id === request.asset_id);
         if (assetIndex !== -1) {
             const asset = assets[assetIndex];
-            asset.quantity -= request.quantity_requested;
+            asset.quantity -= quantityToServe;
             if (asset.quantity <= 0) {
-                asset.status = 'Disposed'; // Or another status to indicate it's out of stock
+                asset.status = 'Disposed';
             }
             asset.logs.push({
                 date: now,
                 type: 'Stock Update',
-                details: `${request.quantity_requested} unit(s) served for request ${request.id}.`,
+                details: `${quantityToServe} unit(s) served for request ${request.id}.`,
                 recorded_by: editorId,
             });
             saveAssets(assets);
         }
+        
+        // Add to allocations
+        addAssetAllocation({
+            assetId: request.asset_id,
+            assetName: request.asset_name,
+            quantity: quantityToServe,
+            allocatedToId: request.department, // Using department as ID and Name
+            allocatedToName: request.department,
+            allocationType: 'Department',
+            condition: 'Good', // Assuming good condition on serving
+            notes: `Served for request ${request.id}.`
+        });
+
+    }
+    
+    if(status === 'Not Served') {
+        request.served_by_id = editorId;
+        request.served_by_name = editorName;
+        request.served_date = now;
+        request.comments = data?.comments;
     }
 
     saveDepartmentRequests(requests);

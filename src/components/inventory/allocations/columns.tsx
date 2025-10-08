@@ -1,6 +1,6 @@
 'use client';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Trash2, User, Users } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Trash2, User, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AssetAllocation } from '@/lib/types';
@@ -29,10 +29,12 @@ export const columns = ({ onDelete }: ColumnsProps): ColumnDef<AssetAllocation>[
         accessorKey: 'allocationType',
         header: 'Type',
         cell: ({ row }) => {
-            const isStaff = row.original.allocationType === 'Staff';
+            const type = row.original.allocationType;
+            const icon = type === 'Staff' ? User : type === 'Class' ? Users : Building2;
+            const Icon = icon;
             return (
                 <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                    {isStaff ? <User className="h-3 w-3" /> : <Users className="h-3 w-3" />}
+                    <Icon className="h-3 w-3" />
                     {row.original.allocationType}
                 </Badge>
             )

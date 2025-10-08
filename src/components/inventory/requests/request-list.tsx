@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { DepartmentRequest, DepartmentRequestStatus } from "@/lib/types";
@@ -12,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/use-auth";
 
 
 type RequestListProps = {
@@ -85,6 +87,9 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
     const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
     const [isServeDialogOpen, setIsServeDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<DepartmentRequest | null>(null);
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
+
 
     const handleActionClick = (req: DepartmentRequest, action: 'Approve' | 'Serve') => {
         setSelectedRequest(req);
@@ -116,6 +121,10 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
             onUpdateStatus(reqId, status);
         }
     }
+    
+    const showApprovalActions = canApprove || isAdmin;
+    const showServeActions = canServe || isAdmin;
+
 
     return (
         <>
@@ -130,8 +139,8 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                             <TableRow>
                                 <TableHead>Asset</TableHead>
                                 <TableHead>Qty Req.</TableHead>
-                                {canApprove && <TableHead>Qty Appr.</TableHead>}
-                                {canServe && <TableHead>Qty Served</TableHead>}
+                                {(showApprovalActions || showServeActions) && <TableHead>Qty Appr.</TableHead>}
+                                {showServeActions && <TableHead>Qty Served</TableHead>}
                                 <TableHead>Requester</TableHead>
                                 <TableHead>Department</TableHead>
                                 <TableHead>Date</TableHead>
@@ -146,8 +155,8 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium">{req.asset_name}</TableCell>
                                     <TableCell>{req.quantity_requested}</TableCell>
-                                    {canApprove && <TableCell>{req.quantity_approved || '-'}</TableCell>}
-                                    {canServe && <TableCell>{req.quantity_served || '-'}</TableCell>}
+                                    {(showApprovalActions || showServeActions) && <TableCell>{req.quantity_approved || '-'}</TableCell>}
+                                    {showServeActions && <TableCell>{req.quantity_served || '-'}</TableCell>}
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <User className="h-4 w-4 text-muted-foreground" />
@@ -163,13 +172,13 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {canApprove && req.status === 'Pending' && (
+                                        {showApprovalActions && req.status === 'Pending' && (
                                             <div className="flex gap-2 justify-end">
                                                 <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => handleActionClick(req, 'Approve')}>Approve</Button>
                                                 <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => handleSimpleStatusUpdate(req.id, 'Rejected')}>Reject</Button>
                                             </div>
                                         )}
-                                         {canServe && req.status === 'Approved' && (
+                                         {showServeActions && req.status === 'Approved' && (
                                              <div className="flex gap-2 justify-end">
                                                 <Button size="sm" variant="outline" onClick={() => handleActionClick(req, 'Serve')}>
                                                     <Truck className="mr-2 h-4 w-4" /> Mark as Served
@@ -181,7 +190,7 @@ export function RequestList({ title, requests, canApprove, canServe, onUpdateSta
                                 </TableRow>
                             )}) : (
                                 <TableRow>
-                                    <TableCell colSpan={canApprove || canServe ? 9 : 7} className="h-24 text-center">
+                                    <TableCell colSpan={showApprovalActions || showServeActions ? 9 : 7} className="h-24 text-center">
                                         No requests found in this category.
                                     </TableCell>
                                 </TableRow>

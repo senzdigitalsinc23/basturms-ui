@@ -10,7 +10,7 @@ import {
   saveAssets,
   addAuditLog,
 } from '@/lib/store';
-import { Asset, Staff, Class, AssetAllocation, AssetCondition, ALL_ASSET_CONDITIONS } from '@/lib/types';
+import { Asset, Staff, Class, AssetAllocation, AssetCondition, ALL_ASSET_CONDITIONS, DepartmentRequest } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,13 +43,15 @@ import { Input } from '@/components/ui/input';
 const allocationSchema = z.object({
   assetId: z.string().min(1, 'Please select an asset.'),
   quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
-  allocationType: z.enum(['Staff', 'Class']),
+  allocationType: z.enum(['Staff', 'Class', 'Department']),
   allocatedToId: z.string().min(1, 'Please select who to allocate to.'),
   condition: z.enum(ALL_ASSET_CONDITIONS),
   notes: z.string().optional(),
 });
 
 type AllocationFormValues = z.infer<typeof allocationSchema>;
+
+const departmentOptions = ['Headmasters office', 'Kitchen', 'Account'];
 
 function AllocationForm({
   assets,
@@ -127,6 +129,7 @@ function AllocationForm({
                     <SelectContent>
                         <SelectItem value="Class">Class</SelectItem>
                         <SelectItem value="Staff">Staff Member</SelectItem>
+                        <SelectItem value="Department">Department</SelectItem>
                     </SelectContent>
                 </Select>
                 <FormMessage />
@@ -138,15 +141,13 @@ function AllocationForm({
             name="allocatedToId"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>{allocationType === 'Class' ? 'Class' : 'Staff Member'}</FormLabel>
+                <FormLabel>{allocationType}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger></FormControl>
                     <SelectContent>
-                        {allocationType === 'Class' ? (
-                            classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)
-                        ) : (
-                            staff.map(s => <SelectItem key={s.staff_id} value={s.staff_id}>{`${s.first_name} ${s.last_name}`}</SelectItem>)
-                        )}
+                        {allocationType === 'Class' && classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        {allocationType === 'Staff' && staff.map(s => <SelectItem key={s.staff_id} value={s.staff_id}>{`${s.first_name} ${s.last_name}`}</SelectItem>)}
+                        {allocationType === 'Department' && departmentOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                     </SelectContent>
                 </Select>
                 <FormMessage />
@@ -225,9 +226,11 @@ export function AssetAllocations() {
     let allocatedToName: string;
     if (values.allocationType === 'Class') {
         allocatedToName = classes.find(c => c.id === values.allocatedToId)?.name || 'Unknown Class';
-    } else {
+    } else if (values.allocationType === 'Staff') {
         const staffMember = staff.find(s => s.staff_id === values.allocatedToId);
         allocatedToName = staffMember ? `${staffMember.first_name} ${staffMember.last_name}` : 'Unknown Staff';
+    } else { // Department
+        allocatedToName = values.allocatedToId;
     }
 
     const newAllocation = storeAddAssetAllocation({ ...values, assetName: asset.name, allocatedToName });
@@ -294,7 +297,7 @@ export function AssetAllocations() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Allocate New Asset</DialogTitle>
-            <DialogDescription>Assign an available asset to a class or staff member.</DialogDescription>
+            <DialogDescription>Assign an available asset to a class, department or staff member.</DialogDescription>
           </DialogHeader>
           <AllocationForm 
             assets={assets}

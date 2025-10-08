@@ -19,6 +19,7 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
+import { useRouter } from 'next/navigation';
 
 const assetSchema = z.object({
   id: z.string().optional(),
@@ -97,6 +98,7 @@ export function AssetManagement() {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const fetchData = () => {
     setAssets(getAssets());
@@ -111,6 +113,7 @@ export function AssetManagement() {
     const allAssets = getAssets();
     let updatedAssets;
     let action: 'created' | 'updated' = 'created';
+    let newAsset: Asset | undefined;
 
     if (editingAsset) {
       action = 'updated';
@@ -118,7 +121,7 @@ export function AssetManagement() {
         asset.id === editingAsset.id ? { ...asset, ...data, purchaseDate: data.purchaseDate.toISOString() } : asset
       );
     } else {
-      const newAsset: Asset = {
+      newAsset = {
         ...data,
         id: `ASSET-${Date.now()}`,
         purchaseDate: data.purchaseDate.toISOString(),
@@ -145,6 +148,10 @@ export function AssetManagement() {
     toast({ title: 'Asset Saved', description: `Asset record has been ${action}.` });
     setIsFormOpen(false);
     setEditingAsset(null);
+    
+    if (newAsset) {
+        router.push(`/inventory/assets/tags?assetId=${newAsset.id}`);
+    }
   };
   
   const handleEdit = (asset: Asset) => {

@@ -1,4 +1,5 @@
 
+
 export type Role =
   | 'Admin'
   | 'Teacher'
@@ -101,7 +102,7 @@ export type AssetAllocation = {
     quantity: number;
     allocatedToId: string; // Can be a Staff ID or Class ID
     allocatedToName: string;
-    allocationType: 'Staff' | 'Class';
+    allocationType: 'Staff' | 'Class' | 'Department';
     date: string; // ISO string
     condition: AssetCondition;
     notes?: string;
