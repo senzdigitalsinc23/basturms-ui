@@ -514,7 +514,7 @@ export function PayrollManagement() {
                                             type="number"
                                             min="0"
                                             className="w-40" 
-                                            value={salaryInputs[s.staff_id] || ''}
+                                            value={salaryInputs[s.staff_id] ?? ''}
                                             onChange={(e) => handleSalaryInputChange(s.staff_id, e.target.value)}
                                             placeholder="Set salary"
                                         />

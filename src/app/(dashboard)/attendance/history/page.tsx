@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords, getRoles, getStaffAppointmentHistory } from '@/lib/store';
+import { getClasses, getStudentProfiles, getStaff, getStaffAttendanceRecords, getRoles, getStaffAppointmentHistory, getStudentAttendanceRecordsForStudent, addAttendanceRecord } from '@/lib/store';
 import { Class, StudentProfile, Staff, StaffAttendanceRecord, StudentAttendanceRecord, Role } from '@/lib/types';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar as CalendarIcon, Search } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -20,16 +20,22 @@ import { DateRange } from 'react-day-picker';
 import { useAuth } from '@/hooks/use-auth';
 
 type StudentAttendanceHistory = {
-    id: string;
-    name: string;
-    status: StudentAttendanceRecord['status'];
+    date: Date;
+    records: {
+        id: string;
+        name: string;
+        status: StudentAttendanceRecord['status'];
+    }[];
 }
 
 type StaffAttendanceHistory = {
-    id: string;
-    name: string;
-    status: StaffAttendanceRecord['status'];
-    roles: Role[];
+    date: Date;
+    records: {
+        id: string;
+        name: string;
+        status: StaffAttendanceRecord['status'];
+        roles: Role[];
+    }[];
 }
 
 export default function AttendanceHistoryPage() {
@@ -82,32 +88,41 @@ export default function AttendanceHistoryPage() {
     }, [user]);
 
     useEffect(() => {
-        if (selectedClass && dateRange?.from) {
+        if (!dateRange?.from) return;
+
+        const intervalDates = eachDayOfInterval({
+            start: dateRange.from,
+            to: dateRange.to || dateRange.from,
+        });
+
+        if (selectedClass) {
             const allProfiles = getStudentProfiles();
-            const filteredStudents = allProfiles
-                .filter(p => p.admissionDetails.class_assigned === selectedClass)
-                .map(p => {
-                    const record = p.attendanceRecords?.find(rec => format(new Date(rec.date), 'yyyy-MM-dd') === format(dateRange.from!, 'yyyy-MM-dd'));
+            const filteredStudents = allProfiles.filter(p => p.admissionDetails.class_assigned === selectedClass);
+            
+            const historyByDay: StudentAttendanceHistory[] = intervalDates.map(day => {
+                const recordsForDay = filteredStudents.map(p => {
+                    const record = p.attendanceRecords?.find(rec => isSameDay(new Date(rec.date), day));
                     return {
                         id: p.student.student_no,
                         name: `${p.student.first_name} ${p.student.last_name}`,
                         status: record?.status || 'N/A'
                     };
-                })
-                .filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
-            setStudentRecords(filteredStudents);
+                }).filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
+
+                return { date: day, records: recordsForDay };
+            });
+
+            setStudentRecords(historyByDay);
         } else {
             setStudentRecords([]);
         }
-    }, [selectedClass, dateRange, studentSearch]);
-    
-     useEffect(() => {
-        if (dateRange?.from) {
-            const allStaff = getStaff();
-            const allStaffAttendance = getStaffAttendanceRecords();
 
-            let filteredStaffRecords = allStaff.map(staff => {
-                const record = allStaffAttendance.find(rec => rec.staff_id === staff.staff_id && format(new Date(rec.date), 'yyyy-MM-dd') === format(dateRange.from!, 'yyyy-MM-dd'));
+        const allStaff = getStaff();
+        const allStaffAttendance = getStaffAttendanceRecords();
+
+        const staffHistoryByDay: StaffAttendanceHistory[] = intervalDates.map(day => {
+             let filteredStaffRecords = allStaff.map(staff => {
+                const record = allStaffAttendance.find(rec => rec.staff_id === staff.staff_id && isSameDay(new Date(rec.date), day));
                 return {
                     id: staff.staff_id,
                     name: `${staff.first_name} ${staff.last_name}`,
@@ -116,13 +131,15 @@ export default function AttendanceHistoryPage() {
                 };
             }).filter(s => s.name.toLowerCase().includes(staffSearch.toLowerCase()));
 
-            if (selectedRole && selectedRole !== 'All') {
+             if (selectedRole && selectedRole !== 'All') {
                 filteredStaffRecords = filteredStaffRecords.filter(s => s.roles.includes(selectedRole as Role));
             }
+            return { date: day, records: filteredStaffRecords };
+        });
+        setStaffRecords(staffHistoryByDay);
 
-            setStaffRecords(filteredStaffRecords);
-        }
-    }, [dateRange, staffSearch, selectedRole]);
+    }, [selectedClass, dateRange, studentSearch, staffSearch, selectedRole]);
+
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -208,7 +225,7 @@ export default function AttendanceHistoryPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Student Attendance</CardTitle>
-                                <CardDescription>Select a class and date to view records.</CardDescription>
+                                <CardDescription>Select a class and date range to view records.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center gap-4">
@@ -231,17 +248,12 @@ export default function AttendanceHistoryPage() {
                                         />
                                     </div>
                                 </div>
-                                {selectedClass && (
-                                     <div className="rounded-md border">
+                                {selectedClass && studentRecords.map(dayHistory => (
+                                     <div key={dayHistory.date.toISOString()} className="rounded-md border">
+                                        <h4 className="font-semibold p-4 bg-muted/50 border-b">{format(dayHistory.date, 'PPPP')}</h4>
                                         <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Student Name</TableHead>
-                                                    <TableHead className="text-right">Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
                                             <TableBody>
-                                                {studentRecords.length > 0 ? studentRecords.map(record => (
+                                                {dayHistory.records.length > 0 ? dayHistory.records.map(record => (
                                                     <TableRow key={record.id}>
                                                         <TableCell className="font-medium">{record.name}</TableCell>
                                                         <TableCell className="text-right">
@@ -251,14 +263,14 @@ export default function AttendanceHistoryPage() {
                                                 )) : (
                                                     <TableRow>
                                                         <TableCell colSpan={2} className="h-24 text-center">
-                                                            No students in this class or no records for this date.
+                                                            No students found for this class or filters.
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
                                             </TableBody>
                                         </Table>
                                     </div>
-                                )}
+                                ))}
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -267,7 +279,7 @@ export default function AttendanceHistoryPage() {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Staff Attendance</CardTitle>
-                                    <CardDescription>Select a date and role to view records.</CardDescription>
+                                    <CardDescription>Select a date range and role to view records.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="flex items-center gap-4">
@@ -291,32 +303,29 @@ export default function AttendanceHistoryPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="rounded-md border">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Staff Name</TableHead>
-                                                    <TableHead className="text-right">Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {staffRecords.length > 0 ? staffRecords.map(record => (
-                                                    <TableRow key={record.id}>
-                                                        <TableCell className="font-medium">{record.name}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )) : (
-                                                    <TableRow>
-                                                        <TableCell colSpan={2} className="h-24 text-center">
-                                                            No records found for this date.
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                     {staffRecords.map(dayHistory => (
+                                        <div key={dayHistory.date.toISOString()} className="rounded-md border">
+                                            <h4 className="font-semibold p-4 bg-muted/50 border-b">{format(dayHistory.date, 'PPPP')}</h4>
+                                            <Table>
+                                                <TableBody>
+                                                    {dayHistory.records.length > 0 ? dayHistory.records.map(record => (
+                                                        <TableRow key={record.id}>
+                                                            <TableCell className="font-medium">{record.name}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Badge variant={getStatusVariant(record.status) as any}>{record.status}</Badge>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )) : (
+                                                        <TableRow>
+                                                            <TableCell colSpan={2} className="h-24 text-center">
+                                                                No records found for this date.
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    ))}
                                 </CardContent>
                             </Card>
                         </TabsContent>

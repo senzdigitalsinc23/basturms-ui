@@ -11,7 +11,7 @@ import { Calendar as CalendarIcon, Download, Search, X } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, isWithinInterval } from 'date-fns';
+import { format, isWithinInterval, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
 import jsPDF from 'jspdf';
@@ -45,6 +45,7 @@ export function FinancialReports() {
     const [allProfiles, setAllProfiles] = useState<StudentProfile[]>([]);
     const [allClasses, setAllClasses] = useState<Class[]>([]);
     const [allPayrolls, setAllPayrolls] = useState<Payroll[]>([]);
+    const [allTermlyBills, setAllTermlyBills] = useState<TermlyBill[]>([]);
     const [filteredPaymentRecords, setFilteredPaymentRecords] = useState<PaymentRecord[]>([]);
     const [debtorsList, setDebtorsList] = useState<DebtorRecord[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -55,6 +56,7 @@ export function FinancialReports() {
         setAllProfiles(getStudentProfiles());
         setAllClasses(getClasses());
         setAllPayrolls(getPayrolls());
+        setAllTermlyBills(getTermlyBills());
     }, []);
 
     const classMap = useMemo(() => new Map(allClasses.map(c => [c.id, c.name])), [allClasses]);
@@ -75,7 +77,7 @@ export function FinancialReports() {
             profile.financialDetails?.payment_history.forEach(termPayment => {
                 termPayment.payments.forEach(payment => {
                     const paymentDate = new Date(payment.date);
-                    const inDateRange = !dateRange?.from || (paymentDate >= dateRange.from && (!dateRange.to || paymentDate <= dateRange.to));
+                    const inDateRange = !dateRange?.from || isWithinInterval(paymentDate, { start: startOfDay(dateRange.from), end: dateRange.to || startOfDay(dateRange.from) });
 
                     if (inDateRange) {
                         allPayments.push({
@@ -111,21 +113,18 @@ export function FinancialReports() {
     const summary = useMemo(() => {
         const totalPaid = filteredPaymentRecords.reduce((acc, rec) => acc + rec.amount, 0);
 
+        const relevantBills = allTermlyBills.filter(bill => {
+            if (!dateRange?.from) return true;
+            const billDate = new Date(bill.created_at);
+            return isWithinInterval(billDate, { start: startOfDay(dateRange.from), end: dateRange.to || startOfDay(dateRange.from) });
+        });
+        
         let totalExpected = 0;
-        const processedTerms = new Set<string>();
-
-        filteredProfiles.forEach(profile => {
-            profile.financialDetails?.payment_history.forEach(termPayment => {
-                const termKey = `${profile.student.student_no}-${termPayment.term}`;
-                const paymentDate = termPayment.payment_date ? new Date(termPayment.payment_date) : new Date(termPayment.bill_number.split('-')[1]);
-                
-                const inDateRange = !dateRange?.from || (paymentDate >= dateRange.from && (!dateRange.to || paymentDate <= dateRange.to));
-
-                if (inDateRange && !processedTerms.has(termKey)) {
-                    totalExpected += termPayment.total_fees;
-                    processedTerms.add(termKey);
-                }
-            });
+        relevantBills.forEach(bill => {
+            const billedStudentIds = new Set(bill.billed_student_ids);
+            const filteredBilledStudents = filteredProfiles.filter(p => billedStudentIds.has(p.student.student_no));
+            const billTotalForItem = bill.items.reduce((acc, item) => acc + item.amount, 0);
+            totalExpected += billTotalForItem * filteredBilledStudents.length;
         });
         
         const totalOutstanding = debtorsList.reduce((acc, debtor) => acc + debtor.outstandingBalance, 0);
@@ -135,7 +134,7 @@ export function FinancialReports() {
             totalExpected,
             totalOutstanding
         }
-    }, [filteredPaymentRecords, debtorsList, filteredProfiles, dateRange]);
+    }, [filteredPaymentRecords, debtorsList, allTermlyBills, dateRange, filteredProfiles]);
 
 
     const handleClearFilters = () => {
