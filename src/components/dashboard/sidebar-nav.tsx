@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -45,6 +46,7 @@ import {
   MessageSquare,
   Package,
   ShoppingBasket,
+  BookOpenCheck,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
@@ -164,8 +166,16 @@ const menuItems: Record<Role, NavItem[]> = {
       ],
     },
     {
+        label: 'Library',
+        icon: Library,
+        items: [
+            { href: '/library/books', label: 'Book Catalog' },
+            { href: '/library/borrowing', label: 'Borrowing & Returns' },
+        ]
+    },
+    {
       label: 'Extra Curricular',
-      icon: Library,
+      icon: Trophy,
       items: [
         { href: '/extra-curricular/clubs', label: 'Clubs &amp; Societies' },
         { href: '/extra-curricular/sports', label: 'Sports Teams' },
@@ -265,8 +275,8 @@ const menuItems: Record<Role, NavItem[]> = {
     { href: '/staff-management/me', label: 'My Profile', icon: BookUser },
     { href: '/inventory/requests', label: 'Make Request', icon: ShoppingBasket },
     { href: '/financials/my-payslips', label: 'My Payslips', icon: WalletCards },
-    { href: '/#', label: 'Book Catalogue', icon: Book },
-    { href: '/#', label: 'Checkouts', icon: History },
+    { href: '/library/books', label: 'Book Catalog', icon: BookOpenCheck },
+    { href: '/library/borrowing', label: 'Borrowing', icon: History },
   ],
   Security: [
     { href: '/dashboard/security', label: 'Dashboard', icon: LayoutDashboard },

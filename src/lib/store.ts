@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -57,6 +56,8 @@ import {
   AssetAllocation,
   DepartmentRequest,
   DepartmentRequestStatus,
+  Book,
+  BorrowingRecord,
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -117,6 +118,8 @@ const SPORTS_KEY = 'campusconnect_sports';
 const ASSETS_KEY = 'campusconnect_assets';
 const ASSET_ALLOCATIONS_KEY = 'campusconnect_asset_allocations';
 const DEPARTMENT_REQUESTS_KEY = 'campusconnect_department_requests';
+const BOOKS_KEY = 'campusconnect_books';
+const BORROWING_KEY = 'campusconnect_borrowing';
 
 
 // Settings Keys
@@ -500,6 +503,8 @@ export const initializeStore = () => {
         saveToStorage(ASSETS_KEY, []);
         saveToStorage(ASSET_ALLOCATIONS_KEY, []);
         saveToStorage(DEPARTMENT_REQUESTS_KEY, []);
+        saveToStorage(BOOKS_KEY, []);
+        saveToStorage(BORROWING_KEY, []);
         saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
         saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
         saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
@@ -1066,1030 +1071,869 @@ export const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>, editorId: str
 export const updateCalendarEvent = (eventId: string, updatedData: Partial<Omit<CalendarEvent, 'id'>>, editorId: string): CalendarEvent | null => {
     const events = getCalendarEvents();
     const eventIndex = events.findIndex(e => e.id === eventId);
-    if (eventIndex !== -1) {
-        const updatedEvent = { ...events[eventIndex], ...updatedData };
-        events[eventIndex] = updatedEvent;
-        saveToStorage(CALENDAR_EVENTS_KEY, events);
-        const editor = getUserById(editorId);
-        addAuditLog({
-            user: editor?.email || 'Unknown',
-            name: editor?.name || 'Unknown',
-            action: 'Update Calendar Event',
-            details: `Updated event: "${updatedEvent.title}"`
-        });
-        return updatedEvent;
-    }
-    return null;
-}
+    if (eventIndex === -1) return null;
 
-export const deleteCalendarEvent = (eventId: string, editorId: string): boolean => {
-    const events = getCalendarEvents();
-    const eventToDelete = events.find(e => e.id === eventId);
-    if (!eventToDelete) return false;
+    events[eventIndex] = { ...events[eventIndex], ...updatedData };
+    saveToStorage(CALENDAR_EVENTS_KEY, events);
 
-    const newEvents = events.filter(e => e.id !== eventId);
-    saveToStorage(CALENDAR_EVENTS_KEY, newEvents);
     const editor = getUserById(editorId);
     addAuditLog({
         user: editor?.email || 'Unknown',
         name: editor?.name || 'Unknown',
-        action: 'Delete Calendar Event',
-        details: `Deleted event: "${eventToDelete.title}"`
+        action: 'Update Calendar Event',
+        details: `Updated event: "${events[eventIndex].title}"`
     });
-    return true;
-}
 
+    return events[eventIndex];
+};
+
+export const deleteCalendarEvent = (eventId: string, editorId: string): void => {
+    const events = getCalendarEvents();
+    const eventToDelete = events.find(e => e.id === eventId);
+    const updatedEvents = events.filter(e => e.id !== eventId);
+    saveToStorage(CALENDAR_EVENTS_KEY, updatedEvents);
+
+    if (eventToDelete) {
+        const editor = getUserById(editorId);
+        addAuditLog({
+            user: editor?.email || 'Unknown',
+            name: editor?.name || 'Unknown',
+            action: 'Delete Calendar Event',
+            details: `Deleted event: "${eventToDelete.title}"`
+        });
+    }
+};
 
 export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSetting[]>(GRADING_SCHEME_KEY, []);
 export const saveGradingScheme = (scheme: GradeSetting[]): void => saveToStorage(GRADING_SCHEME_KEY, scheme);
+
 export const getRolePermissions = (): RolePermissions => getFromStorage<RolePermissions>(ROLE_PERMISSIONS_KEY, {});
 export const saveRolePermissions = (permissions: RolePermissions): void => saveToStorage(ROLE_PERMISSIONS_KEY, permissions);
-export const getPromotionCriteria = (): PromotionCriteria => getFromStorage<PromotionCriteria>(PROMOTION_CRITERIA_KEY, { minAverageScore: 50, coreSubjects: [], minCoreSubjectsToPass: 0 });
-export const savePromotionCriteria = (criteria: PromotionCriteria): void => saveToStorage(PROMOTION_CRITERIA_KEY, criteria);
 
-// Assignment Activity Functions
 export const getAssignmentActivities = (): AssignmentActivity[] => getFromStorage<AssignmentActivity[]>(ASSIGNMENT_ACTIVITIES_KEY, []);
-export const saveAssignmentActivities = (activities: AssignmentActivity[]): void => saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, activities);
-
-export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>): AssignmentActivity => {
+export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>): void => {
     const activities = getAssignmentActivities();
-    const maxId = activities.reduce((max, act) => {
-        const idNum = parseInt(act.id.replace('act', ''), 10);
-        return isNaN(idNum) ? max : Math.max(max, idNum);
-    }, 0);
-    const newId = `act${maxId + 1}`;
-    const newActivity = { ...activity, id: newId };
-    saveAssignmentActivities([...activities, newActivity]);
-    return newActivity;
+    const newActivity = { ...activity, id: `act-${Date.now()}` };
+    saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, [...activities, newActivity]);
 };
-
-export const updateAssignmentActivity = (activityId: string, updatedData: Partial<Omit<AssignmentActivity, 'id'>>): AssignmentActivity | null => {
+export const updateAssignmentActivity = (id: string, updatedActivity: Partial<Omit<AssignmentActivity, 'id'>>): void => {
     const activities = getAssignmentActivities();
-    const activityIndex = activities.findIndex(act => act.id === activityId);
-
-    if (activityIndex !== -1) {
-        const updatedActivity = { ...activities[activityIndex], ...updatedData };
-        activities[activityIndex] = updatedActivity;
-        saveAssignmentActivities(activities);
-        addAuditLog({
-            user: 'System', 
-            name: 'System',
-            action: 'Update Assignment Activity',
-            details: `Updated activity: ${updatedActivity.name}`
-        });
-        return updatedActivity;
+    const index = activities.findIndex(a => a.id === id);
+    if(index > -1) {
+        activities[index] = {...activities[index], ...updatedActivity};
+        saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, activities);
     }
-    return null;
-}
-
-export const deleteAssignmentActivity = (activityId: string): void => {
+};
+export const deleteAssignmentActivity = (id: string): void => {
     let activities = getAssignmentActivities();
-    activities = activities.filter(act => act.id !== activityId);
-    saveAssignmentActivities(activities);
+    activities = activities.filter(a => a.id !== id);
+    saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, activities);
 
     let classActivities = getClassAssignmentActivities();
-    classActivities = classActivities.filter(ca => ca.activity_id !== activityId);
-    saveClassAssignmentActivities(classActivities);
+    classActivities = classActivities.filter(ca => ca.activity_id !== id);
+    saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, classActivities);
 };
 
 export const getClassAssignmentActivities = (): ClassAssignmentActivity[] => getFromStorage<ClassAssignmentActivity[]>(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
-export const saveClassAssignmentActivities = (classActivities: ClassAssignmentActivity[]): void => saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, classActivities);
+export const saveClassAssignmentActivities = (assignments: ClassAssignmentActivity[]): void => saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, assignments);
 
+export const getPromotionCriteria = (): PromotionCriteria => getFromStorage<PromotionCriteria>(PROMOTION_CRITERIA_KEY, {});
+export const savePromotionCriteria = (criteria: PromotionCriteria): void => saveToStorage(PROMOTION_CRITERIA_KEY, criteria);
 
+export const getLeaveRequests = (): LeaveRequest[] => getFromStorage<LeaveRequest[]>(LEAVE_REQUESTS_KEY, []);
 
-// Role Functions
-export const getRoles = (): RoleStorage[] => getFromStorage<RoleStorage[]>(ROLES_KEY, []);
+export const addLeaveRequest = (data: Omit<LeaveRequest, 'id' | 'request_date' | 'status' | 'staff_name'>, requesterId: string): LeaveRequest | null => {
+    const staff = getStaff().find(s => s.staff_id === data.staff_id);
+    if (!staff) return null;
 
-// Class Functions
-export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
-
-// Subject Functions
-export const getSubjects = (): Subject[] => getFromStorage<Subject[]>(SUBJECTS_KEY, []);
-
-export const addSubject = (subjectName: string): Subject => {
-    const subjects = getSubjects();
-    const newId = `SUB${(subjects.length + 1).toString().padStart(3, '0')}`;
-    const newSubject = { id: newId, name: subjectName };
-    saveToStorage(SUBJECTS_KEY, [...subjects, newSubject]);
-    return newSubject;
-};
-
-export const deleteSubject = (subjectId: string): void => {
-    const subjects = getSubjects().filter(s => s.id !== subjectId);
-    saveToStorage(SUBJECTS_KEY, subjects);
-    const classSubjects = addClassSubject().filter(cs => cs.subject_id !== subjectId);
-    saveToStorage(CLASS_SUBJECTS_KEY, classSubjects);
-};
-
-export const addClassSubject = (): ClassSubject[] => getFromStorage<ClassSubject[]>(CLASS_SUBJECTS_KEY, []);
-
-export const saveClassSubjects = (classSubjects: ClassSubject[]): void => {
-    saveToStorage(CLASS_SUBJECTS_KEY, classSubjects);
-};
-
-export const getTeacherSubjects = (): TeacherSubject[] => getFromStorage<TeacherSubject[]>(TEACHER_SUBJECTS_KEY, []);
-
-// User Functions
-const getUsersInternal = (): UserStorage[] => getFromStorage<UserStorage[]>(USERS_KEY, []);
-
-const mapUser = (user: UserStorage): User => {
-    const roles = getRoles();
-    const role = roles.find(r => r.id === user.role_id);
-    return {
-        ...user,
-        role: role?.name || 'Admin', // Safely default to Admin role
+    const newRequest: LeaveRequest = {
+        ...data,
+        id: `leave-${Date.now()}`,
+        request_date: new Date().toISOString(),
+        status: 'Pending',
+        staff_name: `${staff.first_name} ${staff.last_name}`,
     };
-}
-
-export const getUsers = (): User[] => {
-    return getUsersInternal().map(mapUser);
-};
-
-export const getUserById = (userId: string): User | undefined => {
-  const user = getUsersInternal().find((user) => user.id === userId);
-  return user ? mapUser(user) : undefined;
-};
-
-export const getUserByEmail = (email: string): User | undefined => {
-  const user = getUsersInternal().find((user) => user.email === email);
-  return user ? mapUser(user) : undefined;
-}
-
-export const addUser = (user: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'is_super_admin' | 'role_id'> & { entityId?: string }): User => {
-  const users = getUsersInternal();
-  const roles = getRoles();
-  const role = roles.find(r => r.name === user.role);
-  const now = new Date().toISOString();
-  
-  const existingUser = users.find(u => u.email === user.email);
-  if (existingUser) {
-    console.warn(`User with email ${user.email} already exists.`);
-    return mapUser(existingUser);
-  }
-
-  const nextId = (users.length > 0 ? (Math.max(...users.map(u => parseInt(u.id, 10))) + 1) : 1).toString();
-
-  const newUser: UserStorage = {
-    ...user,
-    id: nextId,
-    username: user.username,
-    password: user.password || 'password',
-    role_id: role!.id,
-    is_super_admin: false,
-    avatarUrl: `https://picsum.photos/seed/avatar${nextId}/40/40`,
-    status: user.status || 'active',
-    created_at: now,
-    updated_at: now,
-  };
-  
-  addAuditLog({
-    user: 'System',
-    name: 'System',
-    action: 'Create User',
-    details: `Created user: ${newUser.name}, Email: ${newUser.email}, Role: ${user.role}`,
-  });
-
-  saveToStorage(USERS_KEY, [...users, newUser]);
-
-  // Link the new user ID back to the staff or student record
-  if (user.entityId) {
-      const isStaffRole = user.role !== 'Student' && user.role !== 'Parent';
-      if (isStaffRole) {
-          const staffList = getStaff();
-          const staffIndex = staffList.findIndex(s => s.staff_id === user.entityId);
-          if (staffIndex !== -1) {
-              staffList[staffIndex].user_id = newUser.id;
-              saveToStorage(STAFF_KEY, staffList);
-          }
-      }
-  }
-
-  return mapUser(newUser);
-};
-
-
-export const updateUser = (updatedUser: User): User => {
-  const users = getUsersInternal();
-  const userIndex = users.findIndex((u) => u.id === updatedUser.id);
-  if (userIndex !== -1) {
-    const roles = getRoles();
-    const role = roles.find(r => r.name === updatedUser.role);
-    const { role: _, ...userToStore } = updatedUser;
-
-    const originalUser = users[userIndex];
-    users[userIndex] = {
-        ...originalUser,
-        ...userToStore,
-        role_id: role ? role.id : originalUser.role_id,
-        updated_at: new Date().toISOString(),
-    };
-    saveToStorage(USERS_KEY, users);
-     addAuditLog({
-        user: 'System',
-        name: 'System',
-        action: 'Update User',
-        details: `Updated user: ${users[userIndex].name}, Email: ${users[userIndex].email}`,
-    });
-  }
-  return updatedUser;
-};
-
-export const toggleUserStatus = (userId: string): User | undefined => {
-    const users = getUsersInternal();
-    const userIndex = users.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-        const user = { ...users[userIndex] };
-        user.status = user.status === 'active' ? 'frozen' : 'active';
-        user.updated_at = new Date().toISOString();
-        
-        const newUsers = [...users];
-        newUsers[userIndex] = user;
-
-        saveToStorage(USERS_KEY, newUsers);
-        return mapUser(user);
-    }
-    return undefined;
-};
-
-export const resetPassword = (userId: string, newPassword: string): boolean => {
-    const users = getUsersInternal();
-    const userIndex = users.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-        users[userIndex].password = newPassword;
-        users[userIndex].updated_at = new Date().toISOString();
-        saveToStorage(USERS_KEY, users);
-        return true;
-    }
-    return false;
-}
-
-export const changePassword = (userId: string, currentPassword: string, newPassword: string): boolean => {
-    const users = getUsersInternal();
-    const userIndex = users.findIndex(u => u.id === userId);
-    if (userIndex !== -1 && users[userIndex].password === currentPassword) {
-        users[userIndex].password = newPassword;
-        users[userIndex].updated_at = new Date().toISOString();
-        saveToStorage(USERS_KEY, users);
-        return true;
-    }
-    return false;
-}
-
-
-export const deleteUser = (userId: string): boolean => {
-    const users = getUsersInternal();
-    const newUsers = users.filter(u => u.id !== userId);
-    if (newUsers.length < users.length) {
-        saveToStorage(USERS_KEY, newUsers);
-        return true;
-    }
-    return false;
-};
-
-export const bulkDeleteUsers = (userIds: string[]): number => {
-    const users = getUsersInternal();
-    const newUsers = users.filter(u => !userIds.includes(u.id));
-    const deletedCount = users.length - newUsers.length;
-    if (deletedCount > 0) {
-        saveToStorage(USERS_KEY, newUsers);
-    }
-    return deletedCount;
-}
-
-// Audit Log Functions
-export const getAuditLogs = (): AuditLog[] => getFromStorage<AuditLog[]>(LOGS_KEY, []);
-export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
-  const logs = getAuditLogs();
-  const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
     
-  const newLog: AuditLog = {
-    ...log,
-    id: nextId,
-    timestamp: new Date().toISOString(),
-    clientInfo: typeof window !== 'undefined' ? navigator.userAgent : 'N/A',
-  };
-  saveToStorage(LOGS_KEY, [newLog, ...logs]);
+    const requests = getLeaveRequests();
+    saveToStorage(LEAVE_REQUESTS_KEY, [...requests, newRequest]);
+    return newRequest;
 };
 
+export const updateLeaveRequestStatus = (leaveId: string, status: LeaveStatus, approverId: string, comments: string, days_approved?: number): LeaveRequest | null => {
+    const requests = getLeaveRequests();
+    const index = requests.findIndex(r => r.id === leaveId);
+    if (index === -1) return null;
 
-export const deleteAuditLog = (logId: string): boolean => {
-    const logs = getAuditLogs();
-    const newLogs = logs.filter(l => l.id !== logId);
-    if (newLogs.length < logs.length) {
-        saveToStorage(LOGS_KEY, newLogs);
-        return true;
+    const approver = getUserById(approverId);
+    requests[index].status = status;
+    requests[index].approver_id = approverId;
+    requests[index].approver_name = approver?.name || 'N/A';
+    requests[index].comments = comments;
+    if (status === 'Approved') {
+        requests[index].days_approved = days_approved;
     }
-    return false;
-}
-
-export const bulkDeleteAuditLogs = (logIds: string[]): number => {
-    const logs = getAuditLogs();
-    const newLogs = logs.filter(l => !logIds.includes(l.id));
-    const deletedCount = logs.length - newLogs.length;
-    if (deletedCount > 0) {
-        saveToStorage(LOGS_KEY, newLogs);
-    }
-    return deletedCount;
-}
-
-export const deleteAllAuditLogs = (): void => {
-    saveToStorage(LOGS_KEY, []);
-}
-
-// Auth Log Functions
-export const getAuthLogs = (): AuthLog[] => getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
-export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp' | 'clientInfo'>): void => {
-    const logs = getAuthLogs();
-    const nextId = logs.length > 0 ? (Math.max(...logs.map(l => parseInt(l.id, 10))) + 1).toString() : '1';
-    const newLog: AuthLog = {
-        ...log,
-        id: nextId,
-        timestamp: new Date().toISOString(),
-        clientInfo: typeof window !== 'undefined' ? navigator.userAgent : 'N/A',
-    };
-    saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
-}
-
-export const deleteAuthLog = (logId: string): boolean => {
-    const logs = getAuthLogs();
-    const newLogs = logs.filter(l => l.id !== logId);
-    if (newLogs.length < logs.length) {
-        saveToStorage(AUTH_LOGS_KEY, newLogs);
-        return true;
-    }
-    return false;
-}
-
-export const bulkDeleteAuthLogs = (logIds: string[]): number => {
-    const logs = getAuthLogs();
-    const newLogs = logs.filter(l => !logIds.includes(l.id));
-    const deletedCount = logs.length - newLogs.length;
-    if (deletedCount > 0) {
-        saveToStorage(AUTH_LOGS_KEY, newLogs);
-    }
-    return deletedCount;
-}
-
-export const deleteAllAuthLogs = (): void => {
-    saveToStorage(AUTH_LOGS_KEY, []);
-}
-
-// Student Management Functions
-export const getStudentProfiles = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
-
-export const getStudentProfileById = (studentId: string): StudentProfile | undefined => {
-    const profiles = getStudentProfiles();
-    return profiles.find(p => p.student.student_no === studentId);
-}
-
-export const addStudentProfile = (
-    profile: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, 
-    creatorId: string,
-    classes: Class[]
-): StudentProfile => {
-    const profiles = getStudentProfiles();
-    const now = new Date();
     
-    const admissionYear = new Date(profile.admissionDetails.enrollment_date).getFullYear();
-    const yearYY = admissionYear.toString().slice(-2);
-
-    const studentsInYear = profiles.filter(p => {
-        const pYear = new Date(p.admissionDetails.enrollment_date).getFullYear();
-        return pYear === admissionYear;
-    });
-    const nextInYear = studentsInYear.length + 1;
-    const nextNumberPadded = nextInYear.toString().padStart(3, '0');
-
-    const newStudentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
-    const newAdmissionNo = `ADM${yearYY}${nextNumberPadded}`;
-    
-    const newProfile: StudentProfile = {
-        student: {
-            ...profile.student,
-            student_no: newStudentNo,
-            avatarUrl: `https://picsum.photos/seed/${newStudentNo}/200/200`,
-            created_at: now.toISOString(),
-            updated_at: now.toISOString(),
-            created_by: creatorId,
-            updated_by: creatorId,
-        },
-        contactDetails: { ...profile.contactDetails, student_no: newStudentNo },
-        guardianInfo: { ...profile.guardianInfo, student_no: newStudentNo },
-        emergencyContact: { ...profile.emergencyContact, student_no: newStudentNo },
-        admissionDetails: { 
-            ...profile.admissionDetails, 
-            student_no: newStudentNo,
-            admission_no: newAdmissionNo 
-        },
-    };
-
-    saveToStorage(STUDENTS_KEY, [...profiles, newProfile]);
-    
-    const hasEmail = !!newProfile.contactDetails.email;
-    const lastName = newProfile.student.last_name.toLowerCase();
-    const studentNoSuffix = newProfile.student.student_no.slice(-3);
-    const usernameFromStudentNo = newProfile.student.student_no.split('-').pop()!.toLowerCase();
-
-    const userToCreate = {
-        name: `${newProfile.student.first_name} ${newProfile.student.last_name}`,
-        email: hasEmail ? newProfile.contactDetails.email! : `${usernameFromStudentNo}@student.com`,
-        username: hasEmail ? newProfile.contactDetails.email! : usernameFromStudentNo,
-        password: `${lastName}${studentNoSuffix}`,
-        role: 'Student' as Role,
-        status: 'frozen' as 'frozen',
-        entityId: newProfile.student.student_no,
-    };
-    addUser(userToCreate);
-
-    const className = classes.find(c => c.id === newProfile.admissionDetails.class_assigned)?.name || 'Unknown Class';
-    const enrollmentDateTime = format(new Date(newProfile.admissionDetails.enrollment_date), 'PPP p');
-
-    addAuditLog({
-        user: getUserById(creatorId)?.email || 'Unknown',
-        name: getUserById(creatorId)?.name || 'Unknown',
-        action: 'Create Student',
-        details: `Enrolled: ${newProfile.student.first_name} ${newProfile.student.last_name} (ID: ${newProfile.student.student_no}) into ${className} on ${enrollmentDateTime}`
-    });
-
-    return newProfile;
+    saveToStorage(LEAVE_REQUESTS_KEY, requests);
+    return requests[index];
 };
 
-export const updateStudentProfile = (studentId: string, updatedData: Partial<StudentProfile>, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    
-    if (profileIndex !== -1) {
-        const now = new Date().toISOString();
-        const existingProfile = profiles[profileIndex];
-
-        const newProfile: StudentProfile = {
-            ...existingProfile,
-            ...updatedData,
-            student: {
-                ...existingProfile.student,
-                ...updatedData.student,
-                updated_at: now,
-                updated_by: editorId,
-            },
-            contactDetails: {
-                ...existingProfile.contactDetails,
-                ...updatedData.contactDetails,
-            },
-            guardianInfo: {
-                ...existingProfile.guardianInfo,
-                ...updatedData.guardianInfo,
-            },
-             admissionDetails: {
-                ...existingProfile.admissionDetails,
-                ...updatedData.admissionDetails,
-            },
-        };
-        
-        profiles[profileIndex] = newProfile;
-        saveToStorage(STUDENTS_KEY, profiles);
-
-        const changes: string[] = [];
-        // Deep compare to find changes for audit log
-        Object.keys(updatedData).forEach(sectionKey => {
-            const section = sectionKey as keyof StudentProfile;
-            const originalSection = existingProfile[section];
-            const updatedSection = updatedData[section];
-
-            if (typeof updatedSection === 'object' && updatedSection !== null && originalSection) {
-                 Object.keys(updatedSection).forEach(fieldKey => {
-                    const originalValue = (originalSection as any)[fieldKey];
-                    const updatedValue = (updatedSection as any)[fieldKey];
-                    if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
-                        changes.push(`${section}.${fieldKey}`);
-                    }
-                });
-            }
-        });
-        const logDetails = `Updated fields for ${newProfile.student.first_name} ${newProfile.student.last_name}: ${changes.join(', ')}`;
-        
-        addAuditLog({
-            user: getUserById(editorId)?.email || 'Unknown',
-            name: getUserById(editorId)?.name || 'Unknown',
-            action: 'Update Student Profile',
-            details: logDetails,
-        });
-
-        return newProfile;
-    }
-    return null;
+export const deleteLeaveRequest = (leaveId: string): boolean => {
+    let requests = getLeaveRequests();
+    const initialLength = requests.length;
+    requests = requests.filter(r => r.id !== leaveId);
+    saveToStorage(LEAVE_REQUESTS_KEY, requests);
+    return requests.length < initialLength;
 };
 
-
-export const updateStudentStatus = (studentId: string, status: AdmissionStatus, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    
-    if (profileIndex !== -1) {
-        const now = new Date().toISOString();
-        const profile = profiles[profileIndex];
-        
-        profile.admissionDetails.admission_status = status;
-        profile.student.updated_at = now;
-        profile.student.updated_by = editorId;
-
-        profiles[profileIndex] = profile;
-        saveToStorage(STUDENTS_KEY, profiles);
-        return profile;
-    }
-    return null;
+export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
+    let requests = getLeaveRequests();
+    const initialLength = requests.length;
+    requests = requests.filter(r => !leaveIds.includes(r.id));
+    saveToStorage(LEAVE_REQUESTS_KEY, requests);
+    return initialLength - requests.length;
 }
 
-export const deleteStudentProfile = (studentId: string): boolean => {
-    const profiles = getStudentProfiles();
-    const newProfiles = profiles.filter(p => p.student.student_no !== studentId);
-    if (newProfiles.length < profiles.length) {
-        saveToStorage(STUDENTS_KEY, newProfiles);
-        return true;
-    }
-    return false;
-}
+// Student & Staff Attendance
+export const getStudentAttendanceRecordsForStudent = (studentId: string): StudentAttendanceRecord[] => {
+    const profile = getStudentProfileById(studentId);
+    return profile?.attendanceRecords || [];
+};
 
+export const getStaffAttendanceRecords = (): StaffAttendanceRecord[] => {
+    return getFromStorage(STAFF_ATTENDANCE_RECORDS_KEY, []);
+};
 
-const updateProfileSubArray = <T>(studentId: string, editorId: string, arrayName: keyof StudentProfile, newItem: T): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-
-    if (profileIndex !== -1) {
-        const now = new Date().toISOString();
-        const profile = profiles[profileIndex];
-
-        if (Array.isArray(profile[arrayName])) {
-            (profile[arrayName] as T[]).push(newItem);
-        } else {
-            (profile[arrayName] as T[]) = [newItem];
-        }
-
-        profile.student.updated_at = now;
-        profile.student.updated_by = editorId;
-
-        profiles[profileIndex] = profile;
-        saveToStorage(STUDENTS_KEY, profiles);
-        return profile;
-    }
-    return null;
-}
-
-export const addAcademicRecord = (studentId: string, record: AcademicRecord, editorId: string) => 
-    updateProfileSubArray(studentId, editorId, 'academicRecords', record);
-
-export const addDisciplinaryRecord = (studentId: string, record: DisciplinaryRecord, editorId: string) =>
-    updateProfileSubArray(studentId, editorId, 'disciplinaryRecords', record);
-
-export const addAttendanceRecord = (entityId: string, record: AttendanceRecord, editorId: string, type: 'student' | 'staff') => {
+// Generic function to add attendance
+export function addAttendanceRecord(entityId: string, record: { date: string, status: AttendanceStatus }, editorId: string, type: 'student' | 'staff') {
     if (type === 'student') {
-        const studentRecord: StudentAttendanceRecord = { ...record, student_id: entityId };
-        return updateProfileSubArray(entityId, editorId, 'attendanceRecords', studentRecord);
-    } else { // staff
-        const staffRecord: StaffAttendanceRecord = { ...record, staff_id: entityId };
-        const allRecords = getFromStorage<StaffAttendanceRecord[]>(STAFF_ATTENDANCE_RECORDS_KEY, []);
-        saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, [...allRecords, staffRecord]);
-    }
-};
-
-export const getScoresForClass = (classId: string): AssignmentScore[] => {
-    const profiles = getStudentProfiles();
-    return profiles.flatMap(p => p.assignmentScores || []).filter(s => s.class_id === classId);
-}
-
-export const addScore = (score: AssignmentScore, editorId: string): void => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === score.student_id);
-
-    if (profileIndex !== -1) {
-        const profile = profiles[profileIndex];
-        if (!profile.assignmentScores) {
-            profile.assignmentScores = [];
-        }
-
-        const existingScoreIndex = profile.assignmentScores.findIndex(s => 
-            s.student_id === score.student_id && 
-            s.subject_id === score.subject_id && 
-            s.assignment_name === score.assignment_name
-        );
-
-        if (existingScoreIndex !== -1) {
-            // If the new score is higher, update it.
-            if (score.score > profile.assignmentScores[existingScoreIndex].score) {
-                profile.assignmentScores[existingScoreIndex] = score;
+        const profiles = getStudentProfiles();
+        const profileIndex = profiles.findIndex(p => p.student.student_no === entityId);
+        if (profileIndex !== -1) {
+            if (!profiles[profileIndex].attendanceRecords) {
+                profiles[profileIndex].attendanceRecords = [];
             }
+            const recordIndex = profiles[profileIndex].attendanceRecords!.findIndex(r => r.date.split('T')[0] === new Date(record.date).toISOString().split('T')[0]);
+            if (recordIndex !== -1) {
+                profiles[profileIndex].attendanceRecords![recordIndex].status = record.status;
+            } else {
+                profiles[profileIndex].attendanceRecords!.push({ student_id: entityId, ...record });
+            }
+            saveToStorage(STUDENTS_KEY, profiles);
+        }
+    } else { // staff
+        const records = getStaffAttendanceRecords();
+        const recordIndex = records.findIndex(r => r.staff_id === entityId && r.date.split('T')[0] === new Date(record.date).toISOString().split('T')[0]);
+        if (recordIndex !== -1) {
+            records[recordIndex].status = record.status;
         } else {
-            // If no score exists, add the new one.
-            profile.assignmentScores.push(score);
+            records.push({ staff_id: entityId, ...record });
         }
-
-        profile.student.updated_at = new Date().toISOString();
-        profile.student.updated_by = editorId;
-        
-        profiles[profileIndex] = profile;
-        saveToStorage(STUDENTS_KEY, profiles);
+        saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, records);
     }
-};
-
-export const updateAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, newScore: number, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    if (profileIndex === -1) return null;
-
-    const profile = profiles[profileIndex];
-    if (!profile.assignmentScores) return null;
-
-    const scoreIndex = profile.assignmentScores.findIndex(s => s.subject_id === subjectId && s.assignment_name === assignmentName);
-    if (scoreIndex === -1) return null;
-
-    profile.assignmentScores[scoreIndex].score = newScore;
-    profile.student.updated_at = new Date().toISOString();
-    profile.student.updated_by = editorId;
-
-    profiles[profileIndex] = profile;
-    saveToStorage(STUDENTS_KEY, profiles);
-    return profile;
-}
-
-export const deleteAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    if (profileIndex === -1) return null;
-
-    const profile = profiles[profileIndex];
-    if (!profile.assignmentScores) return null;
-    
-    const initialLength = profile.assignmentScores.length;
-    profile.assignmentScores = profile.assignmentScores.filter(s => !(s.subject_id === subjectId && s.assignment_name === assignmentName));
-
-    if (profile.assignmentScores.length < initialLength) {
-        profile.student.updated_at = new Date().toISOString();
-        profile.student.updated_by = editorId;
-        profiles[profileIndex] = profile;
-        saveToStorage(STUDENTS_KEY, profiles);
-        return profile;
-    }
-
-    return null;
-}
-
-export const deleteAllAssignmentScores = (studentId: string, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    if (profileIndex === -1) return null;
-
-    const profile = profiles[profileIndex];
-    if (!profile.assignmentScores || profile.assignmentScores.length === 0) {
-        return profile; // No scores to delete
-    }
-
-    profile.assignmentScores = [];
-    profile.student.updated_at = new Date().toISOString();
-    profile.student.updated_by = editorId;
-
-    profiles[profileIndex] = profile;
-    saveToStorage(STUDENTS_KEY, profiles);
-    return profile;
-}
-
-
-export const getStaffAttendanceRecords = (): StaffAttendanceRecord[] => getFromStorage<StaffAttendanceRecord[]>(STAFF_ATTENDANCE_RECORDS_KEY, []);
-
-export const addCommunicationLog = (studentId: string, record: CommunicationLog, editorId: string) =>
-    updateProfileSubArray(studentId, editorId, 'communicationLogs', record);
-
-export const addUploadedDocument = (studentId: string, record: UploadedDocument, editorId: string) =>
-    updateProfileSubArray(studentId, editorId, 'uploadedDocuments', record);
-    
-export const deleteUploadedDocument = (studentId: string, documentId: string, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-
-    if (profileIndex !== -1) {
-        const now = new Date().toISOString();
-        const profile = profiles[profileIndex];
-        
-        if (profile.uploadedDocuments) {
-            profile.uploadedDocuments = profile.uploadedDocuments.filter(doc => doc.uploaded_at !== documentId);
-        }
-
-        profile.student.updated_at = now;
-        profile.student.updated_by = editorId;
-
-        profiles[profileIndex] = profile;
-        saveToStorage(STUDENTS_KEY, profiles);
-        return profile;
-    }
-
-    return null;
-}
-
-export const updateHealthRecords = (studentId: string, healthRecords: HealthRecords, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
-    const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    
-    if (profileIndex !== -1) {
-        const now = new Date().toISOString();
-        const profile = profiles[profileIndex];
-        
-        profile.healthRecords = healthRecords;
-        profile.student.updated_at = now;
-        profile.student.updated_by = editorId;
-
-        profiles[profileIndex] = profile;
-        saveToStorage(STUDENTS_KEY, profiles);
-        return profile;
-    }
-    return null;
-}
-
-export const promoteStudents = (studentIds: string[], newClassId: string, editorId: string): number => {
-    const profiles = getStudentProfiles();
-    let updatedCount = 0;
-    const now = new Date().toISOString();
-
-    profiles.forEach(profile => {
-        if (studentIds.includes(profile.student.student_no)) {
-            profile.admissionDetails.class_assigned = newClassId;
-            profile.student.updated_at = now;
-            profile.student.updated_by = editorId;
-            updatedCount++;
-        }
-    });
-
-    if (updatedCount > 0) {
-        saveToStorage(STUDENTS_KEY, profiles);
-    }
-    return updatedCount;
-}
-
-export const graduateStudents = (studentIds: string[], editorId: string): number => {
-    const profiles = getStudentProfiles();
-    let updatedCount = 0;
-    const now = new Date().toISOString();
-
-    profiles.forEach(profile => {
-        if (studentIds.includes(profile.student.student_no)) {
-            profile.admissionDetails.admission_status = 'Graduated';
-            profile.student.updated_at = now;
-            profile.student.updated_by = editorId;
-            updatedCount++;
-        }
-    });
-
-    if (updatedCount > 0) {
-        saveToStorage(STUDENTS_KEY, profiles);
-    }
-    return updatedCount;
 }
 
 
 // Staff Management Functions
-export const getStaffProfiles = (): StaffProfile[] => getFromStorage<StaffProfile[]>(STAFF_PROFILES_KEY, []);
 export const getStaff = (): Staff[] => getFromStorage<Staff[]>(STAFF_KEY, []);
+export const getDeclinedStaff = (): Staff[] => getFromStorage<Staff[]>(DECLINED_STAFF_KEY, []);
+export const getStaffByStaffId = (staffId: string): Staff | null => getStaff().find(s => s.staff_id === staffId) || null;
 export const storeGetStaffAcademicHistory = (): StaffAcademicHistory[] => getFromStorage<StaffAcademicHistory[]>(STAFF_ACADEMIC_HISTORY_KEY, []);
 export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocument[]>(STAFF_DOCUMENTS_KEY, []);
+export const getStaffDocumentsByStaffId = (staffId: string): StaffDocument[] => getStaffDocuments().filter(d => d.staff_id === staffId);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
-export const addStaff = (staffData: Omit<Staff, 'user_id'>, creatorId: string): Staff => {
+export const addStaff = (staffData: Omit<Staff, 'user_id'> & { signature?: string }, creatorId: string): Staff => {
     const staffList = getStaff();
-    const allStaff = [...staffList, ...getFromStorage<Staff[]>(DECLINED_STAFF_KEY, [])];
-
-    if (staffData.email && allStaff.some(s => s.email === staffData.email)) throw new Error("A staff member with this email already exists.");
-    if (allStaff.some(s => s.phone === staffData.phone)) throw new Error("A staff member with this phone number already exists.");
-    if (staffData.id_no && allStaff.some(s => s.id_no && s.id_no === staffData.id_no)) throw new Error("A staff member with this ID number already exists.");
-    if (staffData.snnit_no && allStaff.some(s => s.snnit_no && s.snnit_no === staffData.snnit_no)) throw new Error("A staff member with this SSNIT number already exists.");
+    const allUsers = getUsers();
     
-    // Create user account first
-    const userToCreate = {
-        name: `${staffData.first_name} ${staffData.last_name}`,
-        email: staffData.email,
-        username: staffData.email,
-        password: `${staffData.last_name.toLowerCase()}${staffData.staff_id.slice(-3)}`,
-        role: staffData.roles[0] as Role, // Assuming the first role is the primary one
-        status: 'active' as 'active' | 'frozen',
-        entityId: staffData.staff_id,
-    };
-
-    const newUser = addUser(userToCreate);
-
-    const newStaff: Staff = { ...staffData, user_id: newUser.id };
+    // Check if user account needs to be created
+    let user = allUsers.find(u => u.email.toLowerCase() === staffData.email.toLowerCase());
+    if (!user) {
+        user = addUser({
+            name: `${staffData.first_name} ${staffData.last_name}`,
+            email: staffData.email,
+            password: 'password', // Default password
+            role: staffData.roles[0],
+            signature: staffData.signature,
+        });
+    } else {
+        // Link existing user
+        if (getStaff().some(s => s.user_id === user!.id)) {
+            throw new Error("This user is already linked to another staff member.");
+        }
+    }
     
-    saveToStorage(STAFF_KEY, [...staffList, newStaff]);
+    const newStaff: Staff = { ...staffData, user_id: user.id };
+    
+    staffList.push(newStaff);
+    saveToStorage(STAFF_KEY, staffList);
+    
     addAuditLog({
-        user: getUserById(creatorId)?.email || 'Unknown', name: getUserById(creatorId)?.name || 'Unknown',
-        action: 'Create Staff', details: `Created staff member ${newStaff.first_name} ${newStaff.last_name}`
+        user: getUserById(creatorId)?.email || 'Unknown',
+        name: getUserById(creatorId)?.name || 'Unknown',
+        action: 'Create Staff',
+        details: `Created staff member ${newStaff.first_name} ${newStaff.last_name} with ID ${newStaff.staff_id}`
     });
+
     return newStaff;
+}
+
+export const saveDeclinedStaff = (staffData: Staff) => {
+    const declined = getDeclinedStaff();
+    saveToStorage(DECLINED_STAFF_KEY, [...declined, staffData]);
 };
 
 export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editorId: string): Staff | null => {
     const staffList = getStaff();
     const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
+    if(staffIndex === -1) return null;
 
-    if (staffIndex !== -1) {
-        const existingStaff = staffList[staffIndex];
-        const newStaffData = { ...existingStaff, ...updatedData };
-        staffList[staffIndex] = newStaffData;
-        saveToStorage(STAFF_KEY, staffList);
-
-        addAuditLog({
-            user: getUserById(editorId)?.email || 'Unknown',
-            name: getUserById(editorId)?.name || 'Unknown',
-            action: 'Update Staff',
-            details: `Updated details for staff ID ${staffId}`
+    staffList[staffIndex] = { ...staffList[staffIndex], ...updatedData };
+    saveToStorage(STAFF_KEY, staffList);
+    
+    // Also update the associated user if name or email changed
+    const user = getUserById(staffList[staffIndex].user_id);
+    if (user && (user.name !== `${updatedData.first_name} ${updatedData.last_name}` || user.email !== updatedData.email)) {
+        updateUser({
+            ...user,
+            name: `${updatedData.first_name} ${updatedData.last_name}`,
+            email: updatedData.email || user.email, // Keep old email if new one is empty
         });
-        
-        return newStaffData;
     }
-    return null;
+    
+    return staffList[staffIndex];
 }
+
+export const toggleEmploymentStatus = (staffId: string, editorId: string): Staff | null => {
+    const staffList = getStaff();
+    const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
+    if(staffIndex === -1) return null;
+
+    const currentStatus = staffList[staffIndex].status;
+    const newStatus: EmploymentStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+    staffList[staffIndex].status = newStatus;
+    
+    saveToStorage(STAFF_KEY, staffList);
+
+    // Also toggle the user account status
+    const user = getUserById(staffList[staffIndex].user_id);
+    if (user) {
+        toggleUserStatus(user.id);
+    }
+
+    addAuditLog({
+        user: getUserById(editorId)?.email || 'Unknown',
+        name: getUserById(editorId)?.name || 'Unknown',
+        action: 'Toggle Staff Status',
+        details: `Changed status for ${staffList[staffIndex].first_name} to ${newStatus}`
+    });
+    
+    return staffList[staffIndex];
+}
+
+export const addStaffAcademicHistory = (history: StaffAcademicHistory): void => {
+    const historyList = storeGetStaffAcademicHistory();
+    saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, [...historyList, history]);
+};
+
+export const addStaffDocument = (doc: StaffDocument): void => {
+    const docs = getStaffDocuments();
+    saveToStorage(STAFF_DOCUMENTS_KEY, [...docs, doc]);
+};
+
+export const deleteStaffDocument = (staffId: string, docName: string): boolean => {
+    let docs = getStaffDocuments();
+    const initialLength = docs.length;
+    docs = docs.filter(d => !(d.staff_id === staffId && d.document_name === docName));
+    if (docs.length < initialLength) {
+        saveToStorage(STAFF_DOCUMENTS_KEY, docs);
+        return true;
+    }
+    return false;
+};
+
+export const addStaffAppointmentHistory = (history: StaffAppointmentHistory): void => {
+    const historyList = getStaffAppointmentHistory();
+    // In a real DB, you'd likely just add. Here, we might replace if one already exists for the same date for simplicity.
+    const existingIndex = historyList.findIndex(h => h.staff_id === history.staff_id && h.appointment_date === history.appointment_date);
+    if (existingIndex > -1) {
+        historyList[existingIndex] = history;
+    } else {
+        historyList.push(history);
+    }
+    saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, historyList);
+};
 
 export const deleteStaff = (staffId: string, editorId: string): boolean => {
     const staffList = getStaff();
     const staffToDelete = staffList.find(s => s.staff_id === staffId);
     if (!staffToDelete) return false;
 
-    // Delete user
-    if (staffToDelete.user_id) {
-        deleteUser(staffToDelete.user_id);
-    }
+    // Delete user account
+    deleteUser(staffToDelete.user_id);
     
     // Delete staff record
-    const newStaffList = staffList.filter(s => s.staff_id !== staffId);
-    saveToStorage(STAFF_KEY, newStaffList);
+    const updatedStaffList = staffList.filter(s => s.staff_id !== staffId);
+    saveToStorage(STAFF_KEY, updatedStaffList);
     
-    // Delete associated records
-    const academicHistory = storeGetStaffAcademicHistory().filter(h => h.staff_id !== staffId);
-    saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, academicHistory);
-    
-    const documents = getStaffDocuments().filter(d => d.staff_id !== staffId);
-    saveToStorage(STAFF_DOCUMENTS_KEY, documents);
-    
+    // Delete related data
     const appointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staffId);
     saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, appointments);
 
+    const academicHistory = storeGetStaffAcademicHistory().filter(h => h.staff_id !== staffId);
+    saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, academicHistory);
+    
+    // ... and so on for other related data (documents, attendance, etc.)
      addAuditLog({
         user: getUserById(editorId)?.email || 'Unknown',
         name: getUserById(editorId)?.name || 'Unknown',
         action: 'Delete Staff',
-        details: `Deleted staff member ${staffToDelete.first_name} ${staffToDelete.last_name} (Staff ID: ${staffId})`
+        details: `Deleted staff member ${staffToDelete.first_name} ${staffToDelete.last_name}`
     });
 
     return true;
-}
+};
 
 export const bulkDeleteStaff = (staffIds: string[], editorId: string): number => {
     let deletedCount = 0;
     staffIds.forEach(id => {
-        const success = deleteStaff(id, editorId);
-        if (success) {
+        if(deleteStaff(id, editorId)) {
             deletedCount++;
         }
     });
     return deletedCount;
+};
+
+
+// Subject Management Functions
+export const getSubjects = (): Subject[] => getFromStorage<Subject[]>(SUBJECTS_KEY, []);
+
+export const addSubject = (subjectName: string): void => {
+    const subjects = getSubjects();
+    const newSubject: Subject = {
+        id: `SUB${subjects.length + 1}`,
+        name: subjectName
+    };
+    saveToStorage(SUBJECTS_KEY, [...subjects, newSubject]);
+};
+
+export const deleteSubject = (subjectId: string): void => {
+    let subjects = getSubjects();
+    subjects = subjects.filter(s => s.id !== subjectId);
+    saveToStorage(SUBJECTS_KEY, subjects);
+
+    let classSubjects = addClassSubject();
+    classSubjects = classSubjects.filter(cs => cs.subject_id !== subjectId);
+    saveToStorage(CLASS_SUBJECTS_KEY, classSubjects);
+};
+
+export const addClassSubject = (): ClassSubject[] => getFromStorage<ClassSubject[]>(CLASS_SUBJECTS_KEY, []);
+export const saveClassSubjects = (assignments: ClassSubject[]): void => saveToStorage(CLASS_SUBJECTS_KEY, assignments);
+
+export const addTeacherSubject = (teacherId: string, subjectId: string): void => {
+    const assignments = getFromStorage<TeacherSubject[]>(TEACHER_SUBJECTS_KEY, []);
+    assignments.push({ staff_id: teacherId, subject_id: subjectId });
+    saveToStorage(TEACHER_SUBJECTS_KEY, assignments);
+};
+
+export const addScore = (score: AssignmentScore, editorId: string): void => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === score.student_id);
+
+    if (studentIndex !== -1) {
+        if (!profiles[studentIndex].assignmentScores) {
+            profiles[studentIndex].assignmentScores = [];
+        }
+
+        const scoreIndex = profiles[studentIndex].assignmentScores!.findIndex(s => 
+            s.subject_id === score.subject_id && s.assignment_name === score.assignment_name
+        );
+        
+        if(scoreIndex !== -1) {
+            profiles[studentIndex].assignmentScores![scoreIndex] = score;
+        } else {
+            profiles[studentIndex].assignmentScores!.push(score);
+        }
+
+        saveToStorage(STUDENTS_KEY, profiles);
+    }
+}
+
+export const updateAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, newScore: number, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if(studentIndex === -1) return null;
+
+    const student = profiles[studentIndex];
+    if (!student.assignmentScores) return student;
+
+    const scoreIndex = student.assignmentScores.findIndex(s => s.subject_id === subjectId && s.assignment_name === assignmentName);
+    if(scoreIndex !== -1) {
+        student.assignmentScores[scoreIndex].score = newScore;
+    }
+
+    profiles[studentIndex] = student;
+    saveToStorage(STUDENTS_KEY, profiles);
+    return student;
+};
+
+export const deleteAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if(studentIndex === -1) return null;
+
+    const student = profiles[studentIndex];
+    if (student.assignmentScores) {
+        student.assignmentScores = student.assignmentScores.filter(s => !(s.subject_id === subjectId && s.assignment_name === assignmentName));
+    }
+
+    profiles[studentIndex] = student;
+    saveToStorage(STUDENTS_KEY, profiles);
+    return student;
+};
+
+export const deleteAllAssignmentScores = (studentId: string, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if(studentIndex === -1) return null;
+
+    profiles[studentIndex].assignmentScores = [];
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+}
+
+export const getScoresForClass = (classId: string): AssignmentScore[] => {
+    const profiles = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === classId);
+    return profiles.flatMap(p => p.assignmentScores || []);
 }
 
 
-export const addStaffAcademicHistory = (history: StaffAcademicHistory): StaffAcademicHistory => {
-    const histories = storeGetStaffAcademicHistory();
-    saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, [...histories, history]);
-    return history;
-};
+// --- Student Management ---
+export const getStudentProfiles = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
+export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
 
-export const addStaffDocument = (document: StaffDocument): StaffDocument => {
-    const documents = getStaffDocuments();
-    saveToStorage(STAFF_DOCUMENTS_KEY, [...documents, document]);
-    return document;
-};
-
-export const addStaffAppointmentHistory = (appointment: StaffAppointmentHistory): StaffAppointmentHistory => {
-    const appointments = getStaffAppointmentHistory();
-    saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, [...appointments, appointment]);
-    return appointment;
-};
-
-export const getStaffByStaffId = (staffId: string): Staff | undefined => {
-    const staffList = getStaff();
-    return staffList.find(s => s.staff_id === staffId);
-};
-
-export const getStaffDocumentsByStaffId = (staffId: string): StaffDocument[] => {
-    const documents = getStaffDocuments();
-    return documents.filter(d => d.staff_id === staffId);
-};
-
-export const deleteStaffDocument = (staffId: string, documentName: string): boolean => {
-    const documents = getStaffDocuments();
-    const newDocuments = documents.filter(d => !(d.staff_id === staffId && d.document_name === documentName));
-    if (newDocuments.length < documents.length) {
-        saveToStorage(STAFF_DOCUMENTS_KEY, newDocuments);
-        return true;
-    }
-    return false;
-};
-
-export const getStaffProfileByUserId = (userId: string): StaffProfile | undefined => {
-    const profiles = getStaffProfiles();
-    return profiles.find(p => p.user_id === userId);
+export const getStudentProfileById = (studentId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    return profiles.find(p => p.student.student_no === studentId) || null;
 }
 
-
-// Leave Management Functions
-export const getLeaveRequests = (): LeaveRequest[] => getFromStorage<LeaveRequest[]>(LEAVE_REQUESTS_KEY, []);
-
-export const addLeaveRequest = (
-  request: Omit<LeaveRequest, 'id' | 'request_date' | 'status' | 'staff_name'>,
-  requesterId: string
-): LeaveRequest | null => {
-  const requests = getLeaveRequests();
-  const staff = getStaffByStaffId(request.staff_id);
-  if (!staff) return null;
-
-  const newRequest: LeaveRequest = {
-    ...request,
-    id: (requests.length > 0 ? Math.max(...requests.map(r => parseInt(r.id))) + 1 : 1).toString(),
-    staff_name: `${staff.first_name} ${staff.last_name}`,
-    request_date: new Date().toISOString(),
-    status: 'Pending',
-  };
-  saveToStorage(LEAVE_REQUESTS_KEY, [...requests, newRequest]);
-  return newRequest;
-};
-
-export const updateLeaveRequestStatus = (
-  leaveId: string,
-  status: LeaveStatus,
-  approverId: string,
-  comments: string,
-  days_approved?: number
-): LeaveRequest | null => {
-  const requests = getLeaveRequests();
-  const requestIndex = requests.findIndex((r) => r.id === leaveId);
-  if (requestIndex !== -1) {
-    const approver = getUserById(approverId);
-    requests[requestIndex].status = status;
-    requests[requestIndex].approver_id = approverId;
-    requests[requestIndex].approver_name = approver?.name;
-    requests[requestIndex].comments = comments;
-    if (days_approved !== undefined) {
-      requests[requestIndex].days_approved = days_approved;
-    }
-    saveToStorage(LEAVE_REQUESTS_KEY, requests);
-    return requests[requestIndex];
-  }
-  return null;
-};
-
-export const deleteLeaveRequest = (leaveId: string): boolean => {
-    const requests = getLeaveRequests();
-    const newRequests = requests.filter(r => r.id !== leaveId);
-    if (newRequests.length < requests.length) {
-        saveToStorage(LEAVE_REQUESTS_KEY, newRequests);
-        return true;
-    }
-    return false;
-}
-
-export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
-    const requests = getLeaveRequests();
-    const newRequests = requests.filter(r => !leaveIds.includes(r.id));
-    const deletedCount = requests.length - newRequests.length;
-    if (deletedCount > 0) {
-        saveToStorage(LEAVE_REQUESTS_KEY, newRequests);
-    }
-    return deletedCount;
-}
-
-export const toggleEmploymentStatus = (staffId: string, editorId: string): Staff | null => {
-    const staffList = getStaff();
-    const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
-    if (staffIndex === -1) return null;
-
-    const staff = staffList[staffIndex];
-    staff.status = staff.status === 'Active' ? 'Inactive' : 'Active';
+export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>, creatorId: string, classes: Class[]): StudentProfile => {
+    const profiles = getStudentProfiles();
     
-    // Also toggle the user account if it exists
-    if (staff.user_id) {
-        const user = getUserById(staff.user_id);
-        if(user) {
-            const newStatus = staff.status === 'Active' ? 'active' : 'frozen';
-            if(user.status !== newStatus) {
-                toggleUserStatus(staff.user_id);
-            }
+    // Generate student_no and admission_no
+    const admissionYear = new Date(profileData.admissionDetails.enrollment_date).getFullYear();
+    const studentsInYear = profiles.filter(p => new Date(p.admissionDetails.enrollment_date).getFullYear() === admissionYear);
+    const nextInYear = studentsInYear.length + 1;
+    const yearYY = admissionYear.toString().slice(-2);
+    const nextNumberPadded = nextInYear.toString().padStart(3, '0');
+    
+    const studentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
+    const admissionNo = `ADM${yearYY}${nextNumberPadded}`;
+    
+    const className = classes.find(c => c.id === profileData.admissionDetails.class_assigned)?.name || '';
+    const avatarSeed = `${profileData.student.first_name}${className}`.replace(/\s/g, '');
+
+    const newProfile: StudentProfile = {
+        student: {
+            ...profileData.student,
+            student_no: studentNo,
+            avatarUrl: `https://picsum.photos/seed/${avatarSeed}/200/200`,
+            created_at: new Date().toISOString(),
+            created_by: creatorId,
+            updated_at: new Date().toISOString(),
+            updated_by: creatorId,
+        },
+        contactDetails: { ...profileData.contactDetails, student_no: studentNo },
+        guardianInfo: { ...profileData.guardianInfo, student_no: studentNo },
+        emergencyContact: { ...profileData.emergencyContact, student_no: studentNo },
+        admissionDetails: {
+            ...profileData.admissionDetails,
+            student_no: studentNo,
+            admission_no: admissionNo,
+        }
+    };
+
+    saveToStorage(STUDENTS_KEY, [...profiles, newProfile]);
+    return newProfile;
+};
+
+export const updateStudentProfile = (studentId: string, updatedData: Partial<StudentProfile>, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+
+    if (studentIndex === -1) {
+        return null;
+    }
+
+    const currentProfile = profiles[studentIndex];
+
+    const newProfile: StudentProfile = {
+        ...currentProfile,
+        ...updatedData,
+        student: { ...currentProfile.student, ...updatedData.student, updated_at: new Date().toISOString(), updated_by: editorId },
+        contactDetails: { ...currentProfile.contactDetails, ...updatedData.contactDetails, student_no: studentId },
+        guardianInfo: { ...currentProfile.guardianInfo, ...updatedData.guardianInfo, student_no: studentId },
+        emergencyContact: { ...currentProfile.emergencyContact, ...updatedData.emergencyContact, student_no: studentId },
+        admissionDetails: { ...currentProfile.admissionDetails, ...updatedData.admissionDetails, student_no: studentId }
+    };
+    
+    profiles[studentIndex] = newProfile;
+    saveToStorage(STUDENTS_KEY, profiles);
+    return newProfile;
+};
+
+export const updateStudentStatus = (studentId: string, status: AdmissionStatus, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (studentIndex === -1) return null;
+    
+    profiles[studentIndex].admissionDetails.admission_status = status;
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+};
+
+export const promoteStudents = (studentIds: string[], toClassId: string, editorId: string): number => {
+    const profiles = getStudentProfiles();
+    let updatedCount = 0;
+    studentIds.forEach(id => {
+        const index = profiles.findIndex(p => p.student.student_no === id);
+        if (index > -1) {
+            profiles[index].admissionDetails.class_assigned = toClassId;
+            updatedCount++;
+        }
+    });
+    saveToStorage(STUDENTS_KEY, profiles);
+    return updatedCount;
+};
+
+export const graduateStudents = (studentIds: string[], editorId: string): number => {
+     const profiles = getStudentProfiles();
+    let updatedCount = 0;
+    studentIds.forEach(id => {
+        const index = profiles.findIndex(p => p.student.student_no === id);
+        if (index > -1) {
+            profiles[index].admissionDetails.admission_status = 'Graduated';
+            updatedCount++;
+        }
+    });
+    saveToStorage(STUDENTS_KEY, profiles);
+    return updatedCount;
+}
+
+export const deleteStudentProfile = (studentId: string): boolean => {
+    const profiles = getStudentProfiles();
+    const updatedProfiles = profiles.filter(p => p.student.student_no !== studentId);
+    if (profiles.length === updatedProfiles.length) return false;
+    saveToStorage(STUDENTS_KEY, updatedProfiles);
+    return true;
+}
+
+// Student Profile sub-record functions
+export const addAcademicRecord = (studentId: string, record: AcademicRecord, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (studentIndex === -1) return null;
+
+    if (!profiles[studentIndex].academicRecords) {
+        profiles[studentIndex].academicRecords = [];
+    }
+    profiles[studentIndex].academicRecords!.push(record);
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+}
+
+export const addDisciplinaryRecord = (studentId: string, record: DisciplinaryRecord, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (studentIndex === -1) return null;
+
+    if (!profiles[studentIndex].disciplinaryRecords) {
+        profiles[studentIndex].disciplinaryRecords = [];
+    }
+    profiles[studentIndex].disciplinaryRecords!.push(record);
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+}
+
+export const addCommunicationLog = (studentId: string, log: CommunicationLog, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (studentIndex === -1) return null;
+
+    if (!profiles[studentIndex].communicationLogs) {
+        profiles[studentIndex].communicationLogs = [];
+    }
+    profiles[studentIndex].communicationLogs!.push(log);
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+}
+
+export const addUploadedDocument = (studentId: string, doc: UploadedDocument, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (studentIndex === -1) return null;
+
+    if (!profiles[studentIndex].uploadedDocuments) {
+        profiles[studentIndex].uploadedDocuments = [];
+    }
+    profiles[studentIndex].uploadedDocuments!.push(doc);
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+}
+
+export const deleteUploadedDocument = (studentId: string, documentId: string, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (studentIndex === -1) return null;
+
+    if (profiles[studentIndex].uploadedDocuments) {
+        profiles[studentIndex].uploadedDocuments = profiles[studentIndex].uploadedDocuments!.filter(d => d.uploaded_at !== documentId);
+    }
+    
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+}
+
+
+export const updateHealthRecords = (studentId: string, records: HealthRecords, editorId: string): StudentProfile | null => {
+    const profiles = getStudentProfiles();
+    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    if (studentIndex === -1) return null;
+
+    profiles[studentIndex].healthRecords = records;
+    saveToStorage(STUDENTS_KEY, profiles);
+    return profiles[studentIndex];
+}
+
+
+
+// --- User & Role Management ---
+
+export const getUsers = (): User[] => {
+  const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+  const roles = getRoles();
+  return users.map((user) => {
+    const role = roles.find((r) => r.id === user.role_id);
+    return {
+      ...user,
+      role: role?.name || 'Guest',
+    };
+  });
+};
+
+export const getUserById = (id: string): User | null => {
+  const users = getUsers();
+  return users.find((user) => user.id === id) || null;
+};
+
+export const getUserByEmail = (email: string): User | null => {
+  const users = getUsers();
+  return users.find((user) => user.email.toLowerCase() === email.toLowerCase()) || null;
+};
+
+export const addUser = (userData: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, entityId?: string }): User => {
+    const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const roles = getRoles();
+    const now = new Date().toISOString();
+
+    const roleId = roles.find(r => r.name === userData.role)?.id;
+    if (!roleId) {
+        throw new Error(`Role "${userData.role}" not found.`);
+    }
+    
+    const existingUser = users.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+    if (existingUser) {
+        throw new Error("A user with this email already exists.");
+    }
+    
+    const username = userData.email.split('@')[0];
+    const avatarSeed = username.replace(/[^a-zA-Z0-9]/g, '');
+
+    const newUser: UserStorage = {
+        id: (users.length + 1).toString(),
+        name: userData.name,
+        username,
+        email: userData.email,
+        password: userData.password || 'password', // Default password
+        role_id: roleId,
+        is_super_admin: userData.role === 'Admin',
+        avatarUrl: `https://picsum.photos/seed/${avatarSeed}/40/40`,
+        status: 'active',
+        created_at: now,
+        updated_at: now,
+        signature: userData.signature,
+    };
+    saveToStorage(USERS_KEY, [...users, newUser]);
+
+    if (userData.entityId && userData.role !== 'Student' && userData.role !== 'Parent') {
+        const staff = getStaff();
+        const staffIndex = staff.findIndex(s => s.staff_id === userData.entityId);
+        if (staffIndex !== -1) {
+            staff[staffIndex].user_id = newUser.id;
+            saveToStorage(STAFF_KEY, staff);
         }
     }
     
-    staffList[staffIndex] = staff;
-    saveToStorage(STAFF_KEY, staffList);
-    
-    addAuditLog({
-        user: getUserById(editorId)?.email || 'Unknown',
-        name: getUserById(editorId)?.name || 'Unknown',
-        action: 'Toggle Staff Employment Status',
-        details: `Toggled employment status for staff member ${staff.first_name} ${staff.last_name} to ${staff.status}`
-    });
+    return { ...newUser, role: userData.role };
+};
 
-    return staff;
+export const updateUser = (updatedUser: User): User => {
+  const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+  const roles = getRoles();
+
+  const userIndex = users.findIndex((u) => u.id === updatedUser.id);
+  if (userIndex === -1) {
+    throw new Error('User not found');
+  }
+
+  const roleId = roles.find(r => r.name === updatedUser.role)?.id;
+
+  const userToSave: UserStorage = {
+    ...users[userIndex],
+    name: updatedUser.name,
+    email: updatedUser.email,
+    role_id: roleId || users[userIndex].role_id,
+    updated_at: new Date().toISOString(),
+    signature: updatedUser.signature,
+  };
+
+  users[userIndex] = userToSave;
+  saveToStorage(USERS_KEY, users);
+  
+  return { ...userToSave, role: updatedUser.role };
+};
+
+export const deleteUser = (userId: string): boolean => {
+    const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const updatedUsers = users.filter(u => u.id !== userId);
+    if (users.length === updatedUsers.length) return false;
+    saveToStorage(USERS_KEY, updatedUsers);
+    return true;
 }
 
+export const bulkDeleteUsers = (userIds: string[]): number => {
+    let users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const initialLength = users.length;
+    users = users.filter(u => !userIds.includes(u.id));
+    saveToStorage(USERS_KEY, users);
+    return initialLength - users.length;
+}
+
+
+export const toggleUserStatus = (userId: string): User | null => {
+    const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex === -1) return null;
+
+    users[userIndex].status = users[userIndex].status === 'active' ? 'frozen' : 'active';
+    users[userIndex].updated_at = new Date().toISOString();
     
+    saveToStorage(USERS_KEY, users);
+    return getUserById(userId);
+}
+
+export const changePassword = (userId: string, currentPass: string, newPass: string): boolean => {
+    const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex === -1) return false;
+    
+    if (users[userIndex].password !== currentPass) return false;
+
+    users[userIndex].password = newPass;
+    saveToStorage(USERS_KEY, users);
+    return true;
+}
+
+export const resetPassword = (userId: string, newPassword: string): boolean => {
+    const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex === -1) return false;
+    
+    users[userIndex].password = newPassword;
+    saveToStorage(USERS_KEY, users);
+    return true;
+}
+
+
+export const getRoles = (): RoleStorage[] => getFromStorage(ROLES_KEY, []);
+
+// --- Logging ---
+
+export const getAuditLogs = (): AuditLog[] => {
+    const logs = getFromStorage<AuditLog[]>(LOGS_KEY, []);
+    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
+
+export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>) => {
+  const logs = getAuditLogs();
+  const newLog: AuditLog = {
+    id: `log_${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    clientInfo: navigator.userAgent,
+    ...log,
+  };
+  saveToStorage(LOGS_KEY, [newLog, ...logs]);
+};
+
+export const deleteAuditLog = (logId: string): boolean => {
+    let logs = getAuditLogs();
+    const initialLength = logs.length;
+    logs = logs.filter(l => l.id !== logId);
+    saveToStorage(LOGS_KEY, logs);
+    return logs.length < initialLength;
+};
+
+export const bulkDeleteAuditLogs = (logIds: string[]): number => {
+    let logs = getAuditLogs();
+    const initialLength = logs.length;
+    logs = logs.filter(l => !logIds.includes(l.id));
+    saveToStorage(LOGS_KEY, logs);
+    return initialLength - logs.length;
+}
+
+export const deleteAllAuditLogs = () => {
+    saveToStorage(LOGS_KEY, []);
+}
+
+
+export const getAuthLogs = (): AuthLog[] => {
+    const logs = getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
+    return logs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
+
+export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp'>) => {
+  const logs = getAuthLogs();
+  const newLog: AuthLog = {
+    id: `authlog_${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    clientInfo: navigator.userAgent,
+    ...log,
+  };
+  saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
+};
+
+export const deleteAuthLog = (logId: string): boolean => {
+    let logs = getAuthLogs();
+    const initialLength = logs.length;
+    logs = logs.filter(l => l.id !== logId);
+    saveToStorage(AUTH_LOGS_KEY, logs);
+    return logs.length < initialLength;
+};
+
+export const bulkDeleteAuthLogs = (logIds: string[]): number => {
+    let logs = getAuthLogs();
+    const initialLength = logs.length;
+    logs = logs.filter(l => !logIds.includes(l.id));
+    saveToStorage(AUTH_LOGS_KEY, logs);
+    return initialLength - logs.length;
+}
+
+export const deleteAllAuthLogs = () => {
+    saveToStorage(AUTH_LOGS_KEY, []);
+}
+
+// Library Management
+export const getBooks = (): Book[] => getFromStorage<Book[]>(BOOKS_KEY, []);
+export const saveBooks = (books: Book[]): void => saveToStorage(BOOKS_KEY, books);
+export const getBorrowingRecords = (): BorrowingRecord[] => getFromStorage<BorrowingRecord[]>(BORROWING_KEY, []);
+export const saveBorrowingRecords = (records: BorrowingRecord[]): void => saveToStorage(BORROWING_KEY, records);
