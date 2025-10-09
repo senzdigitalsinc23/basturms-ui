@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'CampusConnect',
   description: 'A modern school records management system.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
