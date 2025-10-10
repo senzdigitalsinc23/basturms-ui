@@ -1,371 +1,252 @@
--- This SQL schema represents the data structures currently stored in localStorage for the CampusConnect application.
+-- This is an example SQL schema generated from the application's data structures.
+-- It is normalized and optimized for a relational database like SQLite.
 
--- =============================================
--- Core & Authentication
--- =============================================
+-- -----------------------------------------------------
+-- Core User & Staff Tables
+-- -----------------------------------------------------
 
-CREATE TABLE Roles (
-    id TEXT PRIMARY KEY,
+CREATE TABLE roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE
 );
 
-CREATE TABLE Users (
-    id TEXT PRIMARY KEY,
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
-    role_id TEXT NOT NULL,
-    avatarUrl TEXT,
-    signature TEXT, -- Data URL for the signature image
+    password_hash TEXT NOT NULL,
+    avatar_url TEXT,
+    signature TEXT, -- Store as base64 data URI
     is_super_admin BOOLEAN NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'active', -- 'active', 'frozen'
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    FOREIGN KEY (role_id) REFERENCES Roles(id)
+    status TEXT NOT NULL CHECK(status IN ('active', 'frozen')) DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- =============================================
--- Student Management
--- =============================================
-
-CREATE TABLE Classes (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE Students (
-    student_no TEXT PRIMARY KEY,
+CREATE TABLE staff (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_no TEXT NOT NULL UNIQUE,
+    user_id INTEGER UNIQUE,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     other_name TEXT,
-    dob TEXT NOT NULL,
-    gender TEXT NOT NULL,
-    avatarUrl TEXT,
-    created_at TEXT NOT NULL,
-    created_by TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    updated_by TEXT NOT NULL,
-    FOREIGN KEY (created_by) REFERENCES Users(id),
-    FOREIGN KEY (updated_by) REFERENCES Users(id)
+    phone TEXT NOT NULL,
+    id_type TEXT NOT NULL,
+    id_no TEXT NOT NULL UNIQUE,
+    snnit_no TEXT UNIQUE,
+    date_of_joining DATE NOT NULL,
+    employment_status TEXT NOT NULL CHECK(employment_status IN ('Active', 'On-leave', 'Inactive')) DEFAULT 'Active',
+    address_residence TEXT,
+    address_hometown TEXT,
+    address_city TEXT,
+    address_country TEXT,
+    address_gps TEXT,
+    base_salary REAL,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TABLE StudentContactDetails (
-    student_no TEXT PRIMARY KEY,
-    email TEXT,
-    phone TEXT,
-    country TEXT NOT NULL,
-    city TEXT,
-    hometown TEXT,
-    residence TEXT,
-    house_no TEXT,
-    gps_no TEXT,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE
+CREATE TABLE staff_roles (
+    staff_id INTEGER NOT NULL,
+    role_id INTEGER NOT NULL,
+    PRIMARY KEY (staff_id, role_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
-CREATE TABLE StudentGuardianInfo (
-    student_no TEXT PRIMARY KEY,
-    guardian_name TEXT NOT NULL,
-    guardian_phone TEXT NOT NULL,
-    guardian_email TEXT,
-    guardian_relationship TEXT,
-    guardian_occupation TEXT,
-    father_name TEXT,
-    father_phone TEXT,
-    father_email TEXT,
-    father_occupation TEXT,
-    mother_name TEXT,
-    mother_phone TEXT,
-    mother_email TEXT,
-    mother_occupation TEXT,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE
-);
-
-CREATE TABLE StudentEmergencyContacts (
-    student_no TEXT PRIMARY KEY,
-    emergency_name TEXT NOT NULL,
-    emergency_phone TEXT NOT NULL,
-    emergency_relationship TEXT,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE
-);
-
-CREATE TABLE StudentAdmissionDetails (
-    student_no TEXT PRIMARY KEY,
-    admission_no TEXT NOT NULL UNIQUE,
-    enrollment_date TEXT NOT NULL,
-    class_id TEXT NOT NULL,
-    admission_status TEXT NOT NULL,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE,
-    FOREIGN KEY (class_id) REFERENCES Classes(id)
-);
-
-CREATE TABLE StudentHealthRecords (
-    student_no TEXT PRIMARY KEY,
-    blood_group TEXT,
-    allergies TEXT, -- Stored as a JSON array string '["Peanuts", "Dust"]'
-    medical_notes TEXT,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE
-);
-
-CREATE TABLE StudentVaccinations (
+CREATE TABLE staff_academic_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_no TEXT NOT NULL,
-    name TEXT NOT NULL,
-    date TEXT NOT NULL,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE
-);
-
--- =============================================
--- Staff Management
--- =============================================
-
-CREATE TABLE Staff (
-    staff_id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL UNIQUE,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    other_name TEXT,
-    email TEXT NOT NULL UNIQUE,
-    phone TEXT,
-    roles TEXT NOT NULL, -- Stored as a JSON array string '["Teacher", "Admin"]'
-    status TEXT NOT NULL DEFAULT 'Active', -- 'Active', 'On-leave', 'Inactive'
-    id_type TEXT,
-    id_no TEXT,
-    snnit_no TEXT,
-    date_of_joining TEXT NOT NULL,
-    salary REAL,
-    FOREIGN KEY (user_id) REFERENCES Users(id)
-);
-
-CREATE TABLE StaffAddress (
-    staff_id TEXT PRIMARY KEY,
-    country TEXT,
-    city TEXT,
-    hometown TEXT,
-    residence TEXT,
-    house_no TEXT,
-    gps_no TEXT,
-    FOREIGN KEY (staff_id) REFERENCES Staff(staff_id) ON DELETE CASCADE
-);
-
-CREATE TABLE StaffAcademicHistory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    staff_id TEXT NOT NULL,
-    school TEXT,
-    qualification TEXT,
+    staff_id INTEGER NOT NULL,
+    school TEXT NOT NULL,
+    qualification TEXT NOT NULL,
     program_offered TEXT,
     year_completed INTEGER,
-    FOREIGN KEY (staff_id) REFERENCES Staff(staff_id) ON DELETE CASCADE
+    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
 );
 
-CREATE TABLE StaffDocuments (
+CREATE TABLE staff_documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    staff_id TEXT NOT NULL,
-    document_name TEXT,
-    file TEXT, -- Could be a URL or path
-    FOREIGN KEY (staff_id) REFERENCES Staff(staff_id) ON DELETE CASCADE
+    staff_id INTEGER NOT NULL,
+    document_name TEXT NOT NULL,
+    file_content BLOB NOT NULL, -- Store file content directly
+    uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
 );
 
-CREATE TABLE StaffAppointmentHistory (
+-- -----------------------------------------------------
+-- Student & Academic Tables
+-- -----------------------------------------------------
+
+CREATE TABLE classes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    staff_id TEXT NOT NULL,
-    appointment_date TEXT NOT NULL,
-    roles TEXT NOT NULL, -- JSON array
-    class_assigned TEXT, -- JSON array of Class IDs
-    subjects_assigned TEXT, -- JSON array of Subject IDs
-    is_class_teacher_for_class_id TEXT,
-    appointment_status TEXT,
-    FOREIGN KEY (staff_id) REFERENCES Staff(staff_id) ON DELETE CASCADE
+    name TEXT NOT NULL UNIQUE,
+    school_level TEXT -- e.g., 'Pre-School', 'JHS'
 );
 
-CREATE TABLE SalaryAdvances (
-    id TEXT PRIMARY KEY,
-    staff_id TEXT NOT NULL,
-    amount REAL NOT NULL,
-    date_requested TEXT NOT NULL,
-    repayment_months INTEGER NOT NULL,
-    monthly_deduction REAL NOT NULL,
-    repayments_made INTEGER NOT NULL DEFAULT 0,
-    FOREIGN KEY (staff_id) REFERENCES Staff(staff_id) ON DELETE CASCADE
+CREATE TABLE students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_no TEXT NOT NULL UNIQUE,
+    admission_no TEXT NOT NULL UNIQUE,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    other_name TEXT,
+    dob DATE NOT NULL,
+    gender TEXT NOT NULL CHECK(gender IN ('Male', 'Female', 'Other')),
+    admission_status TEXT NOT NULL DEFAULT 'Admitted',
+    enrollment_date DATE NOT NULL,
+    class_id INTEGER,
+    avatar_url TEXT,
+    created_by_user_id INTEGER,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES classes (id),
+    FOREIGN KEY (created_by_user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
--- =============================================
--- Academics
--- =============================================
+CREATE TABLE student_contact_details (
+    student_id INTEGER PRIMARY KEY,
+    email TEXT UNIQUE,
+    phone TEXT,
+    residence TEXT,
+    hometown TEXT,
+    house_no TEXT,
+    gps_no TEXT,
+    FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
 
-CREATE TABLE Subjects (
-    id TEXT PRIMARY KEY,
+CREATE TABLE student_guardian_info (
+    student_id INTEGER PRIMARY KEY,
+    guardian_name TEXT NOT NULL,
+    guardian_phone TEXT NOT NULL,
+    guardian_relationship TEXT,
+    guardian_email TEXT,
+    FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------
+-- Academic Structure
+-- -----------------------------------------------------
+
+CREATE TABLE academic_years (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    year_name TEXT NOT NULL UNIQUE, -- e.g., "2023/2024"
+    status TEXT NOT NULL CHECK(status IN ('Active', 'Completed', 'Upcoming'))
+);
+
+CREATE TABLE terms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    academic_year_id INTEGER NOT NULL,
+    name TEXT NOT NULL, -- "First Term", "Second Term"
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('Upcoming', 'Active', 'Completed')),
+    FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
+);
+
+CREATE TABLE subjects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE
 );
 
-CREATE TABLE ClassSubjects (
-    class_id TEXT NOT NULL,
-    subject_id TEXT NOT NULL,
+CREATE TABLE class_subjects (
+    class_id INTEGER NOT NULL,
+    subject_id INTEGER NOT NULL,
     PRIMARY KEY (class_id, subject_id),
-    FOREIGN KEY (class_id) REFERENCES Classes(id),
-    FOREIGN KEY (subject_id) REFERENCES Subjects(id)
+    FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
 );
 
-CREATE TABLE AssignmentScores (
+-- -----------------------------------------------------
+-- Records & Logs
+-- -----------------------------------------------------
+
+CREATE TABLE attendance_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id TEXT NOT NULL,
-    class_id TEXT NOT NULL,
-    subject_id TEXT NOT NULL,
+    student_id INTEGER,
+    staff_id INTEGER,
+    date DATE NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('Present', 'Absent', 'Late', 'Excused', 'On Leave')),
+    recorded_by_user_id INTEGER,
+    FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE,
+    FOREIGN KEY (recorded_by_user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE assignment_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    subject_id INTEGER NOT NULL,
+    term_id INTEGER NOT NULL,
     assignment_name TEXT NOT NULL,
     score REAL NOT NULL,
-    FOREIGN KEY (student_id) REFERENCES Students(student_no),
-    FOREIGN KEY (class_id) REFERENCES Classes(id),
-    FOREIGN KEY (subject_id) REFERENCES Subjects(id)
+    FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE,
+    FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- =============================================
--- Attendance
--- =============================================
-
-CREATE TABLE StudentAttendance (
+CREATE TABLE disciplinary_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id TEXT NOT NULL,
-    date TEXT NOT NULL,
-    status TEXT NOT NULL, -- 'Present', 'Absent', 'Late', 'Excused'
-    FOREIGN KEY (student_id) REFERENCES Students(student_no) ON DELETE CASCADE
+    student_id INTEGER NOT NULL,
+    date DATE NOT NULL,
+    incident TEXT NOT NULL,
+    action_taken TEXT,
+    reported_by_user_id INTEGER,
+    FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+    FOREIGN KEY (reported_by_user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TABLE StaffAttendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    staff_id TEXT NOT NULL,
-    date TEXT NOT NULL,
-    status TEXT NOT NULL, -- 'Present', 'Absent', 'On Leave', 'Excused'
-    FOREIGN KEY (staff_id) REFERENCES Staff(staff_id) ON DELETE CASCADE
-);
-
--- =============================================
+-- -----------------------------------------------------
 -- Financials
--- =============================================
+-- -----------------------------------------------------
 
-CREATE TABLE FeeStructure (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
+CREATE TABLE fee_structure (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_name TEXT NOT NULL UNIQUE,
     description TEXT,
-    isMiscellaneous BOOLEAN DEFAULT 0
+    is_miscellaneous BOOLEAN NOT NULL DEFAULT 0
 );
 
-CREATE TABLE FeeStructureAmounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fee_structure_id TEXT NOT NULL,
-    level TEXT NOT NULL, -- 'Pre-School', 'Lower Primary', etc.
+CREATE TABLE fee_amounts (
+    fee_item_id INTEGER NOT NULL,
+    school_level TEXT NOT NULL,
     amount REAL NOT NULL,
-    FOREIGN KEY (fee_structure_id) REFERENCES FeeStructure(id) ON DELETE CASCADE
+    PRIMARY KEY (fee_item_id, school_level),
+    FOREIGN KEY (fee_item_id) REFERENCES fee_structure (id) ON DELETE CASCADE
 );
 
-CREATE TABLE TermlyBills (
-    bill_number TEXT PRIMARY KEY,
-    term TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    created_by TEXT NOT NULL,
-    status TEXT NOT NULL, -- 'Pending', 'Approved', 'Rejected'
-    approved_by TEXT,
-    approved_at TEXT,
-    FOREIGN KEY (created_by) REFERENCES Users(id)
-);
-
-CREATE TABLE TermlyBillItems (
+CREATE TABLE termly_bills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    bill_number TEXT NOT NULL,
-    description TEXT NOT NULL,
-    amount REAL NOT NULL,
-    FOREIGN KEY (bill_number) REFERENCES TermlyBills(bill_number) ON DELETE CASCADE
+    term_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    total_billed REAL NOT NULL,
+    total_paid REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL CHECK(status IN ('Paid', 'Partially Paid', 'Unpaid')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
-CREATE TABLE StudentFinancials (
-    student_no TEXT PRIMARY KEY,
-    account_balance REAL NOT NULL,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE
-);
-
-CREATE TABLE StudentPayments (
+CREATE TABLE payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_no TEXT NOT NULL,
-    term TEXT NOT NULL,
-    bill_number TEXT NOT NULL,
-    date TEXT NOT NULL,
+    termly_bill_id INTEGER NOT NULL,
     amount REAL NOT NULL,
-    method TEXT,
-    recorded_by TEXT,
+    payment_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    method TEXT NOT NULL,
     receipt_number TEXT,
-    paid_by TEXT,
-    FOREIGN KEY (student_no) REFERENCES Students(student_no) ON DELETE CASCADE
+    recorded_by_user_id INTEGER,
+    FOREIGN KEY (termly_bill_id) REFERENCES termly_bills (id) ON DELETE CASCADE,
+    FOREIGN KEY (recorded_by_user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TABLE Expenses (
-    id TEXT PRIMARY KEY,
-    date TEXT NOT NULL,
-    description TEXT NOT NULL,
-    category TEXT,
-    amount REAL NOT NULL,
-    vendor TEXT,
-    paymentMethod TEXT,
-    recorded_by TEXT NOT NULL,
-    FOREIGN KEY (recorded_by) REFERENCES Users(id)
-);
+-- -----------------------------------------------------
+-- Indexes for Performance Optimization
+-- -----------------------------------------------------
 
-CREATE TABLE Payrolls (
-    id TEXT PRIMARY KEY,
-    month TEXT NOT NULL,
-    generated_at TEXT NOT NULL,
-    generated_by TEXT NOT NULL,
-    status TEXT NOT NULL, -- 'Pending', 'Approved', 'Rejected'
-    total_amount REAL NOT NULL,
-    approved_by TEXT,
-    approved_at TEXT,
-    FOREIGN KEY (generated_by) REFERENCES Users(id)
-);
-
-CREATE TABLE PayrollItems (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    payroll_id TEXT NOT NULL,
-    staff_id TEXT NOT NULL,
-    base_salary REAL,
-    allowances REAL,
-    bonuses REAL,
-    gross_salary REAL,
-    deductions REAL,
-    net_salary REAL,
-    FOREIGN KEY (payroll_id) REFERENCES Payrolls(id) ON DELETE CASCADE,
-    FOREIGN KEY (staff_id) REFERENCES Staff(staff_id)
-);
-
--- =============================================
--- Logs & Miscellaneous
--- =============================================
-
-CREATE TABLE AuditLogs (
-    id TEXT PRIMARY KEY,
-    timestamp TEXT NOT NULL,
-    user_email TEXT,
-    user_name TEXT,
-    action TEXT,
-    details TEXT,
-    clientInfo TEXT
-);
-
-CREATE TABLE AuthLogs (
-    id TEXT PRIMARY KEY,
-    timestamp TEXT NOT NULL,
-    email TEXT,
-    event TEXT,
-    status TEXT,
-    details TEXT,
-    clientInfo TEXT
-);
-
-CREATE TABLE Announcements (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    audience TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    author_id TEXT NOT NULL,
-    FOREIGN KEY (author_id) REFERENCES Users(id)
-);
-
--- ... and so on for other features like inventory, library, etc.
+CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_staff_staff_no ON staff (staff_no);
+CREATE INDEX idx_students_student_no ON students (student_no);
+CREATE INDEX idx_students_class_id ON students (class_id);
+CREATE INDEX idx_attendance_student_date ON attendance_records (student_id, date);
+CREATE INDEX idx_attendance_staff_date ON attendance_records (staff_id, date);
+CREATE INDEX idx_scores_student_term ON assignment_scores (student_id, term_id);
+CREATE INDEX idx_payments_bill_id ON payments (termly_bill_id);
+CREATE INDEX idx_bills_student_term ON termly_bills (student_id, term_id);
