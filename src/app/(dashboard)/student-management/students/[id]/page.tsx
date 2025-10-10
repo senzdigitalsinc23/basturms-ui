@@ -4,15 +4,15 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects, updateAssignmentScore, deleteAssignmentScore, deleteAllAssignmentScores } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData, AssignmentScore, Subject } from '@/lib/types';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects, updateAssignmentScore, deleteAssignmentScore, deleteAllAssignmentScores, getAssignmentActivities, getClassAssignmentActivities } from '@/lib/store';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData, AssignmentScore, Subject, AssignmentActivity } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { format, differenceInYears } from 'date-fns';
-import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark, Image as ImageIcon, Pencil, Save, X } from 'lucide-react';
+import { Calendar, Edit, Mail, Phone, User, Users, GraduationCap, Building, Shield, FileText, PlusCircle, HeartPulse, Scale, Activity, MessageSquare, ArrowLeft, Droplet, Trash2, Landmark, Image as ImageIcon, Pencil, Save, X, File, BookCopy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 const statusColors: Record<string, string> = {
@@ -117,6 +118,7 @@ export default function StudentProfilePage() {
     const [profile, setProfile] = useState<StudentProfile | null>(null);
     const [classes, setClasses] = useState<Class[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [activities, setActivities] = useState<AssignmentActivity[]>([]);
     const [className, setClassName] = useState('');
     const [age, setAge] = useState<number | null>(null);
     const [isEditFormOpen, setIsEditFormOpen] = useState(false);
@@ -147,6 +149,13 @@ export default function StudentProfilePage() {
             setClasses(allClasses);
             setSubjects(getSubjects());
             setSchoolProfile(getSchoolProfile());
+            
+            if (studentProfile) {
+                const classActivities = getClassAssignmentActivities().filter(ca => ca.class_id === studentProfile.admissionDetails.class_assigned);
+                const activityIds = classActivities.map(ca => ca.activity_id);
+                setActivities(getAssignmentActivities().filter(a => activityIds.includes(a.id)));
+            }
+
             setSelectedScores({});
 
             if(studentProfile) {
@@ -366,6 +375,28 @@ export default function StudentProfilePage() {
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
     
     const scoresSelectedCount = Object.values(selectedScores).filter(Boolean).length;
+    
+    const groupedScores = subjects.map(subject => {
+        const subjectScores = (assignmentScores || []).filter(s => s.subject_id === subject.id);
+        const activitiesData = activities.map(activity => {
+            const activityScores = subjectScores.filter(s => s.assignment_name.startsWith(activity.name));
+            const totalScore = activityScores.reduce((acc, s) => acc + s.score, 0);
+            const numTaken = activityScores.length;
+            const maxScorePerActivity = 100;
+            const weight = activity.weight;
+            const weightedScore = numTaken > 0 ? (totalScore / (numTaken * maxScorePerActivity)) * weight : 0;
+            
+            return {
+                ...activity,
+                scores: activityScores,
+                numTaken,
+                totalScore,
+                weightedScore,
+            };
+        }).filter(a => a.scores.length > 0);
+
+        return { subject, activities: activitiesData };
+    }).filter(s => s.activities.length > 0);
 
 
     return (
@@ -436,7 +467,7 @@ export default function StudentProfilePage() {
                     </Card>
                 </div>
 
-                <Tabs defaultValue="contact">
+                <Tabs defaultValue="academic">
                     <TabsList className="grid w-full grid-cols-7">
                         <TabsTrigger value="contact">Contact & Guardian</TabsTrigger>
                         <TabsTrigger value="academic">Academic</TabsTrigger>
@@ -471,119 +502,50 @@ export default function StudentProfilePage() {
                         </Card>
                     </TabsContent>
                     <TabsContent value="academic" className="space-y-6">
-                        <RecordCard<AssignmentScore>
-                            title="Assignment Scores"
-                            description="Detailed scores from classwork, homework, and exams."
-                            icon={FileText}
-                            records={assignmentScores}
-                            columns={[
-                                <Checkbox
-                                    key="select-all"
-                                    checked={scoresSelectedCount > 0 && scoresSelectedCount === assignmentScores?.length}
-                                    onCheckedChange={(checked) => {
-                                        const newSelection: Record<string, boolean> = {};
-                                        if (checked && assignmentScores) {
-                                            assignmentScores.forEach(rec => newSelection[`${rec.subject_id}___${rec.assignment_name}`] = true);
-                                        }
-                                        setSelectedScores(newSelection);
-                                    }}
-                                />,
-                                'Assignment', 'Subject', 'Score', 'Actions'
-                            ]}
-                            renderRow={(rec, i) => {
-                                const scoreKey = `${rec.subject_id}___${rec.assignment_name}`;
-                                return (
-                                <TableRow key={i}>
-                                    <TableCell>
-                                        <Checkbox
-                                            checked={!!selectedScores[scoreKey]}
-                                            onCheckedChange={(checked) => {
-                                                const newSelection = { ...selectedScores };
-                                                if (checked) newSelection[scoreKey] = true;
-                                                else delete newSelection[scoreKey];
-                                                setSelectedScores(newSelection);
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>{rec.assignment_name}</TableCell>
-                                    <TableCell>{subjects.find(s => s.id === rec.subject_id)?.name || rec.subject_id}</TableCell>
-                                    <TableCell><Badge variant="secondary">{rec.score}</Badge></TableCell>
-                                    <TableCell className="text-right">
-                                        {(currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') && (
-                                            <>
-                                                <Button variant="ghost" size="icon" onClick={() => handleEditScore(rec)}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                This action will permanently delete the score for {rec.assignment_name} in {subjects.find(s => s.id === rec.subject_id)?.name}.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteScore(rec)}>Delete Score</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            )}}
-                            emptyMessage="No individual assignment scores have been recorded yet."
-                             bulkDeleteButton={
-                                currentUser?.role === 'Admin' && scoresSelectedCount > 0 && (
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" size="sm">
-                                                <Trash2 className="mr-2 h-4 w-4"/> Delete Selected ({scoresSelectedCount})
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>This will permanently delete the {scoresSelectedCount} selected assignment scores for {fullName}. This action cannot be undone.</AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleBulkDeleteScores}>Delete Selected Scores</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                )
-                            }
-                        />
-                        <RecordCard<AcademicRecord>
-                            title="Academic Performance"
-                            description="Review final grades and remarks for each term."
-                            icon={GraduationCap}
-                            records={academicRecords}
-                            columns={['Term', 'Subject', 'Grade', 'Teacher Remarks']}
-                            renderRow={(rec, i) => (
-                                <TableRow key={i}>
-                                    <TableCell>{rec.term}</TableCell>
-                                    <TableCell>{rec.subject}</TableCell>
-                                    <TableCell><Badge variant="secondary">{rec.grade}</Badge></TableCell>
-                                    <TableCell className="max-w-xs truncate">{rec.teacher_remarks}</TableCell>
-                                </TableRow>
-                            )}
-                            addRecordButton={ (currentUser?.role === 'Admin' || currentUser?.role === 'Teacher') &&
-                                <Dialog open={isAcademicFormOpen} onOpenChange={setIsAcademicFormOpen}>
-                                    <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
-                                    <DialogContent><DialogHeader><DialogTitle>Add Academic Record</DialogTitle></DialogHeader>
-                                        <AcademicRecordForm onSubmit={values => handleAddRecord(addAcademicRecord, values, "Add Academic Record", `Added grade for ${values.subject}`, "Record Added", "Academic record added successfully.", () => setIsAcademicFormOpen(false))} />
-                                    </DialogContent>
-                                </Dialog>
-                            }
-                        />
+                        <Card>
+                             <CardHeader>
+                                <CardTitle>Academic Performance</CardTitle>
+                                <CardDescription>Detailed breakdown of Continuous Assessment (SBA) and Exam scores.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {groupedScores.length > 0 ? (
+                                    <Accordion type="single" collapsible className="w-full">
+                                        {groupedScores.map(({ subject, activities }) => (
+                                            <AccordionItem value={subject.id} key={subject.id}>
+                                                <AccordionTrigger className="text-lg font-semibold">{subject.name}</AccordionTrigger>
+                                                <AccordionContent className="pl-2">
+                                                    <div className="space-y-4">
+                                                        {activities.map(activity => (
+                                                            <div key={activity.id} className="p-4 border rounded-md bg-muted/50">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <h4 className="font-semibold text-md">{activity.name}</h4>
+                                                                        <p className="text-sm text-muted-foreground">
+                                                                            Taken: {activity.numTaken} of {activity.expected_per_term} | Weight: {activity.weight}%
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="font-bold text-lg">{(activity.weightedScore).toFixed(1)} / {activity.weight}</p>
+                                                                        <p className="text-xs text-muted-foreground">Raw Score: {activity.totalScore}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {activity.scores.length > 0 && (
+                                                                     <div className="mt-2 text-xs text-muted-foreground">
+                                                                         Scores: {activity.scores.map(s => `${s.assignment_name.replace(activity.name, '').trim()}: ${s.score}`).join(', ')}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        ))}
+                                    </Accordion>
+                                ) : (
+                                    <p className="text-muted-foreground text-center py-8">No assignment scores have been recorded for any subject yet.</p>
+                                )}
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                     <TabsContent value="financials">
                         <Card>
