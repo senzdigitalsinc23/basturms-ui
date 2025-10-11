@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -71,9 +72,7 @@ export type StudentReport = {
     nextTermBegins: string | null;
     subjects: {
         subjectName: string;
-        rawSbaScore: number;
         sbaScore: number;
-        rawExamScore: number;
         examScore: number;
         totalScore: number;
         grade: string;
@@ -734,25 +733,35 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
     const activities = getAssignmentActivities();
     const gradingScheme = getGradingScheme();
     const schoolProfile = getSchoolProfile();
-    const SBA_WEIGHT = 40;
-    const EXAM_WEIGHT = 60;
-    const SBA_MAX_SCORE_PER_ACTIVITY = 10;
+    const SBA_TOTAL_WEIGHT = 40;
+    const EXAM_TOTAL_WEIGHT = 60;
 
     const reportSubjects = classSubjects.map(subject => {
         const studentScores = student.assignmentScores?.filter(s => s.subject_id === subject.id) || [];
         
-        const sbaScores = studentScores.filter(s => s.assignment_name !== 'End of Term Exam');
-        const examScoreRecord = studentScores.find(s => s.assignment_name === 'End of Term Exam');
+        const examActivity = activities.find(a => a.name === 'End of Term Exam');
+        const examScoreRecord = studentScores.find(s => s.assignment_name === examActivity?.name);
+        
+        const sbaActivities = activities.filter(a => a.name !== 'End of Term Exam');
+        
+        let totalSbaWeightedScore = 0;
+        sbaActivities.forEach(activity => {
+            const activityScores = studentScores.filter(s => s.assignment_name.startsWith(activity.name));
+            if (activityScores.length > 0) {
+                const totalRawScore = activityScores.reduce((acc, s) => acc + s.score, 0);
+                const totalPossibleRawScore = activityScores.length * 100; // Assuming each is out of 100
+                const weightedScore = (totalRawScore / totalPossibleRawScore) * activity.weight;
+                totalSbaWeightedScore += weightedScore;
+            }
+        });
+        
+        // Ensure SBA does not exceed its total weight
+        const finalSbaScore = Math.min(totalSbaWeightedScore, SBA_TOTAL_WEIGHT);
 
-        const studentTotalRawSbaScore = sbaScores.reduce((acc, score) => acc + (score.score || 0), 0);
-        
-        const totalPossibleSbaScore = sbaScores.length * SBA_MAX_SCORE_PER_ACTIVITY;
-        
-        const sbaScore = totalPossibleSbaScore > 0 ? (studentTotalRawSbaScore / totalPossibleSbaScore) * SBA_WEIGHT : 0;
         const rawExamScore = examScoreRecord?.score || 0;
-        const examScore = (rawExamScore / 100) * EXAM_WEIGHT;
+        const examScore = (rawExamScore / 100) * EXAM_TOTAL_WEIGHT;
 
-        const totalScore = Math.round(sbaScore + examScore);
+        const totalScore = Math.round(finalSbaScore + examScore);
         
         let grade = "N/A";
         let remarks = "N/A";
@@ -767,15 +776,22 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
         
         const allScoresForSubject = allStudentsInClass.map(s => {
             const scores = s.assignmentScores?.filter(sc => sc.subject_id === subject.id) || [];
-            const sba = scores.filter(sc => sc.assignment_name !== 'End of Term Exam');
-            const exam = scores.find(sc => sc.assignment_name === 'End of Term Exam');
             
-            const rawSba = sba.reduce((acc, score) => acc + (score.score || 0), 0);
-            const possibleSba = sba.length * SBA_MAX_SCORE_PER_ACTIVITY;
-            
-            const finalSba = possibleSba > 0 ? (rawSba / possibleSba) * SBA_WEIGHT : 0;
-            const finalExam = ((exam?.score || 0) / 100) * EXAM_WEIGHT;
-            return finalSba + finalExam;
+            let studentSbaScore = 0;
+            sbaActivities.forEach(activity => {
+                 const activityScores = scores.filter(sc => sc.assignment_name.startsWith(activity.name));
+                if (activityScores.length > 0) {
+                    const totalRaw = activityScores.reduce((acc, score) => acc + (score.score || 0), 0);
+                    const totalPossible = activityScores.length * 100;
+                    studentSbaScore += (totalRaw / totalPossible) * activity.weight;
+                }
+            });
+            studentSbaScore = Math.min(studentSbaScore, SBA_TOTAL_WEIGHT);
+
+            const examRec = scores.find(sc => sc.assignment_name === examActivity?.name);
+            const studentExamScore = ((examRec?.score || 0) / 100) * EXAM_TOTAL_WEIGHT;
+
+            return studentSbaScore + studentExamScore;
         }).sort((a, b) => b - a);
 
         const position = allScoresForSubject.indexOf(totalScore) + 1;
@@ -783,9 +799,7 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
 
         return {
             subjectName: subject.name,
-            rawSbaScore: studentTotalRawSbaScore || 0,
-            sbaScore: parseFloat(sbaScore.toFixed(1)),
-            rawExamScore: rawExamScore || 0,
+            sbaScore: parseFloat(finalSbaScore.toFixed(1)),
             examScore: parseFloat(examScore.toFixed(1)),
             totalScore,
             grade,

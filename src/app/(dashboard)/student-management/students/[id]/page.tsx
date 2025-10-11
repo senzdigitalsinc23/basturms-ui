@@ -140,6 +140,7 @@ export default function StudentProfilePage() {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
     const idCardRef = useRef<HTMLDivElement>(null);
+    const isAdminOrHead = currentUser?.role === 'Admin' || currentUser?.role === 'Headmaster';
 
     const fetchProfile = () => {
         if (studentId) {
@@ -300,7 +301,7 @@ export default function StudentProfilePage() {
                 user: currentUser.email,
                 name: currentUser.name,
                 action: 'Update Score',
-                details: `Updated score for ${editingScore.assignment_name} (${subjects.find(s => s.id === editingScore.subject_id)?.name}) for student ${fullName} to ${scoreValue}.`
+                details: `Updated score for ${editingScore.assignment_name} (${subjects.find(s => s.id === editingScore?.subject_id)?.name}) for student ${fullName} to ${scoreValue}.`
             });
             toast({ title: 'Score Updated', description: 'The assignment score has been updated.' });
         }
@@ -400,30 +401,43 @@ export default function StudentProfilePage() {
 
 
     return (
-        <ProtectedRoute allowedRoles={['Admin', 'Teacher']}>
+        <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Headmaster']}>
             <div className="space-y-6">
-                <div className="flex items-center justify-end">
-                    <div className="flex items-center gap-2">
-                         {currentUser?.role === 'Admin' && (
-                            <>
-                                <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm">
-                                            <MessageSquare className="mr-2 h-4 w-4" />
-                                            Log Communication
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Add Communication Log</DialogTitle>
-                                            <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
-                                        </DialogHeader>
-                                        <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
-                                    </DialogContent>
-                                </Dialog>
-                            </>
-                        )}
-                    </div>
+                <div className="flex items-center justify-end gap-2">
+                    {isAdminOrHead && (
+                        <>
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href="/student-management/students"><ArrowLeft className="mr-2 h-4 w-4"/>Back to List</Link>
+                            </Button>
+                            <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                                <DialogTrigger asChild>
+                                    <Button size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Profile</Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Edit Student Profile</DialogTitle>
+                                        <DialogDescription>Update details for {fullName}.</DialogDescription>
+                                    </DialogHeader>
+                                    <EditStudentForm defaultValues={profile} onSubmit={handleUpdateProfile} classes={classes} />
+                                </DialogContent>
+                            </Dialog>
+                        </>
+                    )}
+                    <Dialog open={isCommunicationFormOpen} onOpenChange={setIsCommunicationFormOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Log Communication
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add Communication Log</DialogTitle>
+                                <DialogDescription>Record a communication with a parent/guardian.</DialogDescription>
+                            </DialogHeader>
+                            <CommunicationLogForm onSubmit={values => handleAddRecord(addCommunicationLog, values, "Add Communication Log", `Logged communication with ${values.with_whom}`, "Log Added", "Communication log added successfully.", () => setIsCommunicationFormOpen(false))} />
+                        </DialogContent>
+                    </Dialog>
                 </div>
                 <Card>
                     <CardHeader className="flex flex-row items-center gap-6 space-y-0">

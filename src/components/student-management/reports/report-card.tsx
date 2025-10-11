@@ -57,10 +57,8 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                         <thead>
                             <tr className="bg-gray-100">
                                 <th className="border border-black p-1 font-bold">SUBJECT</th>
-                                <th className="border border-black p-1 font-bold w-[70px]">RAW SBA SCORE</th>
-                                <th className="border border-black p-1 font-bold w-[60px]">SBA (40%)</th>
-                                <th className="border border-black p-1 font-bold w-[70px]">RAW EXAM SCORE</th>
-                                <th className="border border-black p-1 font-bold w-[60px]">EXAM (60%)</th>
+                                <th className="border border-black p-1 font-bold w-[70px]">SBA (40%)</th>
+                                <th className="border border-black p-1 font-bold w-[70px]">EXAM (60%)</th>
                                 <th className="border border-black p-1 font-bold w-[60px]">TOTAL (100)</th>
                                 <th className="border border-black p-1 font-bold w-[50px]">GRADE</th>
                                 <th className="border border-black p-1 font-bold w-[60px]">POSITION</th>
@@ -71,10 +69,8 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                             {subjects.map((subj, index) => (
                                 <tr key={index}>
                                     <td className="border border-black p-1 font-medium">{subj.subjectName}</td>
-                                    <td className="border border-black p-1 text-center">{subj.rawSbaScore?.toFixed(1)}</td>
-                                    <td className="border border-black p-1 text-center">{subj.sbaScore?.toFixed(1)}</td>
-                                    <td className="border border-black p-1 text-center">{subj.rawExamScore?.toFixed(1)}</td>
-                                    <td className="border border-black p-1 text-center">{subj.examScore?.toFixed(1)}</td>
+                                    <td className="border border-black p-1 text-center">{subj.sbaScore.toFixed(1)}</td>
+                                    <td className="border border-black p-1 text-center">{subj.examScore.toFixed(1)}</td>
                                     <td className="border border-black p-1 text-center font-bold">{subj.totalScore}</td>
                                     <td className="border border-black p-1 text-center">{subj.grade}</td>
                                     <td className="border border-black p-1 text-center">{getOrdinal(subj.position)}</td>
