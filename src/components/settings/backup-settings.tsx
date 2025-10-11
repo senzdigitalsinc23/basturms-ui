@@ -21,7 +21,14 @@ const ALL_STORAGE_KEYS = [
     'campusconnect_staff_documents', 'campusconnect_staff_appointment_history', 'campusconnect_staff_attendance_records',
     'campusconnect_subjects', 'campusconnect_class_subjects', 'campusconnect_teacher_subjects',
     'campusconnect_school', 'campusconnect_academic_years', 'campusconnect_grading_scheme',
-    'campusconnect_role_permissions', 'campusconnect_leave_requests', 'campusconnect_backup_settings'
+    'campusconnect_role_permissions', 'campusconnect_leave_requests', 'campusconnect_backup_settings',
+    // Newly added keys for a full backup
+    'campusconnect_timetable', 'campusconnect_student_reports', 'campusconnect_fee_structures',
+    'campusconnect_termly_bills', 'campusconnect_expenses', 'campusconnect_payrolls',
+    'campusconnect_announcements', 'campusconnect_clubs', 'campusconnect_sports',
+    'campusconnect_assets', 'campusconnect_asset_allocations', 'campusconnect_department_requests',
+    'campusconnect_books', 'campusconnect_borrowing', 'campusconnect_assignment_activities',
+    'campusconnect_class_assignment_activities', 'campusconnect_promotion_criteria'
 ];
 
 const BACKUP_SETTINGS_KEY = 'campusconnect_backup_settings';
