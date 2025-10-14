@@ -73,20 +73,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Find the first valid JSON object in the string in case of duplicates
             let braceCount = 0;
             let endIndex = -1;
-            for (let i = 0; i < responseText.length; i++) {
+            let startIndex = responseText.indexOf('{');
+
+            if (startIndex === -1) {
+                throw new Error("No JSON object found in response");
+            }
+
+            for (let i = startIndex; i < responseText.length; i++) {
                 if (responseText[i] === '{') {
                     braceCount++;
                 } else if (responseText[i] === '}') {
                     braceCount--;
                 }
-                if (braceCount === 0 && endIndex === -1) {
+                if (braceCount === 0) {
                     endIndex = i + 1;
                     break;
                 }
             }
             
-            const jsonToParse = endIndex > 0 ? responseText.substring(0, endIndex) : responseText;
+            const jsonToParse = endIndex > 0 ? responseText.substring(startIndex, endIndex) : responseText;
             result = JSON.parse(jsonToParse);
+            console.log('API Response:', result);
         } catch (e) {
             console.error("Failed to parse JSON response. Raw response text:", responseText);
             addAuthLog({
