@@ -70,7 +70,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let result;
         
         try {
-            result = JSON.parse(responseText);
+            // Find the first valid JSON object in the string in case of duplicates
+            let braceCount = 0;
+            let endIndex = -1;
+            for (let i = 0; i < responseText.length; i++) {
+                if (responseText[i] === '{') {
+                    braceCount++;
+                } else if (responseText[i] === '}') {
+                    braceCount--;
+                }
+                if (braceCount === 0 && endIndex === -1) {
+                    endIndex = i + 1;
+                    break;
+                }
+            }
+            
+            const jsonToParse = endIndex > 0 ? responseText.substring(0, endIndex) : responseText;
+            result = JSON.parse(jsonToParse);
         } catch (e) {
             console.error("Failed to parse JSON response. Raw response text:", responseText);
             addAuthLog({
@@ -94,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 name: apiUser.username, // Assuming username is the full name
                 username: apiUser.username,
                 email: apiUser.email,
-                role: apiUser.role_id || 'Admin', // Fallback role
+                role: 'Admin', // Fallback role, will need proper mapping later
                 role_id: apiUser.role_id,
                 avatarUrl: `https://picsum.photos/seed/${apiUser.username}/40/40`,
                 is_super_admin: apiUser.is_super_admin === '1',
