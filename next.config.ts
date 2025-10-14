@@ -5,11 +5,18 @@ const pwa = withPWA({
   dest: "public",
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === "development",
+  disable: process.env.NODE_ENV === "development" || process.env.CI,
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://13.60.189.242/api/:path*',
+      },
+    ]
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
