@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 'Content-Type': 'application/json',
                 'X-API-KEY': apiKey,
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email: email, password: password }),
         });
 
         const responseText = await response.text();
@@ -85,7 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } else if (responseText[i] === '}') {
                     braceCount--;
                 }
-                if (braceCount === 0) {
+                if (braceCount > 0 && i === responseText.length - 1) {
+                    // Malformed JSON, brace never closes
+                     throw new Error("Malformed JSON response");
+                }
+                if (braceCount === 0 && startIndex !== -1) {
                     endIndex = i + 1;
                     break;
                 }
@@ -93,7 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             const jsonToParse = endIndex > 0 ? responseText.substring(startIndex, endIndex) : responseText;
             result = JSON.parse(jsonToParse);
-            console.log('API Response:', result);
         } catch (e) {
             console.error("Failed to parse JSON response. Raw response text:", responseText);
             addAuthLog({
