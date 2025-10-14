@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // We still initialize the store for other parts of the app that might use localStorage
-    initializeStore(); 
+    initializeStore();
     try {
       const storedUser = localStorage.getItem(USER_SESSION_KEY);
       if (storedUser) {
@@ -66,7 +66,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             body: JSON.stringify({ email, password }),
         });
 
-        const result = await response.json();
+        const responseText = await response.text();
+        let result;
+        
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error("Failed to parse JSON response. Raw response text:", responseText);
+            addAuthLog({
+                email,
+                event: 'Login Failure',
+                status: 'Failure',
+                details: 'Server returned an invalid JSON response.',
+            });
+            return false;
+        }
 
         if (result.success && result.data && result.data.success) {
             const apiUser = result.data.user;
