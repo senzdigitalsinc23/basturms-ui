@@ -260,12 +260,13 @@ export const ALL_SCHOOL_LEVELS: SchoolLevel[] = ['Pre-School', 'Lower Primary', 
 
 
 export interface User {
-  id: string; // Will be used as user_id as well
+  id: string; 
+  user_id?: string; // from API
   name: string;
   username: string;
   email: string;
   role: Role; // For easy access in the app
-  role_id: string;
+  role_id: string | null;
   avatarUrl: string;
   signature?: string; // Data URL of the user's signature image
   is_super_admin: boolean;
@@ -690,3 +691,24 @@ export interface RoleStorage {
   id: string;
   name: Role;
 }
+// Library Management Types
+export type Book = {
+  id: string;
+  title: string;
+  author: string;
+  isbn?: string;
+  category?: string;
+  quantity: number;
+};
+
+export type BorrowingRecord = {
+  id: string;
+  borrower_id: string; // Student or Staff ID
+  borrower_name: string;
+  book_id: string;
+  book_title: string;
+  borrow_date: string; // ISO string
+  due_date: string; // ISO string
+  return_date?: string; // ISO string
+  status: 'Borrowed' | 'Returned';
+};
