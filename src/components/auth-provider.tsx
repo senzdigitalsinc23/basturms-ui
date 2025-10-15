@@ -108,6 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return false;
         }
 
+        console.log('API Response:', result);
+
         if (result.success && result.data && result.data.success) {
             const apiUser = result.data.user;
             const token = result.data.token;
