@@ -786,7 +786,7 @@ export const deleteTermlyBill = (billNumber: string, editorId: string): void => 
     if (!billToDelete) return;
     
     // Find all students affected and reverse the financial impact
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     if(billToDelete.status === 'Approved') {
         const updatedProfiles = profiles.map(profile => {
             if (profile.financialDetails?.payment_history) {
@@ -817,11 +817,11 @@ export const deleteTermlyBill = (billNumber: string, editorId: string): void => 
 };
 
 export const prepareBills = (bill: TermlyBill, editorId: string): void => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     
     const allStudentsToBill = new Set<string>([
         ...bill.assigned_students,
-        ...getStudentProfiles()
+        ...getStudentProfilesFromStorage()
             .filter(p => bill.assigned_classes.includes(p.admissionDetails.class_assigned))
             .map(p => p.student.student_no)
     ]);
@@ -1431,13 +1431,19 @@ export const getScoresForClass = (classId: string): AssignmentScore[] => {
 const getStudentProfilesFromStorage = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
 
 export async function getStudentProfiles(): Promise<StudentProfile[]> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+    const apiUrl = '/api/v1';
     const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-    const token = typeof window !== 'undefined' ? localStorage.getItem('campusconnect_token') : null;
+
+    if (typeof window === 'undefined') {
+        return [];
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
 
     if (!apiKey || !token) {
-        console.error("API Key or auth token is missing.");
-        return [];
+        console.error("API Key or auth token is missing from client-side.");
+        // Fallback to cache if no token is available, maybe user is logged out
+        return getStudentProfilesFromStorage();
     }
     
     try {
@@ -1452,7 +1458,7 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
 
         if (!response.ok) {
             console.error("Failed to fetch students:", response.statusText);
-            return [];
+            return getStudentProfilesFromStorage(); // Fallback to cache
         }
 
         const result = await response.json();
@@ -1536,7 +1542,7 @@ export const getStudentProfileById = (studentId: string): StudentProfile | null 
     return profiles.find(p => p.student.student_no === studentId) || null;
 }
 
-export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>, creatorId: string, classes?: Class[]): StudentProfile => {
+export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, creatorId: string, classes?: Class[]): StudentProfile => {
     const profiles = getStudentProfilesFromStorage();
     
     // Generate student_no and admission_no
