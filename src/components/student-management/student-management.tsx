@@ -1,7 +1,7 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { getStudentProfiles, addStudentProfile, updateStudentStatus, addAuditLog, getClasses, deleteStudentProfile } from '@/lib/store';
+import { getStudentProfiles, updateStudentStatus, addAuditLog, getClasses, deleteStudentProfile } from '@/lib/store';
 import { AdmissionStatus, Class, StudentProfile } from '@/lib/types';
 import { StudentDataTable } from './data-table';
 import { columns } from './columns';
@@ -53,9 +53,11 @@ export function StudentManagement() {
   const [classes, setClasses] = useState<Class[]>([]);
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
 
-  const refreshStudents = () => {
-    const profiles = getStudentProfiles();
+  const refreshStudents = async () => {
+    setLoading(true);
+    const profiles = await getStudentProfiles();
     const classesData = getClasses();
     setClasses(classesData);
     const classMap = new Map(classesData.map(c => [c.id, c.name]));
@@ -70,112 +72,20 @@ export function StudentManagement() {
         email: p.contactDetails.email,
     })).sort((a, b) => new Date(b.admission_date).getTime() - new Date(a.admission_date).getTime());
     setStudents(displayData);
+    setLoading(false);
   }
 
   useEffect(() => {
     refreshStudents();
   }, []);
 
-  const handleAddStudent = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>) => {
-    if (!currentUser) return;
-
-    const newProfile = addStudentProfile(profileData, currentUser.id);
-    
-    addAuditLog({
-        user: currentUser.email,
-        name: currentUser.name,
-        action: 'Create Student',
-        details: `Created student ${newProfile.student.first_name} ${newProfile.student.last_name} with ID ${newProfile.student.student_no}`,
-    });
-    return newProfile;
-  };
-
   const handleImportStudents = (importedData: any[]) => {
     if (!currentUser) return;
-    try {
-        let createdCount = 0;
-        importedData.forEach((row, index) => {
-            // Very basic validation
-            if (row.first_name && row.last_name && row.enrollment_date && row.class_assigned) {
-                const enrollmentDate = parseDateString(row.enrollment_date);
-                const dobDate = parseDateString(row.dob);
-
-                if (!enrollmentDate) {
-                    console.error(`Skipping row ${index + 2} due to invalid enrollment_date:`, row.enrollment_date);
-                    return;
-                }
-                 if (!dobDate) {
-                    console.error(`Skipping row ${index + 2} due to invalid dob:`, row.dob);
-                    return;
-                }
-
-                const profileData: Parameters<typeof handleAddStudent>[0] = {
-                    student: {
-                        first_name: row.first_name,
-                        last_name: row.last_name,
-                        other_name: row.other_name,
-                        dob: dobDate.toISOString(),
-                        gender: row.gender,
-                    },
-                    contactDetails: {
-                        email: row.email,
-                        phone: row.phone,
-                        country: row.country,
-                        city: row.city,
-                        hometown: row.hometown,
-                        residence: row.residence,
-                        house_no: row.house_no,
-                        gps_no: row.gps_no,
-                    },
-                    guardianInfo: {
-                        guardian_name: row.guardian_name,
-                        guardian_phone: row.guardian_phone,
-                        guardian_relationship: row.guardian_relationship,
-                        guardian_email: row.guardian_email,
-                        father_name: row.father_name,
-                        father_phone: row.father_phone,
-                        father_email: row.father_email,
-                        mother_name: row.mother_name,
-                        mother_phone: row.mother_phone,
-                        mother_email: row.mother_email,
-                    },
-                    emergencyContact: {
-                        emergency_name: row.emergency_name,
-                        emergency_phone: row.emergency_phone,
-                        emergency_relationship: row.emergency_relationship,
-                    },
-                    admissionDetails: {
-                        enrollment_date: enrollmentDate.toISOString(),
-                        class_assigned: row.class_assigned,
-                        admission_status: row.admission_status || 'Admitted',
-                    }
-                };
-                handleAddStudent(profileData);
-                createdCount++;
-            }
-        });
-        
-        refreshStudents();
-
-        toast({
-            title: "Import Successful",
-            description: `${createdCount} student(s) imported successfully.`
-        });
-        addAuditLog({
-            user: currentUser.email,
-            name: currentUser.name,
-            action: 'Import Students',
-            details: `Imported ${createdCount} students from CSV.`,
-        });
-
-    } catch (error) {
-        console.error("Import failed:", error);
-        toast({
-            variant: "destructive",
-            title: "Import Failed",
-            description: "There was an error processing the CSV file. Please check the file format and try again."
-        });
-    }
+    toast({
+        variant: "destructive",
+        title: "Import Not Implemented",
+        description: "Importing from CSV is not connected to the new API yet."
+    });
   }
 
   const handleUpdateStatus = (studentId: string, status: AdmissionStatus) => {
@@ -185,7 +95,7 @@ export function StudentManagement() {
         refreshStudents();
         toast({
             title: "Status Updated",
-            description: `Student ${updatedProfile.student.first_name}'s status has been changed to ${status}.`
+            description: `Student status has been changed to ${status}.`
         });
         addAuditLog({
             user: currentUser.email,

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -229,101 +228,6 @@ const getInitialStaff = (): Staff[] => {
     ];
 };
 
-const getInitialStudentProfiles = (): StudentProfile[] => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const yearYY = currentYear.toString().slice(-2);
-    const adminUser = '1';
-    
-    // Student 1 admitted this year
-    const student1EnrollDate = new Date(currentYear, 2, 15).toISOString(); // Mar 15
-    const student1StudentNo = `WR-TK001-LBA${'${yearYY}'}001`;
-    const student1AdmissionNo = `ADM${'${yearYY}'}001`;
-
-    // Student 2 admitted last year
-    const lastYear = currentYear - 1;
-    const lastYearYY = lastYear.toString().slice(-2);
-    const student2EnrollDate = new Date(lastYear, 8, 1).toISOString(); // Sep 1
-    const student2StudentNo = `WR-TK001-LBA${'${lastYearYY}'}001`;
-    const student2AdmissionNo = `ADM${'${lastYearYY}'}001`;
-
-    return [
-        {
-            student: { student_no: student1StudentNo, first_name: 'John', last_name: 'Doe', dob: '2010-05-15', gender: 'Male', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser, avatarUrl: 'https://picsum.photos/seed/student1/200/200' },
-            contactDetails: { student_no: student1StudentNo, email: 'john.doe@example.com', phone: '123-456-7890', country: 'Ghana', city: 'Accra', hometown: 'Accra', residence: 'East Legon', house_no: 'H23', gps_no: 'GA-123-456' },
-            guardianInfo: { student_no: student1StudentNo, guardian_name: 'Jane Doe', guardian_phone: '098-765-4321', guardian_relationship: 'Mother', guardian_email: 'jane.doe@example.com', father_name: 'John Doe Sr.', father_phone: '111-222-3333', father_occupation: 'Engineer', mother_name: 'Jane Doe', mother_phone: '098-765-4321', mother_occupation: 'Doctor' },
-            emergencyContact: { student_no: student1StudentNo, emergency_name: 'Jane Doe', emergency_phone: '098-765-4321', emergency_relationship: 'Mother' },
-            admissionDetails: { student_no: student1StudentNo, admission_no: student1AdmissionNo, enrollment_date: student1EnrollDate, class_assigned: 'b5', admission_status: 'Admitted' },
-            healthRecords: {
-                blood_group: 'O+',
-                allergies: ['Peanuts'],
-                vaccinations: [{ name: 'MMR', date: '2012-06-01' }, { name: 'Polio', date: '2013-08-15' }],
-                medical_notes: 'Requires an inhaler for exercise-induced asthma.'
-            },
-            academicRecords: [
-                { term: '1st Term 2023', subject: 'Mathematics', grade: 'A', teacher_remarks: 'Excellent work' },
-                { term: '1st Term 2023', subject: 'English', grade: 'B+', teacher_remarks: 'Good, but needs to participate more in class discussions.' }
-            ],
-            disciplinaryRecords: [
-                { date: '2023-10-20', incident: 'Skipped class', action_taken: 'Detention', reported_by: '2' }
-            ],
-            attendanceRecords: [
-                { student_id: student1StudentNo, date: '2024-05-10', status: 'Present' },
-                { student_id: student1StudentNo, date: '2024-05-11', status: 'Absent' },
-            ],
-            communicationLogs: [
-                { date: '2023-10-21', type: 'Phone Call', notes: 'Discussed absence with mother. Reason: family emergency.', with_whom: 'Jane Doe (Mother)' }
-            ],
-            uploadedDocuments: [
-                { name: 'Birth Certificate', url: '#', uploaded_at: '2024-03-15T10:00:00.000Z', type: 'Birth Certificate' },
-                { name: 'Admission Form', url: '#', uploaded_at: '2024-03-15T10:05:00.000Z', type: 'Admission Form' }
-            ],
-             financialDetails: {
-                account_balance: -500, // owes 500
-                payment_history: [
-                    {
-                        bill_number: `BILL-${Date.now()}-1`,
-                        term: '1st Term 2023/2024',
-                        total_fees: 2000,
-                        amount_paid: 2000,
-                        outstanding: 0,
-                        status: 'Paid',
-                        payment_date: '2023-09-05',
-                        bill_items: [
-                            { description: 'Tuition', amount: 1500 },
-                            { description: 'Books', amount: 300 },
-                            { description: 'Uniform', amount: 200 },
-                        ],
-                        payments: []
-                    },
-                    {
-                        bill_number: `BILL-${Date.now()}-2`,
-                        term: '2nd Term 2023/2024',
-                        total_fees: 1800,
-                        amount_paid: 1300,
-                        outstanding: 500,
-                        status: 'Partially Paid',
-                        payment_date: '2024-01-10',
-                        bill_items: [
-                            { description: 'Tuition', amount: 1500 },
-                            { description: 'Extra Curricular', amount: 300 },
-                        ],
-                        payments: []
-                    }
-                ]
-            }
-        },
-        {
-            student: { student_no: student2StudentNo, first_name: 'Mary', last_name: 'Smith', dob: '2011-02-20', gender: 'Female', created_at: now.toISOString(), created_by: adminUser, updated_at: now.toISOString(), updated_by: adminUser, avatarUrl: 'https://picsum.photos/seed/student2/200/200' },
-            contactDetails: { student_no: student2StudentNo, email: 'mary.smith@example.com', phone: '123-456-7891', country: 'Ghana', city: 'Kumasi', hometown: 'Kumasi', residence: 'Asokwa', house_no: 'Plot 5', gps_no: 'AK-456-789' },
-            guardianInfo: { student_no: student2StudentNo, guardian_name: 'Peter Smith', guardian_phone: '098-765-4322', guardian_relationship: 'Father', guardian_email: 'peter.smith@example.com' },
-            emergencyContact: { student_no: student2StudentNo, emergency_name: 'Peter Smith', emergency_phone: '098-765-4322', emergency_relationship: 'Father' },
-            admissionDetails: { student_no: student2StudentNo, admission_no: student2AdmissionNo, enrollment_date: student2EnrollDate, class_assigned: 'b4', admission_status: 'Admitted' }
-        }
-    ];
-}
-
-
 const getInitialClasses = (): Class[] => {
     return [
         { id: 'nur1', name: 'Nursery 1' },
@@ -487,7 +391,7 @@ export const initializeStore = () => {
         saveToStorage(USERS_KEY, getInitialUsers(roles));
         saveToStorage(LOGS_KEY, []);
         saveToStorage(AUTH_LOGS_KEY, []);
-        saveToStorage(STUDENTS_KEY, getInitialStudentProfiles());
+        saveToStorage(STUDENTS_KEY, []); // Start with an empty student list
         saveToStorage(STUDENT_REPORTS_KEY, []);
         saveToStorage(CLASSES_KEY, getInitialClasses());
         saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
@@ -989,7 +893,7 @@ export const updateTermlyBillStatus = (billNumber: string, status: TermlyBill['s
 
 
 export const recordPayment = (studentId: string, paymentDetails: {amount: number, method: TermPayment['payments'][0]['method'], receipt_number?: string, paid_by?: string}, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
 
     if (profileIndex === -1) {
@@ -1042,7 +946,7 @@ export const recordPayment = (studentId: string, paymentDetails: {amount: number
 };
 
 export const deleteAllFinancialRecords = (editorId: string) => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     profiles.forEach(p => {
         p.financialDetails = undefined;
     });
@@ -1220,7 +1124,7 @@ export const getStaffAttendanceRecords = (): StaffAttendanceRecord[] => {
 // Generic function to add attendance
 export function addAttendanceRecord(entityId: string, record: { date: string, status: AttendanceStatus }, editorId: string, type: 'student' | 'staff') {
     if (type === 'student') {
-        const profiles = getStudentProfiles();
+        const profiles = getStudentProfilesFromStorage();
         const profileIndex = profiles.findIndex(p => p.student.student_no === entityId);
         if (profileIndex !== -1) {
             if (!profiles[profileIndex].attendanceRecords) {
@@ -1451,7 +1355,7 @@ export const addTeacherSubject = (teacherId: string, subjectId: string): void =>
 };
 
 export const addScore = (score: AssignmentScore, editorId: string): void => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === score.student_id);
 
     if (studentIndex !== -1) {
@@ -1474,7 +1378,7 @@ export const addScore = (score: AssignmentScore, editorId: string): void => {
 }
 
 export const updateAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, newScore: number, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if(studentIndex === -1) return null;
 
@@ -1492,7 +1396,7 @@ export const updateAssignmentScore = (studentId: string, subjectId: string, assi
 };
 
 export const deleteAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if(studentIndex === -1) return null;
 
@@ -1507,7 +1411,7 @@ export const deleteAssignmentScore = (studentId: string, subjectId: string, assi
 };
 
 export const deleteAllAssignmentScores = (studentId: string, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if(studentIndex === -1) return null;
 
@@ -1517,22 +1421,123 @@ export const deleteAllAssignmentScores = (studentId: string, editorId: string): 
 }
 
 export const getScoresForClass = (classId: string): AssignmentScore[] => {
-    const profiles = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === classId);
+    const profiles = getStudentProfilesFromStorage().filter(p => p.admissionDetails.class_assigned === classId);
     return profiles.flatMap(p => p.assignmentScores || []);
 }
 
 
 // --- Student Management ---
-export const getStudentProfiles = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
+// This is the internal function that reads from localStorage
+const getStudentProfilesFromStorage = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
+
+export async function getStudentProfiles(): Promise<StudentProfile[]> {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('campusconnect_token') : null;
+
+    if (!apiKey || !token) {
+        console.error("API Key or auth token is missing.");
+        return [];
+    }
+    
+    try {
+        const response = await fetch(`${apiUrl}/students`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-KEY': apiKey,
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            console.error("Failed to fetch students:", response.statusText);
+            return [];
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data && Array.isArray(result.data.students)) {
+            // Transform the API data to the StudentProfile format
+            const transformedProfiles = result.data.students.map((apiStudent: any): StudentProfile => {
+                 const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
+                 const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
+                 const mother = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'mother') || {};
+                
+                return {
+                    student: {
+                        student_no: apiStudent.student_no,
+                        first_name: apiStudent.first_name,
+                        last_name: apiStudent.last_name,
+                        other_name: apiStudent.other_name,
+                        dob: apiStudent.dob,
+                        gender: apiStudent.gender,
+                        created_at: new Date().toISOString(),
+                        created_by: apiStudent.created_by,
+                        updated_at: new Date().toISOString(),
+                        updated_by: apiStudent.created_by,
+                        avatarUrl: `https://picsum.photos/seed/${apiStudent.student_no}/200/200`,
+                    },
+                    contactDetails: {
+                        student_no: apiStudent.student_no,
+                        email: apiStudent.email,
+                        phone: apiStudent.phone,
+                        country: apiStudent.country_id, // Assuming country_id is the name
+                        city: apiStudent.city,
+                        hometown: apiStudent.hometown,
+                        residence: apiStudent.residence,
+                        house_no: apiStudent.house_no,
+                        gps_no: apiStudent.gps_no,
+                    },
+                    guardianInfo: {
+                        student_no: apiStudent.student_no,
+                        guardian_name: guardian.guardian_name,
+                        guardian_phone: guardian.guardian_phone,
+                        guardian_email: guardian.guardian_email,
+                        guardian_relationship: guardian.guardian_relationship,
+                        father_name: father.guardian_name,
+                        father_phone: father.guardian_phone,
+                        mother_name: mother.guardian_name,
+                        mother_phone: mother.guardian_phone,
+                    },
+                    emergencyContact: {
+                        student_no: apiStudent.student_no,
+                        emergency_name: apiStudent.emergency_contact?.emergency_name,
+                        emergency_phone: apiStudent.emergency_contact?.emergency_phone,
+                        emergency_relationship: apiStudent.emergency_contact?.emergency_relationship,
+                    },
+                    admissionDetails: {
+                        student_no: apiStudent.student_no,
+                        admission_no: apiStudent.admission_no,
+                        enrollment_date: apiStudent.enrollment_date,
+                        class_assigned: apiStudent.class_assigned,
+                        admission_status: apiStudent.admission_status === 'Active' ? 'Admitted' : apiStudent.admission_status,
+                    },
+                };
+            });
+            // Update localStorage cache
+            saveToStorage(STUDENTS_KEY, transformedProfiles);
+            return transformedProfiles;
+        } else {
+            console.error("API response for students was not successful or malformed.");
+            return getStudentProfilesFromStorage(); // Fallback to cache
+        }
+
+    } catch (error) {
+        console.error("Error fetching students from API:", error);
+        return getStudentProfilesFromStorage(); // Fallback to cache
+    }
+}
+
 export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
 
 export const getStudentProfileById = (studentId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     return profiles.find(p => p.student.student_no === studentId) || null;
 }
 
-export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>, creatorId: string, classes: Class[]): StudentProfile => {
-    const profiles = getStudentProfiles();
+export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no'>, creatorId: string, classes?: Class[]): StudentProfile => {
+    const profiles = getStudentProfilesFromStorage();
     
     // Generate student_no and admission_no
     const admissionYear = new Date(profileData.admissionDetails.enrollment_date).getFullYear();
@@ -1544,7 +1549,7 @@ export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.stu
     const studentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
     const admissionNo = `ADM${yearYY}${nextNumberPadded}`;
     
-    const className = classes.find(c => c.id === profileData.admissionDetails.class_assigned)?.name || '';
+    const className = classes?.find(c => c.id === profileData.admissionDetails.class_assigned)?.name || '';
     const avatarSeed = `${profileData.student.first_name}${className}`.replace(/\s/g, '');
 
     const newProfile: StudentProfile = {
@@ -1572,7 +1577,7 @@ export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.stu
 };
 
 export const updateStudentProfile = (studentId: string, updatedData: Partial<StudentProfile>, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
 
     if (studentIndex === -1) {
@@ -1597,7 +1602,7 @@ export const updateStudentProfile = (studentId: string, updatedData: Partial<Stu
 };
 
 export const updateStudentStatus = (studentId: string, status: AdmissionStatus, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if (studentIndex === -1) return null;
     
@@ -1607,7 +1612,7 @@ export const updateStudentStatus = (studentId: string, status: AdmissionStatus, 
 };
 
 export const promoteStudents = (studentIds: string[], toClassId: string, editorId: string): number => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     let updatedCount = 0;
     studentIds.forEach(id => {
         const index = profiles.findIndex(p => p.student.student_no === id);
@@ -1621,7 +1626,7 @@ export const promoteStudents = (studentIds: string[], toClassId: string, editorI
 };
 
 export const graduateStudents = (studentIds: string[], editorId: string): number => {
-     const profiles = getStudentProfiles();
+     const profiles = getStudentProfilesFromStorage();
     let updatedCount = 0;
     studentIds.forEach(id => {
         const index = profiles.findIndex(p => p.student.student_no === id);
@@ -1635,7 +1640,7 @@ export const graduateStudents = (studentIds: string[], editorId: string): number
 }
 
 export const deleteStudentProfile = (studentId: string): boolean => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const updatedProfiles = profiles.filter(p => p.student.student_no !== studentId);
     if (profiles.length === updatedProfiles.length) return false;
     saveToStorage(STUDENTS_KEY, updatedProfiles);
@@ -1644,7 +1649,7 @@ export const deleteStudentProfile = (studentId: string): boolean => {
 
 // Student Profile sub-record functions
 export const addAcademicRecord = (studentId: string, record: AcademicRecord, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if (studentIndex === -1) return null;
 
@@ -1657,7 +1662,7 @@ export const addAcademicRecord = (studentId: string, record: AcademicRecord, edi
 }
 
 export const addDisciplinaryRecord = (studentId: string, record: DisciplinaryRecord, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if (studentIndex === -1) return null;
 
@@ -1670,7 +1675,7 @@ export const addDisciplinaryRecord = (studentId: string, record: DisciplinaryRec
 }
 
 export const addCommunicationLog = (studentId: string, log: CommunicationLog, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if (studentIndex === -1) return null;
 
@@ -1683,7 +1688,7 @@ export const addCommunicationLog = (studentId: string, log: CommunicationLog, ed
 }
 
 export const addUploadedDocument = (studentId: string, doc: UploadedDocument, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if (studentIndex === -1) return null;
 
@@ -1696,7 +1701,7 @@ export const addUploadedDocument = (studentId: string, doc: UploadedDocument, ed
 }
 
 export const deleteUploadedDocument = (studentId: string, documentId: string, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if (studentIndex === -1) return null;
 
@@ -1710,7 +1715,7 @@ export const deleteUploadedDocument = (studentId: string, documentId: string, ed
 
 
 export const updateHealthRecords = (studentId: string, records: HealthRecords, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfiles();
+    const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
     if (studentIndex === -1) return null;
 
