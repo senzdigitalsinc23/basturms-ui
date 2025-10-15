@@ -57,6 +57,7 @@ export function ScoreEntryForm() {
 
     // Effect for when the class changes
     useEffect(() => {
+      async function onClassChange() {
         if (selectedClass) {
             const allSubjects = getSubjects();
             let subjectsToShow: Subject[] = [];
@@ -104,7 +105,7 @@ export function ScoreEntryForm() {
 
             setAssignmentName(undefined);
             
-            const allStudentsInClass = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
+            const allStudentsInClass = (await getStudentProfiles()).filter(p => p.admissionDetails.class_assigned === selectedClass);
             
             const initialScores: Record<string, string> = {};
             subjectsToShow.forEach(sub => {
@@ -139,6 +140,8 @@ export function ScoreEntryForm() {
             setAssignmentOptions([]);
             setIsTermFinalized(false);
         }
+      }
+      onClassChange();
     }, [selectedClass, user]);
 
     // Effect for loading scores when an assignment is selected

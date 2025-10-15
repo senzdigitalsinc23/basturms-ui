@@ -14,11 +14,14 @@ export default function ParentDashboardPage() {
   const [childProfile, setChildProfile] = useState<StudentProfile | null>(null);
 
   useEffect(() => {
-    if (user) {
-        const studentProfiles = getStudentProfiles();
-        const profile = studentProfiles.find(p => p.guardianInfo.guardian_email === user.email);
-        setChildProfile(profile || null);
+    async function fetchProfile() {
+      if (user) {
+          const studentProfiles = await getStudentProfiles();
+          const profile = studentProfiles.find(p => p.guardianInfo.guardian_email === user.email);
+          setChildProfile(profile || null);
+      }
     }
+    fetchProfile();
   }, [user]);
 
   const gpa = '3.4'; // Placeholder

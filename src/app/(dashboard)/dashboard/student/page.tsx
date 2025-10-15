@@ -14,11 +14,14 @@ export default function StudentDashboardPage() {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
 
   useEffect(() => {
-    if (user) {
-        const studentProfiles = getStudentProfiles();
-        const currentProfile = studentProfiles.find(p => p.contactDetails.email === user.email);
-        setProfile(currentProfile || null);
+    async function fetchProfile() {
+      if (user) {
+          const studentProfiles = await getStudentProfiles();
+          const currentProfile = studentProfiles.find(p => p.contactDetails.email === user.email);
+          setProfile(currentProfile || null);
+      }
     }
+    fetchProfile();
   }, [user]);
 
   const overallGrade = profile?.academicRecords?.[0]?.grade || 'N/A';

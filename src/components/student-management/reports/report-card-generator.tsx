@@ -227,7 +227,7 @@ export function ReportCardGenerator() {
 
     }, [user]);
 
-    const handleGenerateReports = () => {
+    const handleGenerateReports = async () => {
         if (!selectedClass || !selectedTerm) {
             toast({ variant: 'destructive', title: 'Selection Required', description: 'Please select both a class and a term.' });
             return;
@@ -238,7 +238,7 @@ export function ReportCardGenerator() {
         }
 
         setIsLoading(true);
-        const allStudentsInClass = getStudentProfiles().filter(p => p.admissionDetails.class_assigned === selectedClass);
+        const allStudentsInClass = (await getStudentProfiles()).filter(p => p.admissionDetails.class_assigned === selectedClass);
         const skippedStudents: string[] = [];
 
         const reports = allStudentsInClass.map(student => {

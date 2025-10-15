@@ -88,56 +88,58 @@ export default function AttendanceHistoryPage() {
     }, [user]);
 
     useEffect(() => {
-        if (!dateRange?.from) return;
+        async function fetchRecords() {
+            if (!dateRange?.from) return;
 
-        const intervalDates = eachDayOfInterval({
-            start: dateRange.from,
-            to: dateRange.to || dateRange.from,
-        });
-
-        if (selectedClass) {
-            const allProfiles = getStudentProfiles();
-            const filteredStudents = allProfiles.filter(p => p.admissionDetails.class_assigned === selectedClass);
-            
-            const historyByDay: StudentAttendanceHistory[] = intervalDates.map(day => {
-                const recordsForDay = filteredStudents.map(p => {
-                    const record = p.attendanceRecords?.find(rec => isSameDay(new Date(rec.date), day));
-                    return {
-                        id: p.student.student_no,
-                        name: `${p.student.first_name} ${p.student.last_name}`,
-                        status: record?.status || 'N/A'
-                    };
-                }).filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
-
-                return { date: day, records: recordsForDay };
+            const intervalDates = eachDayOfInterval({
+                start: dateRange.from!,
+                to: dateRange.to || dateRange.from!,
             });
 
-            setStudentRecords(historyByDay);
-        } else {
-            setStudentRecords([]);
-        }
+            if (selectedClass) {
+                const allProfiles = await getStudentProfiles();
+                const filteredStudents = allProfiles.filter(p => p.admissionDetails.class_assigned === selectedClass);
+                
+                const historyByDay: StudentAttendanceHistory[] = intervalDates.map(day => {
+                    const recordsForDay = filteredStudents.map(p => {
+                        const record = p.attendanceRecords?.find(rec => isSameDay(new Date(rec.date), day));
+                        return {
+                            id: p.student.student_no,
+                            name: `${p.student.first_name} ${p.student.last_name}`,
+                            status: record?.status || 'N/A'
+                        };
+                    }).filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
 
-        const allStaff = getStaff();
-        const allStaffAttendance = getStaffAttendanceRecords();
+                    return { date: day, records: recordsForDay };
+                });
 
-        const staffHistoryByDay: StaffAttendanceHistory[] = intervalDates.map(day => {
-             let filteredStaffRecords = allStaff.map(staff => {
-                const record = allStaffAttendance.find(rec => rec.staff_id === staff.staff_id && isSameDay(new Date(rec.date), day));
-                return {
-                    id: staff.staff_id,
-                    name: `${staff.first_name} ${staff.last_name}`,
-                    status: record?.status || 'N/A',
-                    roles: staff.roles || []
-                };
-            }).filter(s => s.name.toLowerCase().includes(staffSearch.toLowerCase()));
-
-             if (selectedRole && selectedRole !== 'All') {
-                filteredStaffRecords = filteredStaffRecords.filter(s => s.roles.includes(selectedRole as Role));
+                setStudentRecords(historyByDay);
+            } else {
+                setStudentRecords([]);
             }
-            return { date: day, records: filteredStaffRecords };
-        });
-        setStaffRecords(staffHistoryByDay);
 
+            const allStaff = getStaff();
+            const allStaffAttendance = getStaffAttendanceRecords();
+
+            const staffHistoryByDay: StaffAttendanceHistory[] = intervalDates.map(day => {
+                 let filteredStaffRecords = allStaff.map(staff => {
+                    const record = allStaffAttendance.find(rec => rec.staff_id === staff.staff_id && isSameDay(new Date(rec.date), day));
+                    return {
+                        id: staff.staff_id,
+                        name: `${staff.first_name} ${staff.last_name}`,
+                        status: record?.status || 'N/A',
+                        roles: staff.roles || []
+                    };
+                }).filter(s => s.name.toLowerCase().includes(staffSearch.toLowerCase()));
+
+                 if (selectedRole && selectedRole !== 'All') {
+                    filteredStaffRecords = filteredStaffRecords.filter(s => s.roles.includes(selectedRole as Role));
+                }
+                return { date: day, records: filteredStaffRecords };
+            });
+            setStaffRecords(staffHistoryByDay);
+        }
+        fetchRecords();
     }, [selectedClass, dateRange, studentSearch, staffSearch, selectedRole]);
 
 

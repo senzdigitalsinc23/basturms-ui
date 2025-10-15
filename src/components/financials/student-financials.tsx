@@ -48,22 +48,26 @@ export function StudentFinancials() {
     const [profile, setProfile] = useState<StudentProfile | null>(null);
 
     useEffect(() => {
-        if (user) {
-            let studentProfile;
-            if (user.role === 'Student') {
-                const studentUser = getStudentProfiles().find(p => p.contactDetails.email === user.email);
-                if (studentUser) {
-                    studentProfile = studentUser;
+        async function fetchProfile() {
+            if (user) {
+                let studentProfile;
+                const studentProfiles = await getStudentProfiles();
+                if (user.role === 'Student') {
+                    const studentUser = studentProfiles.find(p => p.contactDetails.email === user.email);
+                    if (studentUser) {
+                        studentProfile = studentUser;
+                    }
+                } else if (user.role === 'Parent') {
+                    studentProfile = studentProfiles.find(p => p.guardianInfo.guardian_email === user.email);
+                } else if (user.role === 'Admin') {
+                    // For demo purposes, admin can see the first student's profile.
+                    // A real app would have a search/selection mechanism.
+                    studentProfile = studentProfiles[0];
                 }
-            } else if (user.role === 'Parent') {
-                studentProfile = getStudentProfiles().find(p => p.guardianInfo.guardian_email === user.email);
-            } else if (user.role === 'Admin') {
-                // For demo purposes, admin can see the first student's profile.
-                // A real app would have a search/selection mechanism.
-                studentProfile = getStudentProfiles()[0];
+                 setProfile(studentProfile || null);
             }
-             setProfile(studentProfile || null);
         }
+        fetchProfile();
     }, [user]);
 
     const handlePrintInvoice = (termPayment: TermPayment) => {

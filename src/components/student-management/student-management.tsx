@@ -132,25 +132,25 @@ export function StudentManagement() {
     });
   }
   
-  const handleBulkDelete = (studentIds: string[]) => {
+  const handleBulkDelete = async (studentIds: string[]) => {
     if (!currentUser) return;
     let successCount = 0;
-    studentIds.forEach(id => {
-        const success = deleteStudentProfile(id);
-        if (success) successCount++;
-    });
-    refreshStudents();
+    for (const id of studentIds) {
+      const success = deleteStudentProfile(id);
+      if (success) successCount++;
+    }
+    await refreshStudents();
     toast({
-        title: "Bulk Delete Successful",
-        description: `Deleted ${successCount} of ${studentIds.length} students.`
+      title: "Bulk Delete Successful",
+      description: `Deleted ${successCount} of ${studentIds.length} students.`
     });
     addAuditLog({
-        user: currentUser.email,
-        name: currentUser.name,
-        action: 'Bulk Delete Students',
-        details: `Deleted ${studentIds.length} students.`,
+      user: currentUser.email,
+      name: currentUser.name,
+      action: 'Bulk Delete Students',
+      details: `Deleted ${studentIds.length} students.`,
     });
-  }
+  };
 
   return (
     <StudentDataTable

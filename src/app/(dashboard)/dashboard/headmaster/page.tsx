@@ -17,14 +17,17 @@ export default function HeadmasterDashboardPage() {
   });
 
   useEffect(() => {
-    const allStaff = getStaff();
-    const allStudents = getStudentProfiles();
+    async function fetchData() {
+      const allStaff = getStaff();
+      const allStudents = await getStudentProfiles();
 
-    setStats(prev => ({
-        ...prev,
-        totalStaff: allStaff.length,
-        totalStudents: allStudents.length,
-    }));
+      setStats(prev => ({
+          ...prev,
+          totalStaff: allStaff.length,
+          totalStudents: allStudents.length,
+      }));
+    }
+    fetchData();
   }, []);
 
   return (

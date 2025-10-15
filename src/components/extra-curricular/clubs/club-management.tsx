@@ -66,9 +66,12 @@ export function ClubManagement() {
     const { toast } = useToast();
 
     useEffect(() => {
-        setClubs(getClubs());
-        setTeachers(getStaff().filter(s => s.roles.includes('Teacher')));
-        setStudents(getStudentProfiles());
+        async function fetchData() {
+            setClubs(getClubs());
+            setTeachers(getStaff().filter(s => s.roles.includes('Teacher')));
+            setStudents(await getStudentProfiles());
+        }
+        fetchData();
     }, []);
 
     const handleSaveClub = (clubData: Omit<Club, 'id' | 'student_ids'>) => {

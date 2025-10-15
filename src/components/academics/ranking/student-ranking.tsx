@@ -26,17 +26,20 @@ export function StudentRanking() {
     const [rankedStudents, setRankedStudents] = useState<StudentRank[]>([]);
 
     useEffect(() => {
-        setProfiles(getStudentProfiles());
-        setClasses(getClasses());
-        setSubjects(getSubjects());
+        async function fetchData() {
+            setProfiles(await getStudentProfiles());
+            setClasses(getClasses());
+            setSubjects(getSubjects());
 
-        const activeYear = getAcademicYears().find(y => y.status === 'Active');
-        if (activeYear) {
-            const activeTerm = activeYear.terms.find(t => t.status === 'Active');
-            if (activeTerm) {
-                setActiveTermName(`${activeTerm.name} ${activeYear.year}`);
+            const activeYear = getAcademicYears().find(y => y.status === 'Active');
+            if (activeYear) {
+                const activeTerm = activeYear.terms.find(t => t.status === 'Active');
+                if (activeTerm) {
+                    setActiveTermName(`${activeTerm.name} ${activeYear.year}`);
+                }
             }
         }
+        fetchData();
     }, []);
 
     const classMap = useMemo(() => new Map(classes.map(c => [c.id, c.name])), [classes]);

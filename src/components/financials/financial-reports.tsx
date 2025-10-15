@@ -53,10 +53,13 @@ export function FinancialReports() {
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        setAllProfiles(getStudentProfiles());
-        setAllClasses(getClasses());
-        setAllPayrolls(getPayrolls());
-        setAllTermlyBills(getTermlyBills());
+        async function fetchData() {
+            setAllProfiles(await getStudentProfiles());
+            setAllClasses(getClasses());
+            setAllPayrolls(getPayrolls());
+            setAllTermlyBills(getTermlyBills());
+        }
+        fetchData();
     }, []);
 
     const classMap = useMemo(() => new Map(allClasses.map(c => [c.id, c.name])), [allClasses]);

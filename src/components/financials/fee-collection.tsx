@@ -127,8 +127,9 @@ export function FeeCollection() {
     const { toast } = useToast();
 
     useEffect(() => {
+      async function searchStudents() {
         if (searchQuery.length > 2) {
-            const profiles = getStudentProfiles();
+            const profiles = await getStudentProfiles();
             const filtered = profiles.filter(p =>
                 p.student.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 p.student.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -138,6 +139,8 @@ export function FeeCollection() {
         } else {
             setSearchResults([]);
         }
+      }
+      searchStudents();
     }, [searchQuery]);
 
     const handleSelectStudent = (student: StudentProfile) => {
@@ -146,9 +149,9 @@ export function FeeCollection() {
         setSearchResults([]);
     };
     
-    const isReceiptNumberDuplicate = (receiptNo: string): boolean => {
+    const isReceiptNumberDuplicate = async (receiptNo: string): Promise<boolean> => {
         if (!receiptNo) return false;
-        const allProfiles = getStudentProfiles();
+        const allProfiles = await getStudentProfiles();
         return allProfiles.some(profile =>
             profile.financialDetails?.payment_history.some(term =>
                 term.payments.some(p => p.receipt_number === receiptNo)
@@ -156,13 +159,13 @@ export function FeeCollection() {
         );
     }
 
-    const handleRecordPayment = () => {
+    const handleRecordPayment = async () => {
         if (!selectedStudent || !user || !paymentAmount) {
             toast({ variant: 'destructive', title: 'Error', description: 'Missing required payment details.' });
             return;
         }
 
-        if (paymentMethod === 'Cash' && receiptNumber && isReceiptNumberDuplicate(receiptNumber)) {
+        if (paymentMethod === 'Cash' && receiptNumber && await isReceiptNumberDuplicate(receiptNumber)) {
             toast({ variant: 'destructive', title: 'Duplicate Receipt Number', description: 'This receipt number has already been used. Please enter a unique one.' });
             return;
         }
@@ -202,7 +205,7 @@ export function FeeCollection() {
     };
 
     const latestTermPayment = selectedStudent?.financialDetails?.payment_history
-        .sort((a, b) => new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime())[0];
+        .sort((a, b) => new Date(a.payment_date || 0).getTime() - new Date(b.payment_date || 0).getTime())[0];
     
     const accountBalance = selectedStudent?.financialDetails?.account_balance || 0;
 

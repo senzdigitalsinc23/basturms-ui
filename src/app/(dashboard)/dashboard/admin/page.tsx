@@ -77,7 +77,8 @@ export default function AdminDashboardPage() {
     const [financeChartData, setFinanceChartData] = useState<any[]>([]);
 
     useEffect(() => {
-        const studentProfiles = getStudentProfiles();
+      async function fetchData() {
+        const studentProfiles = await getStudentProfiles();
         const lastMonth = subDays(new Date(), 30);
         
         const totalStudents = studentProfiles.length;
@@ -129,7 +130,8 @@ export default function AdminDashboardPage() {
             avgAttendance,
             avgPerformance,
         });
-
+      }
+      fetchData();
     }, []);
 
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);

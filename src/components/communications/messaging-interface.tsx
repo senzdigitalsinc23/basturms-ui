@@ -26,9 +26,12 @@ export function MessagingInterface() {
     const [activeTab, setActiveTab] = useState('students');
 
     useEffect(() => {
-        setStudents(getStudentProfiles());
-        const allStaff = getStaff().filter(s => s.user_id !== user?.id); // Exclude self
-        setStaff(allStaff);
+        async function fetchData() {
+            setStudents(await getStudentProfiles());
+            const allStaff = getStaff().filter(s => s.user_id !== user?.id); // Exclude self
+            setStaff(allStaff);
+        }
+        fetchData();
     }, [user]);
 
     const filteredStudents = students.filter(s =>

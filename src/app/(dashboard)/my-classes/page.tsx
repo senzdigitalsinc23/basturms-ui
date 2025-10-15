@@ -20,23 +20,26 @@ export default function MyClassesPage() {
     const [students, setStudents] = useState<StudentProfile[]>([]);
 
     useEffect(() => {
-        if (user) {
-            const allStaff = getStaff();
-            const currentTeacher = allStaff.find(s => s.user_id === user.id);
-            setTeacher(currentTeacher || null);
+        async function fetchData() {
+            if (user) {
+                const allStaff = getStaff();
+                const currentTeacher = allStaff.find(s => s.user_id === user.id);
+                setTeacher(currentTeacher || null);
 
-            if (currentTeacher) {
-                const appointments = getStaffAppointmentHistory();
-                const teacherAppointments = appointments
-                    .filter(a => a.staff_id === currentTeacher.staff_id)
-                    .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
-                
-                setLatestAppointment(teacherAppointments[0] || null);
+                if (currentTeacher) {
+                    const appointments = getStaffAppointmentHistory();
+                    const teacherAppointments = appointments
+                        .filter(a => a.staff_id === currentTeacher.staff_id)
+                        .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
+                    
+                    setLatestAppointment(teacherAppointments[0] || null);
+                }
+                setClasses(getClasses());
+                setSubjects(getSubjects());
+                setStudents(await getStudentProfiles());
             }
-            setClasses(getClasses());
-            setSubjects(getSubjects());
-            setStudents(getStudentProfiles());
         }
+        fetchData();
     }, [user]);
 
     const assignedClasses = latestAppointment?.class_assigned || [];

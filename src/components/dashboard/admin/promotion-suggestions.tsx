@@ -23,10 +23,10 @@ export function PromotionSuggestions() {
     const [suggestions, setSuggestions] = useState<PromotionSuggestion[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const fetchSuggestions = useCallback(() => {
+    const fetchSuggestions = useCallback(async () => {
         setLoading(true);
         const classes = getClasses();
-        const students = getStudentProfiles();
+        const students = await getStudentProfiles();
         const criteria = getPromotionCriteria();
         
         const promotionSuggestions: PromotionSuggestion[] = classes

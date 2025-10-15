@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getStudentProfiles, getClasses } from '@/lib/store';
@@ -25,39 +26,41 @@ export function ParentManagement() {
     const [classes, setClasses] = useState<Class[]>([]);
 
     useEffect(() => {
-        const studentProfiles = getStudentProfiles();
-        const classData = getClasses();
-        setClasses(classData);
-        const classMap = new Map(classData.map(c => [c.id, c.name]));
+        async function fetchData() {
+            const studentProfiles = await getStudentProfiles();
+            const classData = getClasses();
+            setClasses(classData);
+            const classMap = new Map(classData.map(c => [c.id, c.name]));
 
-        const parentMap = new Map<string, ParentDisplay>();
+            const parentMap = new Map<string, ParentDisplay>();
 
-        studentProfiles.forEach(profile => {
-            const guardianKey = profile.guardianInfo.guardian_phone; // Using phone as a unique key for guardians
-            if (!guardianKey) return;
+            studentProfiles.forEach(profile => {
+                const guardianKey = profile.guardianInfo.guardian_phone; // Using phone as a unique key for guardians
+                if (!guardianKey) return;
 
-            let parentEntry = parentMap.get(guardianKey);
+                let parentEntry = parentMap.get(guardianKey);
 
-            if (!parentEntry) {
-                parentEntry = {
-                    guardian_name: profile.guardianInfo.guardian_name,
-                    guardian_phone: profile.guardianInfo.guardian_phone,
-                    guardian_email: profile.guardianInfo.guardian_email,
-                    students: []
-                };
-            }
+                if (!parentEntry) {
+                    parentEntry = {
+                        guardian_name: profile.guardianInfo.guardian_name,
+                        guardian_phone: profile.guardianInfo.guardian_phone,
+                        guardian_email: profile.guardianInfo.guardian_email,
+                        students: []
+                    };
+                }
 
-            parentEntry.students.push({
-                id: profile.student.student_no,
-                name: `${profile.student.first_name} ${profile.student.last_name}`,
-                className: classMap.get(profile.admissionDetails.class_assigned) || 'N/A'
+                parentEntry.students.push({
+                    id: profile.student.student_no,
+                    name: `${profile.student.first_name} ${profile.student.last_name}`,
+                    className: classMap.get(profile.admissionDetails.class_assigned) || 'N/A'
+                });
+
+                parentMap.set(guardianKey, parentEntry);
             });
 
-            parentMap.set(guardianKey, parentEntry);
-        });
-
-        setParents(Array.from(parentMap.values()));
-
+            setParents(Array.from(parentMap.values()));
+        }
+        fetchData();
     }, []);
 
     return (

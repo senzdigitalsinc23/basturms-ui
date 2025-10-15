@@ -66,9 +66,12 @@ export function SportsManagement() {
     const { toast } = useToast();
 
     useEffect(() => {
-        setSports(getSports());
-        setTeachers(getStaff().filter(s => s.roles.includes('Teacher')));
-        setStudents(getStudentProfiles());
+        async function fetchData() {
+            setSports(getSports());
+            setTeachers(getStaff().filter(s => s.roles.includes('Teacher')));
+            setStudents(await getStudentProfiles());
+        }
+        fetchData();
     }, []);
 
     const handleSaveSport = (sportData: Omit<Sport, 'id' | 'student_ids'>) => {
