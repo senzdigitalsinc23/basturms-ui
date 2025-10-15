@@ -110,9 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('API Response:', result);
 
-        if (result.success && result.data && result.data.success) {
-            const apiUser = result.data.user;
-            const token = result.data.token;
+        if (result.success && result.data && result.data.id) {
+            const apiUser = result.data;
+            const token = result.token;
             
             // Map the API user to our app's User type
             // This is a basic mapping and might need adjustments
