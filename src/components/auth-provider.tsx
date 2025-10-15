@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 'Content-Type': 'application/json',
                 'X-API-KEY': apiKey,
             },
-            body: JSON.stringify({ email: email, password: password }),
+            body: JSON.stringify({ email, password }),
         });
 
         const responseText = await response.text();
@@ -111,9 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { success: false, message: 'Server returned an invalid response.' };
         }
 
-        if (result.success && result.data && result.data.id) {
-            const apiUser = result.data;
-            const token = result.token;
+        if (result.success && result.data?.user && result.data.user.id) {
+            const apiUser = result.data.user;
+            const token = result.data.token;
             
             const appUser: User = {
                 id: apiUser.id.toString(),
