@@ -6,10 +6,15 @@ import { useRouter } from 'next/navigation';
 import { User, Role } from '@/lib/types';
 import { initializeStore, addAuthLog } from '@/lib/store';
 
+interface AuthResult {
+  success: boolean;
+  message?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => void;
 }
 
@@ -41,19 +46,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    async (email: string, password: string): Promise<AuthResult> => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
       const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
-      if (!apiUrl || !apiKey) {
-        console.error("API URL or Key is not configured in environment variables.");
+      if (!apiKey) {
+        console.error("API Key is not configured in environment variables.");
         addAuthLog({
             email,
             event: 'Login Failure',
             status: 'Failure',
             details: 'Client-side API configuration is missing.',
         });
-        return false;
+        return { success: false, message: 'Client-side API configuration is missing.' };
       }
       
       try {
@@ -70,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let result;
         
         try {
-            // Find the first valid JSON object in the string in case of duplicates
             let braceCount = 0;
             let endIndex = -1;
             let startIndex = responseText.indexOf('{');
@@ -86,7 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     braceCount--;
                 }
                 if (braceCount > 0 && i === responseText.length - 1) {
-                    // Malformed JSON, brace never closes
                      throw new Error("Malformed JSON response");
                 }
                 if (braceCount === 0 && startIndex !== -1) {
@@ -105,21 +108,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 status: 'Failure',
                 details: 'Server returned an invalid JSON response.',
             });
-            return false;
+            return { success: false, message: 'Server returned an invalid response.' };
         }
-
-        console.log('API Response:', result);
 
         if (result.success && result.data && result.data.id) {
             const apiUser = result.data;
             const token = result.token;
             
-            // Map the API user to our app's User type
-            // This is a basic mapping and might need adjustments
             const appUser: User = {
                 id: apiUser.id.toString(),
                 user_id: apiUser.user_id,
-                name: apiUser.username, // Assuming username is the full name
+                name: apiUser.username,
                 username: apiUser.username,
                 email: apiUser.email,
                 role: 'Admin', // Fallback role, will need proper mapping later
@@ -142,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 details: `User ${email} logged in successfully.`,
             });
             
-            return true;
+            return { success: true };
         } else {
              addAuthLog({
                 email,
@@ -150,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 status: 'Failure',
                 details: result.message || 'Invalid credentials provided.',
             });
-            return false;
+            return { success: false, message: result.message || 'Invalid credentials provided.'};
         }
 
       } catch (error) {
@@ -161,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             status: 'Failure',
             details: 'Failed to connect to the login service.',
         });
-        return false;
+        return { success: false, message: 'Failed to connect to the login service.' };
       }
     },
     []

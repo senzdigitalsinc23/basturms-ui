@@ -46,16 +46,16 @@ export function LoginForm() {
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     setIsLoading(true);
-    const success = await login(data.email, data.password);
+    const result = await login(data.email, data.password);
     setIsLoading(false);
 
-    if (success) {
+    if (result.success) {
       router.push('/dashboard');
     } else {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'Invalid email or password. Please try again.',
+        description: result.message || 'An unknown error occurred. Please try again.',
       });
     }
   }
