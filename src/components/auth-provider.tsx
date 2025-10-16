@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      const apiUrl = 'http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/login';
+      const apiUrl = '/api/login';
       const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
       if (!apiKey) {
@@ -130,13 +130,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       } catch (error) {
         console.error("Login API call failed:", error);
+        if (error instanceof Error) {
+            addAuthLog({
+                email,
+                event: 'Login Failure',
+                status: 'Failure',
+                details: `Failed to connect to the login service. Error: ${error.message}`,
+            });
+            return { success: false, message: `Failed to connect to the login service: ${error.message}` };
+        }
         addAuthLog({
             email,
             event: 'Login Failure',
             status: 'Failure',
-            details: 'Failed to connect to the login service.',
+            details: 'Failed to connect to the login service due to an unknown error.',
         });
-        return { success: false, message: 'Failed to connect to the login service.' };
+        return { success: false, message: 'Failed to connect to the login service due to an unknown error.' };
       }
     },
     [router]
