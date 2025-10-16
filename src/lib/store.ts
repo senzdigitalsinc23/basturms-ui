@@ -751,9 +751,7 @@ export const saveSchoolProfile = (profile: SchoolProfileData): void => {
 
 // Fee Structure Functions
 export const getFeeStructures = (): FeeStructureItem[] => getFromStorage<FeeStructureItem[]>(FEE_STRUCTURES_KEY, []);
-export const saveFeeStructures = (items: FeeStructureItem[]): void => {
-    saveToStorage(FEE_STRUCTURES_KEY, items);
-};
+export const saveFeeStructures = (items: FeeStructureItem[]): void => saveToStorage(FEE_STRUCTURES_KEY, items);
 
 
 export const getClassSchoolLevel = (classId: string): SchoolLevel | null => {
@@ -1431,7 +1429,7 @@ export const getScoresForClass = (classId: string): AssignmentScore[] => {
 const getStudentProfilesFromStorage = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
 
 export async function getStudentProfiles(): Promise<StudentProfile[]> {
-    const apiUrl = '/api/v1';
+    const apiUrl = '/api';
     const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
     if (typeof window === 'undefined') {
@@ -1962,3 +1960,5 @@ export const getBooks = (): Book[] => getFromStorage<Book[]>(BOOKS_KEY, []);
 export const saveBooks = (books: Book[]): void => saveToStorage(BOOKS_KEY, books);
 export const getBorrowingRecords = (): BorrowingRecord[] => getFromStorage<BorrowingRecord[]>(BORROWING_KEY, []);
 export const saveBorrowingRecords = (records: BorrowingRecord[]): void => saveToStorage(BORROWING_KEY, records);
+
+    

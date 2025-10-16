@@ -87,8 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const result = JSON.parse(responseText);
         console.log('API Response:', result);
 
-        if (result.success && result.data?.user && result.data.user.id) {
-            const apiUser = result.data.user;
+        if (result.success && result.data && result.data.id) {alert()
+            const apiUser = result.data;
             const token = result.token;
             
             const appUser: User = {
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
 
             setUser(appUser);
-            localStorage.setItem(USER_SESSION_KEY, JSON.stringify(appUser));
+            sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(appUser));
             localStorage.setItem(TOKEN_KEY, token);
 
             addAuthLog({
