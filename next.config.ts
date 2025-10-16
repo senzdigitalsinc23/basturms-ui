@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://16.170.248.107/api/:path*',
+        destination: 'http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/:path*',
       },
     ]
   },
