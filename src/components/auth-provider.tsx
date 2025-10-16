@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         const result = JSON.parse(responseText);
+        console.log('API Response:', result);
 
         if (result.success && result.data?.user && result.data.user.id) {
             const apiUser = result.data.user;
