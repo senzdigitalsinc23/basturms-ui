@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -1436,6 +1437,8 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
     }
 
     const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+
     if (!token) {
         console.error("Auth token is missing. Cannot fetch students.");
         return getStudentProfilesFromStorage(); // Fallback to cache
@@ -1446,7 +1449,8 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': apiKey || '',
             }
         });
         if (!response.ok) {
