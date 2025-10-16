@@ -1429,8 +1429,7 @@ export const getScoresForClass = (classId: string): AssignmentScore[] => {
 const getStudentProfilesFromStorage = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
 
 export async function getStudentProfiles(): Promise<StudentProfile[]> {
-    const apiUrl = '/api';
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+    const apiUrl = 'http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/students';
 
     if (typeof window === 'undefined') {
         return [];
@@ -1438,31 +1437,28 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
 
     const token = localStorage.getItem('campusconnect_token');
 
-    if (!apiKey || !token) {
-        console.error("API Key or auth token is missing from client-side.");
-        // Fallback to cache if no token is available, maybe user is logged out
+    if (!token) {
+        console.error("Auth token is missing from client-side.");
         return getStudentProfilesFromStorage();
     }
     
     try {
-        const response = await fetch(`${apiUrl}/students`, {
+        const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-KEY': apiKey,
                 'Authorization': `Bearer ${token}`
             }
         });
 
         if (!response.ok) {
             console.error("Failed to fetch students:", response.statusText);
-            return getStudentProfilesFromStorage(); // Fallback to cache
+            return getStudentProfilesFromStorage();
         }
 
         const result = await response.json();
 
         if (result.success && result.data && Array.isArray(result.data.students)) {
-            // Transform the API data to the StudentProfile format
             const transformedProfiles = result.data.students.map((apiStudent: any): StudentProfile => {
                  const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
                  const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
@@ -1486,7 +1482,7 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
                         student_no: apiStudent.student_no,
                         email: apiStudent.email,
                         phone: apiStudent.phone,
-                        country: apiStudent.country_id, // Assuming country_id is the name
+                        country: apiStudent.country_id,
                         city: apiStudent.city,
                         hometown: apiStudent.hometown,
                         residence: apiStudent.residence,
@@ -1519,17 +1515,16 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
                     },
                 };
             });
-            // Update localStorage cache
             saveToStorage(STUDENTS_KEY, transformedProfiles);
             return transformedProfiles;
         } else {
             console.error("API response for students was not successful or malformed.");
-            return getStudentProfilesFromStorage(); // Fallback to cache
+            return getStudentProfilesFromStorage();
         }
 
     } catch (error) {
         console.error("Error fetching students from API:", error);
-        return getStudentProfilesFromStorage(); // Fallback to cache
+        return getStudentProfilesFromStorage();
     }
 }
 
@@ -1960,5 +1955,3 @@ export const getBooks = (): Book[] => getFromStorage<Book[]>(BOOKS_KEY, []);
 export const saveBooks = (books: Book[]): void => saveToStorage(BOOKS_KEY, books);
 export const getBorrowingRecords = (): BorrowingRecord[] => getFromStorage<BorrowingRecord[]>(BORROWING_KEY, []);
 export const saveBorrowingRecords = (records: BorrowingRecord[]): void => saveToStorage(BORROWING_KEY, records);
-
-    

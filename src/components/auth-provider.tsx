@@ -79,15 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 email,
                 event: 'Login Failure',
                 status: 'Failure',
-                details: `API error: ${response.status} ${response.statusText} - ${responseText}`,
+                details: `API error: ${response.status} ${response.statusText}`,
             });
           return { success: false, message: `Server error: ${response.statusText}` };
         }
         
         const result = JSON.parse(responseText);
-        console.log('API Response:', result);
 
-        if (result.success && result.data && result.data.id) {alert()
+        if (result.success && result.data && result.data.user_id) {
             const apiUser = result.data;
             const token = result.token;
             
@@ -107,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
 
             setUser(appUser);
-            sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(appUser));
+            localStorage.setItem(USER_SESSION_KEY, JSON.stringify(appUser));
             localStorage.setItem(TOKEN_KEY, token);
 
             addAuthLog({
@@ -117,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 details: `User ${email} logged in successfully.`,
             });
             
-            router.push('/dashboard');
+            router.replace('/dashboard');
             return { success: true };
         } else {
              addAuthLog({
@@ -152,7 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [router]
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+
     if (user) {
       addAuthLog({
         email: user.email,
@@ -161,6 +162,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         details: `User ${user.email} logged out.`,
       });
     }
+
+    if (token) {
+        try {
+            await fetch('http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/logout', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (error) {
+            console.error("Logout API call failed:", error);
+            // We still proceed with local logout even if API call fails
+        }
+    }
+    
     setUser(null);
     localStorage.removeItem(USER_SESSION_KEY);
     localStorage.removeItem(TOKEN_KEY);
