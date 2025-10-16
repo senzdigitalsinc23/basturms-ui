@@ -84,7 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!apiKey) {
         const errorMsg = 'Client-side API configuration is missing.';
-        console.error(errorMsg);
         addAuthLog({
             email,
             event: 'Login Failure',
@@ -105,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         const responseText = await response.text();
+        console.log("API Response:", responseText);
         
         if (!response.ok) {
            addAuthLog({
@@ -188,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
+    const apiUrl = '/api/logout';
 
     if (user) {
       addAuthLog({
@@ -200,7 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (token) {
         try {
-            await fetch('http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/logout', {
+            await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

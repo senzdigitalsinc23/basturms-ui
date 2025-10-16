@@ -1429,7 +1429,7 @@ export const getScoresForClass = (classId: string): AssignmentScore[] => {
 const getStudentProfilesFromStorage = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
 
 export async function getStudentProfiles(): Promise<StudentProfile[]> {
-    const apiUrl = 'http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/students';
+    const apiUrl = '/api/students';
 
     if (typeof window === 'undefined') {
         return [];
@@ -1455,7 +1455,7 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
         });
         if (!response.ok) {
             console.error("Failed to fetch students:", response.statusText);
-            return getStudentProfilesFromStorage();
+            return getStudentProfilesFromStorage(); // Fallback to cache
         }
 
         const result = await response.json();
@@ -1526,7 +1526,7 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
 
     } catch (error) {
         console.error("Error fetching students from API:", error);
-        return getStudentProfilesFromStorage();
+        return getStudentProfilesFromStorage(); // Fallback to cache
     }
 }
 
