@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      const apiUrl = '/login';
+      const apiUrl = '/api/login';
       const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
       if (!apiKey) {
