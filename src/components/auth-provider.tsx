@@ -47,22 +47,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = 'http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/login';
       const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
       if (!apiKey) {
-        console.error("API Key is not configured in environment variables.");
+        const errorMsg = 'Client-side API configuration is missing.';
+        console.error(errorMsg);
         addAuthLog({
             email,
             event: 'Login Failure',
             status: 'Failure',
-            details: 'Client-side API configuration is missing.',
+            details: errorMsg,
         });
-        return { success: false, message: 'Client-side API configuration is missing.' };
+        return { success: false, message: errorMsg };
       }
       
       try {
-        const response = await fetch(`${apiUrl}/login`, {
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -71,10 +72,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             body: JSON.stringify({ email, password }),
         });
         
-        const result = await response.json();
+        const responseText = await response.text();
         
-        if (result.success && result.data && result.data.id) {
-            const apiUser = result.data;
+        if (!response.ok) {
+           addAuthLog({
+                email,
+                event: 'Login Failure',
+                status: 'Failure',
+                details: `API error: ${response.status} ${response.statusText} - ${responseText}`,
+            });
+          return { success: false, message: `Server error: ${response.statusText}` };
+        }
+        
+        const result = JSON.parse(responseText);
+
+        if (result.success && result.data?.user && result.data.user.id) {
+            const apiUser = result.data.user;
             const token = result.token;
             
             const appUser: User = {
