@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
       if (!apiKey) {
@@ -70,50 +70,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             },
             body: JSON.stringify({ email, password }),
         });
-
-        const responseText = await response.text();
-        let result;
         
-        try {
-            let braceCount = 0;
-            let endIndex = -1;
-            let startIndex = responseText.indexOf('{');
-
-            if (startIndex === -1) {
-                throw new Error("No JSON object found in response");
-            }
-
-            for (let i = startIndex; i < responseText.length; i++) {
-                if (responseText[i] === '{') {
-                    braceCount++;
-                } else if (responseText[i] === '}') {
-                    braceCount--;
-                }
-                if (braceCount > 0 && i === responseText.length - 1) {
-                     throw new Error("Malformed JSON response");
-                }
-                if (braceCount === 0 && startIndex !== -1) {
-                    endIndex = i + 1;
-                    break;
-                }
-            }
-            
-            const jsonToParse = endIndex > 0 ? responseText.substring(startIndex, endIndex) : responseText;
-            result = JSON.parse(jsonToParse);
-        } catch (e) {
-            console.error("Failed to parse JSON response. Raw response text:", responseText);
-            addAuthLog({
-                email,
-                event: 'Login Failure',
-                status: 'Failure',
-                details: 'Server returned an invalid JSON response.',
-            });
-            return { success: false, message: 'Server returned an invalid response.' };
-        }
-
-        if (result.success && result.data?.user && result.data.user.id) {
-            const apiUser = result.data.user;
-            const token = result.data.token;
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.id) {
+            const apiUser = result.data;
+            const token = result.token;
             
             const appUser: User = {
                 id: apiUser.id.toString(),
@@ -141,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 details: `User ${email} logged in successfully.`,
             });
             
+            router.push('/dashboard');
             return { success: true };
         } else {
              addAuthLog({
@@ -163,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, message: 'Failed to connect to the login service.' };
       }
     },
-    []
+    [router]
   );
 
   const logout = useCallback(() => {
