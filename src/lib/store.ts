@@ -1457,7 +1457,9 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
             console.error("Failed to fetch students:", response.statusText);
             return getStudentProfilesFromStorage(); // Fallback to cache
         }
-
+        console.log(token);
+        
+        
         const result = await response.json();
 
         if (result.success && result.data && Array.isArray(result.data.students)) {

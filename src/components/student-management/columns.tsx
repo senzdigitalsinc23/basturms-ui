@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -110,11 +111,20 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisp
         accessorKey: 'admission_date',
         header: 'Admission Date',
         cell: ({ row }) => {
-            const date = new Date(row.getValue('admission_date'));
+            const dateValue = row.getValue('admission_date') as string;
+            if (!dateValue) return 'N/A';
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) {
+                return 'Invalid Date';
+            }
             return <div>{format(date, "MMMM do, yyyy")}</div>;
         },
         filterFn: (row, id, value) => {
-            const date = new Date(row.getValue(id));
+            const dateValue = row.getValue(id) as string;
+            if (!dateValue) return false;
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) return false;
+            
             const [from, to] = value as [string, string];
             return date >= new Date(from) && date <= new Date(to);
         }
