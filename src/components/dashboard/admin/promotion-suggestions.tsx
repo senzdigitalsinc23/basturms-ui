@@ -26,7 +26,8 @@ export function PromotionSuggestions() {
     const fetchSuggestions = useCallback(async () => {
         setLoading(true);
         const classes = getClasses();
-        const students = await getStudentProfiles();
+        // Fetch all students for calculation, so we use a large limit.
+        const { students } = await getStudentProfiles(1, 1000); 
         const criteria = getPromotionCriteria();
         
         const promotionSuggestions: PromotionSuggestion[] = classes
