@@ -189,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
     const apiUrl = '/api/logout';
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
     if (user) {
       addAuthLog({
@@ -201,12 +202,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (token) {
         try {
-            await fetch(apiUrl, {
+            const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': apiKey || '',
                 }
             });
+
+            // Check if logout was successful on the server, but don't try to parse JSON
+            if (!response.ok) {
+              console.error("Server logout failed:", response.statusText);
+              // We still proceed with local logout even if API call fails
+            }
         } catch (error) {
             console.error("Logout API call failed:", error);
             // We still proceed with local logout even if API call fails
