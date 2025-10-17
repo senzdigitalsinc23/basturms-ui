@@ -162,7 +162,16 @@ export default function StudentProfilePage() {
             if(studentProfile) {
                 const studentClass = allClasses.find(c => c.id === studentProfile.admissionDetails.class_assigned);
                 setClassName(studentClass?.name || 'N/A');
-                setAge(differenceInYears(new Date(), new Date(studentProfile.student.dob)));
+                try {
+                  if (studentProfile.student.dob) {
+                    setAge(differenceInYears(new Date(), new Date(studentProfile.student.dob)));
+                  } else {
+                    setAge(null);
+                  }
+                } catch(e) {
+                  setAge(null);
+                  console.error("Invalid date of birth for student");
+                }
             }
         }
     }
@@ -399,6 +408,7 @@ export default function StudentProfilePage() {
         return { subject, activities: activitiesData };
     }).filter(s => s.activities.length > 0);
 
+    const dobIsValid = student.dob && !isNaN(new Date(student.dob).getTime());
 
     return (
         <ProtectedRoute allowedRoles={['Admin', 'Teacher', 'Headmaster']}>
@@ -467,7 +477,7 @@ export default function StudentProfilePage() {
                             <CardTitle className="text-base font-medium text-muted-foreground">Date of Birth</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="font-semibold text-lg">{format(new Date(student.dob), 'do MMMM, yyyy')}</p>
+                            <p className="font-semibold text-lg">{dobIsValid ? format(new Date(student.dob), 'do MMMM, yyyy') : 'N/A'}</p>
                             {age !== null && <p className="text-sm text-muted-foreground">{age} years old</p>}
                         </CardContent>
                     </Card>
