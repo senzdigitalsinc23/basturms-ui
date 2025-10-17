@@ -1447,9 +1447,11 @@ export async function getStudentProfiles(page = 1, limit = 10): Promise<StudentA
     }
 
     const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
     if (!token) {
         console.error("Auth token is missing. Cannot fetch students.");
+        // Fallback to local storage if API call is not possible
         return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
     }
 
@@ -1458,7 +1460,8 @@ export async function getStudentProfiles(page = 1, limit = 10): Promise<StudentA
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                 'Authorization': `Bearer ${token}`,
+                 'X-API-KEY': apiKey || '',
             }
         });
 
