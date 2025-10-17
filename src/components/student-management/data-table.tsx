@@ -5,7 +5,6 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getFilteredRowModel,
   useReactTable,
   ColumnFiltersState,
@@ -14,6 +13,7 @@ import {
   getFacetedRowModel,
   getFacetedUniqueValues,
   RowSelectionState,
+  PaginationState,
 } from '@tanstack/react-table';
 
 import {
@@ -53,6 +53,11 @@ interface StudentDataTableProps {
   onImport: (data: any[]) => void;
   onBulkUpdateStatus: (studentIds: string[], status: AdmissionStatus) => void;
   onBulkDelete: (studentIds: string[]) => void;
+  pagination: PaginationState;
+  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
+  pageCount: number;
+  totalRecords: number;
+  isLoading: boolean;
 }
 
 const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
@@ -61,7 +66,19 @@ const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
 }));
 
 
-export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdateStatus, onBulkDelete }: StudentDataTableProps) {
+export function StudentDataTable({ 
+    columns, 
+    data, 
+    classes, 
+    onImport, 
+    onBulkUpdateStatus, 
+    onBulkDelete,
+    pagination,
+    setPagination,
+    pageCount,
+    totalRecords,
+    isLoading,
+ }: StudentDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -76,12 +93,14 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
   const table = useReactTable({
     data,
     columns,
+    pageCount: pageCount,
+    onPaginationChange: setPagination,
+    manualPagination: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
@@ -90,7 +109,8 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
       sorting,
       columnFilters,
       globalFilter,
-      rowSelection
+      rowSelection,
+      pagination,
     },
   });
 
@@ -417,7 +437,7 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
                     colSpan={columns.length}
                     className="h-24 text-center"
                     >
-                    No results.
+                    {isLoading ? "Fetching students..." : "No results."}
                     </TableCell>
                 </TableRow>
                 )}
@@ -425,9 +445,16 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
             </Table>
         </div>
         <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">Rows per page</p>
+            <div className="text-sm text-muted-foreground">
+                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {totalRecords} row(s) selected.
+            </div>
+            <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium">
+                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                </span>
+                 <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">Rows:</p>
                     <Select
                         value={`${table.getState().pagination.pageSize}`}
                         onValueChange={(value) => {
@@ -446,12 +473,6 @@ export function StudentDataTable({ columns, data, classes, onImport, onBulkUpdat
                         </SelectContent>
                     </Select>
                 </div>
-                <div>Showing {table.getRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of {table.getFilteredRowModel().rows.length} students</div>
-            </div>
-            <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium">
-                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
-                </span>
                 <div className="flex items-center space-x-2">
                     <Button
                     variant="outline"

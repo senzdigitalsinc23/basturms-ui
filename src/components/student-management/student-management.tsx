@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useEffect, useState } from 'react';
 import { getStudentProfiles, updateStudentStatus, addAuditLog, getClasses, deleteStudentProfile } from '@/lib/store';
@@ -7,6 +8,7 @@ import { StudentDataTable } from './data-table';
 import { columns } from './columns';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { type PaginationState } from '@tanstack/react-table';
 
 // Flatten the StudentProfile for easier display in the data table
 export type StudentDisplay = {
@@ -19,34 +21,6 @@ export type StudentDisplay = {
   email?: string;
 };
 
-// A more robust date parsing function
-function parseDateString(dateStr: string | undefined): Date | null {
-    if (!dateStr) return null;
-
-    // Try standard ISO and MM/DD/YYYY directly
-    let date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-        return date;
-    }
-
-    // Try DD/MM/YYYY
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-        // new Date(year, monthIndex, day)
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-        const year = parseInt(parts[2], 10);
-        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-            date = new Date(year, month, day);
-            if (!isNaN(date.getTime())) {
-                return date;
-            }
-        }
-    }
-
-    return null; // Return null if all parsing fails
-}
-
 
 export function StudentManagement() {
   const [students, setStudents] = useState<StudentDisplay[]>([]);
@@ -54,10 +28,16 @@ export function StudentManagement() {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [pageCount, setPageCount] = useState(0);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const refreshStudents = async () => {
     setLoading(true);
-    const profiles = await getStudentProfiles();
+    const { students: profiles, pagination: paginationData } = await getStudentProfiles(pagination.pageIndex + 1, pagination.pageSize);
     const classesData = getClasses();
     setClasses(classesData);
     const classMap = new Map(classesData.map(c => [c.id, c.name]));
@@ -72,12 +52,14 @@ export function StudentManagement() {
         email: p.contactDetails.email,
     })).sort((a, b) => new Date(b.admission_date).getTime() - new Date(a.admission_date).getTime());
     setStudents(displayData);
+    setPageCount(paginationData.pages);
+    setTotalRecords(paginationData.total);
     setLoading(false);
   }
 
   useEffect(() => {
     refreshStudents();
-  }, []);
+  }, [pagination]);
 
   const handleImportStudents = (importedData: any[]) => {
     if (!currentUser) return;
@@ -162,6 +144,11 @@ export function StudentManagement() {
       onImport={handleImportStudents}
       onBulkUpdateStatus={handleBulkUpdateStatus}
       onBulkDelete={handleBulkDelete}
+      pagination={pagination}
+      setPagination={setPagination}
+      pageCount={pageCount}
+      totalRecords={totalRecords}
+      isLoading={loading}
     />
   );
 }

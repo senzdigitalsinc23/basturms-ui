@@ -1429,19 +1429,28 @@ export const getScoresForClass = (classId: string): AssignmentScore[] => {
 // This is the internal function that reads from localStorage
 const getStudentProfilesFromStorage = (): StudentProfile[] => getFromStorage<StudentProfile[]>(STUDENTS_KEY, []);
 
-export async function getStudentProfiles(): Promise<StudentProfile[]> {
-    const apiUrl = '/api/students';
+export type StudentAPIResponse = {
+    students: StudentProfile[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        pages: number;
+    };
+}
+
+export async function getStudentProfiles(page = 1, limit = 10): Promise<StudentAPIResponse> {
+    const apiUrl = `/api/students?page=${page}&limit=${limit}`;
 
     if (typeof window === 'undefined') {
-        return [];
+        return { students: [], pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
     }
 
     const token = localStorage.getItem('campusconnect_token');
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
     if (!token) {
         console.error("Auth token is missing. Cannot fetch students.");
-        return getStudentProfilesFromStorage(); // Fallback to cache
+        return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
     }
 
     try {
@@ -1450,15 +1459,13 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                'X-API-KEY': apiKey || '',
             }
         });
+
         if (!response.ok) {
             console.error("Failed to fetch students:", response.statusText);
-            return getStudentProfilesFromStorage(); // Fallback to cache
+            return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
         }
-        console.log(token);
-        
         
         const result = await response.json();
 
@@ -1519,16 +1526,19 @@ export async function getStudentProfiles(): Promise<StudentProfile[]> {
                     },
                 };
             });
-            saveToStorage(STUDENTS_KEY, transformedProfiles);
-            return transformedProfiles;
+            // Don't save to localStorage, as it's now just a paginated view
+            return {
+                students: transformedProfiles,
+                pagination: result.data.pagination,
+            };
         } else {
             console.error("API response for students was not successful or malformed.");
-            return getStudentProfilesFromStorage();
+            return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
         }
 
     } catch (error) {
         console.error("Error fetching students from API:", error);
-        return getStudentProfilesFromStorage(); // Fallback to cache
+        return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
     }
 }
 
