@@ -49,6 +49,8 @@ export function IDCardTemplate({ cardData, schoolProfile, classes }: IDCardTempl
     }
     
     const initials = name.split(' ').map(n => n[0]).join('');
+    const formattedIssueDate = !isNaN(issueDate.getTime()) ? format(issueDate, 'MM/yy') : 'N/A';
+    const formattedExpiryDate = !isNaN(expiryDate.getTime()) ? format(expiryDate, 'MM/yy') : 'N/A';
 
     return (
         <div className="w-[204px] h-[324px] bg-blue-900 rounded-xl shadow-lg flex flex-col font-sans overflow-hidden">
@@ -77,8 +79,8 @@ export function IDCardTemplate({ cardData, schoolProfile, classes }: IDCardTempl
                 <div className="text-xs space-y-1 mt-3 text-center">
                     <p className="font-bold flex items-center justify-center whitespace-nowrap">ID No: <span className="font-mono font-normal ml-1 truncate">{id}</span></p>
                     <div className="flex justify-center gap-4">
-                        <p className="font-bold flex items-center whitespace-nowrap">Issued: <span className="font-normal ml-1">{format(issueDate, 'MM/yy')}</span></p>
-                        <p className="font-bold flex items-center whitespace-nowrap">Expires: <span className="font-normal ml-1">{format(expiryDate, 'MM/yy')}</span></p>
+                        <p className="font-bold flex items-center whitespace-nowrap">Issued: <span className="font-normal ml-1">{formattedIssueDate}</span></p>
+                        <p className="font-bold flex items-center whitespace-nowrap">Expires: <span className="font-normal ml-1">{formattedExpiryDate}</span></p>
                     </div>
                 </div>
 
