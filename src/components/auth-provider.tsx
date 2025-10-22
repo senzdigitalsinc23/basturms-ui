@@ -25,32 +25,50 @@ const TOKEN_KEY = 'campusconnect_token';
 
 // Helper to find the first valid JSON object in a string
 const parseFirstJson = (text: string): any => {
-  let firstBrace = text.indexOf('{');
-  if (firstBrace === -1) {
-    throw new Error("No JSON object found in response");
+  const firstBrace = text.indexOf('{');
+  const firstSquare = text.indexOf('[');
+  
+  let start = -1;
+  if (firstBrace === -1 && firstSquare === -1) {
+      throw new Error("No JSON object or array found in response");
   }
   
+  if (firstBrace !== -1 && (firstSquare === -1 || firstBrace < firstSquare)) {
+      start = firstBrace;
+  } else {
+      start = firstSquare;
+  }
+
   let braceCount = 0;
-  let lastBrace = -1;
+  let squareCount = 0;
+  let inString = false;
+  let lastValidChar = -1;
 
-  for (let i = firstBrace; i < text.length; i++) {
-    if (text[i] === '{') {
-      braceCount++;
-    } else if (text[i] === '}') {
-      braceCount--;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    
+    if (char === '"' && (i === 0 || text[i-1] !== '\\')) {
+      inString = !inString;
     }
-
-    if (braceCount === 0) {
-      lastBrace = i;
+    
+    if (!inString) {
+      if (char === '{') braceCount++;
+      else if (char === '}') braceCount--;
+      else if (char === '[') squareCount++;
+      else if (char === ']') squareCount--;
+    }
+    
+    if (braceCount === 0 && squareCount === 0) {
+      lastValidChar = i;
       break;
     }
   }
 
-  if (lastBrace === -1) {
+  if (lastValidChar === -1) {
     throw new Error("Invalid JSON structure in response");
   }
 
-  const jsonSubstring = text.substring(firstBrace, lastBrace + 1);
+  const jsonSubstring = text.substring(start, lastValidChar + 1);
   return JSON.parse(jsonSubstring);
 };
 
