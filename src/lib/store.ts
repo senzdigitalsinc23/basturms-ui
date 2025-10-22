@@ -1480,7 +1480,21 @@ export async function getStudentProfiles(page = 1, limit = 1000): Promise<Studen
             return { students: paginatedStudents, pagination: { total, page, limit, pages } };
         }
         
-        const result = await response.json();
+        const responseText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            // Attempt to parse the first JSON object if there's trailing text
+            const firstBrace = responseText.indexOf('{');
+            const lastBrace = responseText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace > firstBrace) {
+                const jsonString = responseText.substring(firstBrace, lastBrace + 1);
+                result = JSON.parse(jsonString);
+            } else {
+                throw new Error("Could not find a valid JSON object in the response.");
+            }
+        }
 
         if (result.success && result.data && Array.isArray(result.data.students)) {
             const transformedProfiles = result.data.students.map((apiStudent: any): StudentProfile => {
