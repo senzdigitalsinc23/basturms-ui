@@ -50,8 +50,10 @@ export default function PromotionsPage() {
     }, []);
 
     useEffect(() => {
+      async function fetchStudents() {
         if (fromClass) {
-            const allStudentProfiles = getStudentProfiles();
+            // Fetch all students for promotion logic
+            const { students: allStudentProfiles } = await getStudentProfiles(1, 1000); 
             const classMap = new Map(classes.map(c => [c.id, c.name]));
             const filteredStudents = allStudentProfiles
                 .filter(p => p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
@@ -65,6 +67,8 @@ export default function PromotionsPage() {
         } else {
             setStudentsInClass([]);
         }
+      }
+      fetchStudents();
     }, [fromClass, classes]);
 
     const isAllSelected = studentsInClass.length > 0 && Object.keys(selectedStudents).length === studentsInClass.length && Object.keys(selectedStudents).length === studentsInClass.length;
@@ -364,3 +368,4 @@ export default function PromotionsPage() {
         </ProtectedRoute>
     );
 }
+
