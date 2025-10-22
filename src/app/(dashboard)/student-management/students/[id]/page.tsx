@@ -142,9 +142,9 @@ export default function StudentProfilePage() {
     const idCardRef = useRef<HTMLDivElement>(null);
     const isAdminOrHead = currentUser?.role === 'Admin' || currentUser?.role === 'Headmaster';
 
-    const fetchProfile = () => {
+    const fetchProfile = async () => {
         if (studentId) {
-            const studentProfile = getStudentProfileById(studentId);
+            const studentProfile = await getStudentProfileById(studentId);
             setProfile(studentProfile || null);
             const allClasses = getClasses();
             setClasses(allClasses);

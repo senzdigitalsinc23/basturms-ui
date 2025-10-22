@@ -1439,11 +1439,11 @@ export type StudentAPIResponse = {
     };
 }
 
-export async function getStudentProfiles(page = 1, limit = 10): Promise<StudentAPIResponse> {
+export async function getStudentProfiles(page = 1, limit = 1000): Promise<StudentAPIResponse> {
     const apiUrl = `/api/students?page=${page}&limit=${limit}`;
 
     if (typeof window === 'undefined') {
-        return { students: [], pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
+        return { students: [], pagination: { total: 0, page: 1, limit, pages: 1 } };
     }
 
     const token = localStorage.getItem('campusconnect_token');
@@ -1452,7 +1452,11 @@ export async function getStudentProfiles(page = 1, limit = 10): Promise<StudentA
     if (!token) {
         console.error("Auth token is missing. Cannot fetch students.");
         // Fallback to local storage if API call is not possible
-        return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
+        const allStudents = getStudentProfilesFromStorage();
+        const total = allStudents.length;
+        const pages = Math.ceil(total / limit);
+        const paginatedStudents = allStudents.slice((page - 1) * limit, page * limit);
+        return { students: paginatedStudents, pagination: { total, page, limit, pages } };
     }
 
     try {
@@ -1464,10 +1468,16 @@ export async function getStudentProfiles(page = 1, limit = 10): Promise<StudentA
                  'X-API-KEY': apiKey || '',
             }
         });
+        
+        console.log("Student list response:", await response.clone().text());
 
         if (!response.ok) {
             console.error("Failed to fetch students:", response.statusText);
-            return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
+            const allStudents = getStudentProfilesFromStorage();
+            const total = allStudents.length;
+            const pages = Math.ceil(total / limit);
+            const paginatedStudents = allStudents.slice((page - 1) * limit, page * limit);
+            return { students: paginatedStudents, pagination: { total, page, limit, pages } };
         }
         
         const result = await response.json();
@@ -1536,20 +1546,128 @@ export async function getStudentProfiles(page = 1, limit = 10): Promise<StudentA
             };
         } else {
             console.error("API response for students was not successful or malformed.");
-            return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
+            const allStudents = getStudentProfilesFromStorage();
+            const total = allStudents.length;
+            const pages = Math.ceil(total / limit);
+            const paginatedStudents = allStudents.slice((page - 1) * limit, page * limit);
+            return { students: paginatedStudents, pagination: { total, page, limit, pages } };
         }
 
     } catch (error) {
         console.error("Error fetching students from API:", error);
-        return { students: getStudentProfilesFromStorage(), pagination: { total: 0, page: 1, limit: 10, pages: 1 } };
+        const allStudents = getStudentProfilesFromStorage();
+        const total = allStudents.length;
+        const pages = Math.ceil(total / limit);
+        const paginatedStudents = allStudents.slice((page - 1) * limit, page * limit);
+        return { students: paginatedStudents, pagination: { total, page, limit, pages } };
     }
 }
 
 export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
 
-export const getStudentProfileById = (studentId: string): StudentProfile | null => {
-    const profiles = getStudentProfilesFromStorage();
-    return profiles.find(p => p.student.student_no === studentId) || null;
+export async function getStudentProfileById(studentId: string): Promise<StudentProfile | null> {
+    const apiUrl = `/api/students/show/${studentId}`;
+
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+
+    if (!token) {
+        console.error("Auth token is missing. Cannot fetch student profile.");
+        // Fallback to local storage
+        return getStudentProfilesFromStorage().find(p => p.student.student_no === studentId) || null;
+    }
+     try {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': apiKey || '',
+            }
+        });
+
+        if (!response.ok) {
+            console.error("Failed to fetch student profile:", response.statusText);
+            return getStudentProfilesFromStorage().find(p => p.student.student_no === studentId) || null;
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            const apiStudent = result.data;
+            const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship) || apiStudent.guardians?.[0] || {};
+            const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
+            const mother = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'mother') || {};
+            
+            const profile: StudentProfile = {
+                student: {
+                    student_no: apiStudent.student_info.student_no,
+                    first_name: apiStudent.student_info.first_name,
+                    last_name: apiStudent.student_info.last_name,
+                    other_name: apiStudent.student_info.other_name,
+                    dob: apiStudent.student_info.dob,
+                    gender: apiStudent.student_info.gender,
+                    created_at: apiStudent.student_info.created_at,
+                    created_by: apiStudent.student_info.created_by,
+                    updated_at: apiStudent.student_info.updated_at,
+                    updated_by: apiStudent.student_info.created_by,
+                    avatarUrl: `https://picsum.photos/seed/${apiStudent.student_info.student_no}/200/200`,
+                },
+                contactDetails: {
+                    student_no: apiStudent.student_info.student_no,
+                    email: apiStudent.contact_address.email,
+                    phone: apiStudent.contact_address.phone,
+                    country: apiStudent.contact_address.country_id,
+                    city: apiStudent.contact_address.city,
+                    hometown: apiStudent.contact_address.hometown,
+                    residence: apiStudent.contact_address.residence,
+                    house_no: apiStudent.contact_address.house_no,
+                    gps_no: apiStudent.contact_address.gps_no,
+                },
+                guardianInfo: {
+                    student_no: apiStudent.student_info.student_no,
+                    guardian_name: guardian.guardian_name,
+                    guardian_phone: guardian.guardian_phone,
+                    guardian_email: guardian.guardian_email,
+                    guardian_relationship: guardian.guardian_relationship,
+                    father_name: father.guardian_name,
+                    father_phone: father.guardian_phone,
+                    mother_name: mother.guardian_name,
+                    mother_phone: mother.guardian_phone,
+                },
+                emergencyContact: {
+                    student_no: apiStudent.student_info.student_no,
+                    emergency_name: apiStudent.emergency_contact?.emergency_name,
+                    emergency_phone: apiStudent.emergency_contact?.emergency_phone,
+                    emergency_relationship: apiStudent.emergency_contact?.emergency_relationship,
+                },
+                admissionDetails: {
+                    student_no: apiStudent.student_info.student_no,
+                    admission_no: apiStudent.admission_info.admission_no,
+                    enrollment_date: apiStudent.admission_info.enrollment_date,
+                    class_assigned: apiStudent.admission_info.class_assigned,
+                    admission_status: apiStudent.admission_info.admission_status === 'Active' ? 'Admitted' : apiStudent.admission_info.admission_status,
+                },
+                financialDetails: {
+                    account_balance: apiStudent.payment_history?.reduce((acc: number, p: any) => acc + p.amount_paid - p.total_fees, 0) || 0,
+                    payment_history: apiStudent.payment_history || [],
+                },
+                attendanceRecords: apiStudent.attendance_history || [],
+                uploadedDocuments: apiStudent.uploaded_documents || [],
+            };
+            return profile;
+        } else {
+            console.error("API response for student profile was not successful or malformed.");
+            return getStudentProfilesFromStorage().find(p => p.student.student_no === studentId) || null;
+        }
+    } catch (error) {
+        console.error("Error fetching student profile from API:", error);
+        return getStudentProfilesFromStorage().find(p => p.student.student_no === studentId) || null;
+    }
 }
 
 export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, creatorId: string, classes?: Class[]): StudentProfile => {
