@@ -68,7 +68,7 @@ export function EditStudentForm({
         first_name: defaultValues.student.first_name,
         last_name: defaultValues.student.last_name,
         other_name: defaultValues.student.other_name,
-        dob: new Date(defaultValues.student.dob),
+        dob: defaultValues.student.dob ? new Date(defaultValues.student.dob) : new Date(),
         gender: defaultValues.student.gender,
         email: defaultValues.contactDetails.email,
         phone: defaultValues.contactDetails.phone,
