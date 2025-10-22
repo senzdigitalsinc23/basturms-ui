@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 import withPWA from "@ducanh2912/next-pwa";
 
@@ -11,6 +12,10 @@ const pwa = withPWA({
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
+      {
+        source: '/api/students/show/:path*',
+        destination: 'http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/students/show/:path*',
+      },
       {
         source: '/api/:path*',
         destination: 'http://ec2-16-170-248-107.eu-north-1.compute.amazonaws.com/api/v1/:path*',
