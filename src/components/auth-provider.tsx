@@ -26,59 +26,50 @@ const TOKEN_KEY = 'campusconnect_token';
 
 // Helper to find the first valid JSON object in a string
 const parseFirstJson = (text: string): any => {
-    const firstBrace = text.indexOf('{');
-    const firstSquare = text.indexOf('[');
+  const firstBrace = text.indexOf('{');
+  if (firstBrace === -1) {
+    return null;
+  }
 
-    let start = -1;
-    if (firstBrace === -1 && firstSquare === -1) {
-        return null; // Return null if no JSON found
+  let braceCount = 0;
+  let inString = false;
+  let inEscape = false;
+  let lastValidChar = -1;
+
+  for (let i = firstBrace; i < text.length; i++) {
+    const char = text[i];
+
+    if (inEscape) {
+      inEscape = false;
+      continue;
     }
 
-    if (firstBrace !== -1 && (firstSquare === -1 || firstBrace < firstSquare)) {
-        start = firstBrace;
-    } else {
-        start = firstSquare;
+    if (char === '\\') {
+      inEscape = true;
+      continue;
     }
 
-    let braceCount = 0;
-    let squareCount = 0;
-    let inString = false;
-    let inEscape = false;
-
-    for (let i = start; i < text.length; i++) {
-        const char = text[i];
-        
-        if (inEscape) {
-            inEscape = false;
-            continue;
-        }
-
-        if (char === '\\') {
-            inEscape = true;
-            continue;
-        }
-
-        if (char === '"' && !inEscape) {
-            inString = !inString;
-        }
-        
-        if (!inString) {
-            if (char === '{') braceCount++;
-            else if (char === '}') braceCount--;
-            else if (char === '[') squareCount++;
-            else if (char === ']') squareCount--;
-        }
-        
-        if (braceCount === 0 && squareCount === 0) {
-            const jsonSubstring = text.substring(start, i + 1);
-            try {
-              return JSON.parse(jsonSubstring);
-            } catch (e) {
-              return null; // Invalid JSON
-            }
-        }
+    if (char === '"' && !inEscape) {
+      inString = !inString;
     }
-    return null; // Unmatched braces/brackets
+
+    if (!inString) {
+      if (char === '{') braceCount++;
+      else if (char === '}') braceCount--;
+    }
+
+    if (braceCount === 0) {
+      lastValidChar = i;
+      break; 
+    }
+  }
+
+  if (lastValidChar === -1) {
+    return null;
+  }
+
+  const jsonSubstring = text.substring(firstBrace, lastValidChar + 1);
+  return JSON.parse(jsonSubstring);
 };
 
 
@@ -132,7 +123,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         const responseText = await response.text();
-        console.log("API Response:", responseText);
         
         if (!response.ok) {
            addAuthLog({
@@ -161,12 +151,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
 
-        if (result.success && result.data && result.data.user_id) {
-            const apiUser = result.data;
-            const token = result.token;
+        if (result.success && result.data && result.data.user && result.data.token) {
+            const apiUser = result.data.user;
+            const token = result.data.token;
             
             const appUser: User = {
-                id: apiUser.user_id.toString(),
+                id: apiUser.id.toString(),
                 user_id: apiUser.user_id,
                 name: apiUser.username,
                 username: apiUser.username,
