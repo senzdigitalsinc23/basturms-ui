@@ -136,10 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         let result;
         try {
-            result = parseFirstJson(responseText);
-             if (result === null) {
-                throw new Error("Could not find a valid JSON object in the response.");
-            }
+            result = JSON.parse(responseText);
         } catch (error: any) {
              addAuthLog({
                 email,
@@ -155,13 +152,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const apiUser = result.data.user;
             const token = result.data.token;
             
+            const roleName = apiUser.role_name || 'Guest';
+            const formattedRole = roleName.charAt(0).toUpperCase() + roleName.slice(1);
+
             const appUser: User = {
-                id: apiUser.id.toString(),
+                id: apiUser.user_id,
                 user_id: apiUser.user_id,
                 name: apiUser.username,
                 username: apiUser.username,
                 email: apiUser.email,
-                role: apiUser.role_name || 'Guest',
+                role: formattedRole as Role,
                 role_id: apiUser.role_id,
                 avatarUrl: `https://picsum.photos/seed/${apiUser.username}/40/40`,
                 is_super_admin: apiUser.is_super_admin === '1',
