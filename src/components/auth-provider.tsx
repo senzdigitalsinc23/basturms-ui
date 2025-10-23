@@ -44,11 +44,6 @@ const parseFirstJson = (text: string): any => {
       continue;
     }
 
-    if (char === '\\') {
-      inEscape = true;
-      continue;
-    }
-
     if (char === '"' && !inEscape) {
       inString = !inString;
     }
@@ -104,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
       const apiUrl = '/api/login';
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+      const apiKey = '5|K8p2zSif5sE6sT5qY4u5c2a1t3o8r7v6';
 
       if (!apiKey) {
         const errorMsg = 'Client-side API configuration is missing.';
@@ -224,7 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
     const apiUrl = '/api/logout';
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+    const apiKey = '5|K8p2zSif5sE6sT5qY4u5c2a1t3o8r7v6';
 
     if (user) {
       addAuthLog({
