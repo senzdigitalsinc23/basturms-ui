@@ -24,9 +24,14 @@ export default function DashboardLayout({
       user &&
       (pathname === '/dashboard' || pathname === '/dashboard/')
     ) {
-      const roleDashboard = `/dashboard/${user.role
-        .toLowerCase()
-        .replace(/\s/g, '-')}`;
+      let roleDashboard: string;
+      if (user.is_super_admin) {
+        roleDashboard = '/dashboard/admin';
+      } else {
+        roleDashboard = `/dashboard/${user.role
+          .toLowerCase()
+          .replace(/\s/g, '-')}`;
+      }
       router.replace(roleDashboard);
     }
   }, [isLoading, user, router, pathname]);
