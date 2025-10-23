@@ -25,51 +25,62 @@ const TOKEN_KEY = 'campusconnect_token';
 
 // Helper to find the first valid JSON object in a string
 const parseFirstJson = (text: string): any => {
-  const firstBrace = text.indexOf('{');
-  const firstSquare = text.indexOf('[');
-  
-  let start = -1;
-  if (firstBrace === -1 && firstSquare === -1) {
-      throw new Error("No JSON object or array found in response");
-  }
-  
-  if (firstBrace !== -1 && (firstSquare === -1 || firstBrace < firstSquare)) {
-      start = firstBrace;
-  } else {
-      start = firstSquare;
-  }
+    const firstBrace = text.indexOf('{');
+    const firstSquare = text.indexOf('[');
 
-  let braceCount = 0;
-  let squareCount = 0;
-  let inString = false;
-  let lastValidChar = -1;
-
-  for (let i = start; i < text.length; i++) {
-    const char = text[i];
-    
-    if (char === '"' && (i === 0 || text[i-1] !== '\\')) {
-      inString = !inString;
+    let start = -1;
+    if (firstBrace === -1 && firstSquare === -1) {
+        throw new Error("No JSON object or array found in response");
     }
-    
-    if (!inString) {
-      if (char === '{') braceCount++;
-      else if (char === '}') braceCount--;
-      else if (char === '[') squareCount++;
-      else if (char === ']') squareCount--;
-    }
-    
-    if (braceCount === 0 && squareCount === 0) {
-      lastValidChar = i;
-      break;
-    }
-  }
 
-  if (lastValidChar === -1) {
-    throw new Error("Invalid JSON structure in response");
-  }
+    if (firstBrace !== -1 && (firstSquare === -1 || firstBrace < firstSquare)) {
+        start = firstBrace;
+    } else {
+        start = firstSquare;
+    }
 
-  const jsonSubstring = text.substring(start, lastValidChar + 1);
-  return JSON.parse(jsonSubstring);
+    let braceCount = 0;
+    let squareCount = 0;
+    let inString = false;
+    let lastValidChar = -1;
+    let inEscape = false;
+
+    for (let i = start; i < text.length; i++) {
+        const char = text[i];
+        
+        if (inEscape) {
+            inEscape = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            inEscape = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+        }
+        
+        if (!inString) {
+            if (char === '{') braceCount++;
+            else if (char === '}') braceCount--;
+            else if (char === '[') squareCount++;
+            else if (char === ']') squareCount--;
+        }
+        
+        if (braceCount === 0 && squareCount === 0) {
+            lastValidChar = i;
+            break;
+        }
+    }
+
+    if (lastValidChar === -1) {
+        throw new Error("Invalid JSON structure in response");
+    }
+
+    const jsonSubstring = text.substring(start, lastValidChar + 1);
+    return JSON.parse(jsonSubstring);
 };
 
 
@@ -153,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const token = result.token;
             
             const appUser: User = {
-                id: apiUser.id.toString(),
+                id: apiUser.user_id.toString(),
                 user_id: apiUser.user_id,
                 name: apiUser.username,
                 username: apiUser.username,
@@ -195,22 +206,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       } catch (error) {
         console.error("Login API call failed:", error);
-        if (error instanceof Error) {
-            addAuthLog({
-                email,
-                event: 'Login Failure',
-                status: 'Failure',
-                details: `Failed to connect to the login service. Error: ${error.message}`,
-            });
-            return { success: false, message: `Failed to connect to the login service: ${error.message}` };
-        }
+        const message = error instanceof Error ? error.message : "An unknown error occurred.";
         addAuthLog({
             email,
             event: 'Login Failure',
             status: 'Failure',
-            details: 'Failed to connect to the login service due to an unknown error.',
+            details: `Failed to connect to the login service. Error: ${message}`,
         });
-        return { success: false, message: 'Failed to connect to the login service due to an unknown error.' };
+        return { success: false, message: `Failed to connect to the login service: ${message}` };
       }
     },
     [router]
