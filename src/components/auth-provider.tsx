@@ -5,6 +5,7 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Role } from '@/lib/types';
 import { initializeStore, addAuthLog } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthResult {
   success: boolean;
@@ -59,7 +60,9 @@ const parseFirstJson = (text: string): any => {
         }
 
         if (char === '"') {
-            inString = !inString;
+            if (!inEscape) {
+                 inString = !inString;
+            }
         }
         
         if (!inString) {
@@ -88,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     // We still initialize the store for other parts of the app that might use localStorage
@@ -192,6 +196,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 details: `User ${email} logged in successfully.`,
             });
             
+             toast({
+                title: 'Login Successful',
+                description: 'Welcome back!',
+            });
             router.replace('/dashboard');
             return { success: true };
         } else {
@@ -216,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, message: `Failed to connect to the login service: ${message}` };
       }
     },
-    [router]
+    [router, toast]
   );
 
   const logout = useCallback(async () => {

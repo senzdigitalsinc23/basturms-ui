@@ -49,12 +49,7 @@ export function LoginForm() {
     const result = await login(data.email, data.password);
     setIsLoading(false);
 
-    if (result.success) {
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome back!',
-      });
-    } else {
+    if (!result.success) {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
