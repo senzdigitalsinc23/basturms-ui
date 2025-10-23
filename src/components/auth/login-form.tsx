@@ -49,14 +49,18 @@ export function LoginForm() {
     const result = await login(data.email, data.password);
     setIsLoading(false);
 
-    if (!result.success) {
+    if (result.success) {
+      toast({
+        title: 'Login Successful',
+        description: 'Welcome back!',
+      });
+    } else {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
         description: result.message || 'An unknown error occurred. Please try again.',
       });
     }
-    // Redirection is now handled within the login function itself
   }
 
   return (
