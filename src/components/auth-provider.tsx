@@ -31,7 +31,7 @@ const parseFirstJson = (text: string): any => {
 
     let start = -1;
     if (firstBrace === -1 && firstSquare === -1) {
-        throw new Error("No JSON object or array found in response");
+        return null; // Return null if no JSON found
     }
 
     if (firstBrace !== -1 && (firstSquare === -1 || firstBrace < firstSquare)) {
@@ -43,7 +43,6 @@ const parseFirstJson = (text: string): any => {
     let braceCount = 0;
     let squareCount = 0;
     let inString = false;
-    let lastValidChar = -1;
     let inEscape = false;
 
     for (let i = start; i < text.length; i++) {
@@ -59,10 +58,8 @@ const parseFirstJson = (text: string): any => {
             continue;
         }
 
-        if (char === '"') {
-            if (!inEscape) {
-                 inString = !inString;
-            }
+        if (char === '"' && !inEscape) {
+            inString = !inString;
         }
         
         if (!inString) {
@@ -73,17 +70,15 @@ const parseFirstJson = (text: string): any => {
         }
         
         if (braceCount === 0 && squareCount === 0) {
-            lastValidChar = i;
-            break;
+            const jsonSubstring = text.substring(start, i + 1);
+            try {
+              return JSON.parse(jsonSubstring);
+            } catch (e) {
+              return null; // Invalid JSON
+            }
         }
     }
-
-    if (lastValidChar === -1) {
-        throw new Error("Invalid JSON structure in response");
-    }
-
-    const jsonSubstring = text.substring(start, lastValidChar + 1);
-    return JSON.parse(jsonSubstring);
+    return null; // Unmatched braces/brackets
 };
 
 
@@ -144,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 email,
                 event: 'Login Failure',
                 status: 'Failure',
-                details: `API error: ${response.status} ${response.statusText}`,
+                details: `API error: ${response.status} ${response.statusText}. Response: ${responseText}`,
             });
           return { success: false, message: `Server error: ${response.statusText}` };
         }
@@ -152,6 +147,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let result;
         try {
             result = parseFirstJson(responseText);
+             if (result === null) {
+                throw new Error("Could not find a valid JSON object in the response.");
+            }
         } catch (error: any) {
              addAuthLog({
                 email,
@@ -173,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 name: apiUser.username,
                 username: apiUser.username,
                 email: apiUser.email,
-                role: 'Admin', // Fallback role, will need proper mapping later
+                role: apiUser.role_name || 'Guest',
                 role_id: apiUser.role_id,
                 avatarUrl: `https://picsum.photos/seed/${apiUser.username}/40/40`,
                 is_super_admin: apiUser.is_super_admin === '1',
