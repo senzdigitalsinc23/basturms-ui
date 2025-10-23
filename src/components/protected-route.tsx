@@ -20,7 +20,7 @@ export function ProtectedRoute({
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  const isAuthorized = user && allowedRoles.includes(user.role);
+  const isAuthorized = user && (user.is_super_admin || allowedRoles.includes(user.role));
 
   useEffect(() => {
     // This effect is mainly for the case where a user logs out on a protected page
