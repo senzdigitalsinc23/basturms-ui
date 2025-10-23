@@ -355,7 +355,10 @@ const menuItems: Record<Role, NavItem[]> = {
   ],
 };
 
-const getRoleNavItems = (role: Role) => {
+const getRoleNavItems = (role: Role, isSuperAdmin: boolean): NavItem[] => {
+    if (isSuperAdmin) {
+        return menuItems['Admin']!;
+    }
   const roleKey = role as keyof typeof menuItems;
   if (menuItems[roleKey]) {
     return menuItems[roleKey]!;
@@ -377,7 +380,7 @@ export function SidebarNav() {
   const [schoolLogo, setSchoolLogo] = useState<string | undefined>('/placeholder-logo.png');
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>();
 
-  const navItems = user ? getRoleNavItems(user.role) : [];
+  const navItems = user ? getRoleNavItems(user.role, user.is_super_admin) : [];
 
   useEffect(() => {
     const activeItem = navItems.findIndex(item => item.items?.some(subItem => pathname.startsWith(subItem.href || '---')));
