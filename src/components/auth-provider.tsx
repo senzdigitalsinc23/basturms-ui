@@ -69,7 +69,12 @@ const parseFirstJson = (text: string): any => {
   }
 
   const jsonSubstring = text.substring(firstBrace, lastValidChar + 1);
-  return JSON.parse(jsonSubstring);
+  try {
+    return JSON.parse(jsonSubstring);
+  } catch(e) {
+    console.error("Final attempt to parse JSON failed", e);
+    return null;
+  }
 };
 
 
@@ -136,7 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         let result;
         try {
-            result = JSON.parse(responseText);
+            result = parseFirstJson(responseText);
+            if (result === null) throw new Error("No valid JSON found in response.");
         } catch (error: any) {
              addAuthLog({
                 email,
