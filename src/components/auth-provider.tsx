@@ -134,7 +134,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { success: false, message: `Server error: ${response.statusText}` };
         }
         
-        const result = parseFirstJson(responseText);
+        let result;
+        try {
+            result = parseFirstJson(responseText);
+        } catch (error: any) {
+             addAuthLog({
+                email,
+                event: 'Login Failure',
+                status: 'Failure',
+                details: `Failed to parse server response: ${error.message}. Response: ${responseText}`,
+            });
+            return { success: false, message: 'The login service returned an invalid response. Please try again later.' };
+        }
+
 
         if (result.success && result.data && result.data.user_id) {
             const apiUser = result.data;
