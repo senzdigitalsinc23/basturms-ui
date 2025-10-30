@@ -98,10 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      const apiUrl = '/api/login';
-      const apiKey = '5|K8p2zSif5sE6sT5qY4u5c2a1t3o8r7v6';
+      const baseUri = process.env.NEXT_PUBLIC_API_BASE_URI;
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+      const apiUrl = `${baseUri}/login`;
 
-      if (!apiKey) {
+      if (!apiKey || !baseUri) {
         const errorMsg = 'Client-side API configuration is missing.';
         addAuthLog({
             email,
@@ -145,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 status: 'Failure',
                 details: `Failed to parse server response: ${error.message}. Response: ${responseText}`,
             });
-            return { success: false, message: 'The login service returned an invalid response. Please try again later.' };
+            return { success: false, message: 'The login service is currently unavailable. Please try again later.' };
         }
 
 
@@ -218,8 +219,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
-    const apiUrl = '/api/logout';
-    const apiKey = '5|K8p2zSif5sE6sT5qY4u5c2a1t3o8r7v6';
+    const baseUri = process.env.NEXT_PUBLIC_API_BASE_URI;
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+    const apiUrl = `${baseUri}/logout`;
 
     if (user) {
       addAuthLog({
