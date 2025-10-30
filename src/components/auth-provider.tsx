@@ -98,27 +98,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      const baseUri = process.env.NEXT_PUBLIC_API_BASE_URI;
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-      const apiUrl = `${baseUri}/login`;
-
-      if (!apiKey || !baseUri) {
-        const errorMsg = 'Client-side API configuration is missing.';
-        addAuthLog({
-            email,
-            event: 'Login Failure',
-            status: 'Failure',
-            details: errorMsg,
-        });
-        return { success: false, message: errorMsg };
-      }
+      const apiUrl = `/api/login`;
       
       try {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-API-KEY': apiKey,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ email, password }),
         });
@@ -126,11 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const responseText = await response.text();
         
         if (!response.ok) {
-           addAuthLog({
+            const errorMessage = `Server error: ${response.status} ${response.statusText}. Response: ${responseText}`;
+            addAuthLog({
                 email,
                 event: 'Login Failure',
                 status: 'Failure',
-                details: `API error: ${response.status} ${response.statusText}. Response: ${responseText}`,
+                details: errorMessage,
             });
           return { success: false, message: `Server error: ${response.statusText}` };
         }
@@ -140,11 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             result = parseFirstJson(responseText);
             if (result === null) throw new Error("No valid JSON found in response.");
         } catch (error: any) {
+             const errorMessage = `Failed to parse server response: ${error.message}. Response: ${responseText}`;
              addAuthLog({
                 email,
                 event: 'Login Failure',
                 status: 'Failure',
-                details: `Failed to parse server response: ${error.message}. Response: ${responseText}`,
+                details: errorMessage,
             });
             return { success: false, message: 'The login service is currently unavailable. Please try again later.' };
         }
@@ -158,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const formattedRole = roleName.charAt(0).toUpperCase() + roleName.slice(1);
 
             const appUser: User = {
-                id: apiUser.user_id,
+                id: apiUser.user_id.toString(),
                 user_id: apiUser.user_id,
                 name: apiUser.username,
                 username: apiUser.username,
@@ -193,13 +181,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.replace('/dashboard');
             return { success: true };
         } else {
+             const errorMessage = result.message || 'Invalid credentials provided.';
              addAuthLog({
                 email,
                 event: 'Login Failure',
                 status: 'Failure',
-                details: result.message || 'Invalid credentials provided.',
+                details: errorMessage,
             });
-            return { success: false, message: result.message || 'Invalid credentials provided.'};
+            return { success: false, message: errorMessage};
         }
 
       } catch (error) {
@@ -219,9 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
-    const baseUri = process.env.NEXT_PUBLIC_API_BASE_URI;
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-    const apiUrl = `${baseUri}/logout`;
+    const apiUrl = `/api/logout`;
 
     if (user) {
       addAuthLog({
@@ -238,18 +225,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'X-API-KEY': apiKey || '',
                 }
             });
 
-            // Check if logout was successful on the server, but don't try to parse JSON
             if (!response.ok) {
               console.error("Server logout failed:", response.statusText);
-              // We still proceed with local logout even if API call fails
             }
         } catch (error) {
             console.error("Logout API call failed:", error);
-            // We still proceed with local logout even if API call fails
         }
     }
     
