@@ -1468,8 +1468,6 @@ export async function getStudentProfiles(page = 1, limit = 1000): Promise<Studen
                  'X-API-KEY': apiKey || '',
             }
         });
-        
-        console.log("Student list response:", await response.clone().text());
 
         if (!response.ok) {
             console.error("Failed to fetch students:", response.statusText);

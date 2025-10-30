@@ -26,50 +26,50 @@ const TOKEN_KEY = 'campusconnect_token';
 
 // Helper to find the first valid JSON object in a string
 const parseFirstJson = (text: string): any => {
-  const firstBrace = text.indexOf('{');
-  if (firstBrace === -1) {
-    return null;
-  }
-
-  let braceCount = 0;
-  let inString = false;
-  let inEscape = false;
-  let lastValidChar = -1;
-
-  for (let i = firstBrace; i < text.length; i++) {
-    const char = text[i];
-
-    if (inEscape) {
-      inEscape = false;
-      continue;
+    const firstBrace = text.indexOf('{');
+    if (firstBrace === -1) {
+        return null;
     }
 
-    if (char === '"' && !inEscape) {
-      inString = !inString;
+    let braceCount = 0;
+    let inString = false;
+    let inEscape = false;
+    let lastValidChar = -1;
+
+    for (let i = firstBrace; i < text.length; i++) {
+        const char = text[i];
+
+        if (inEscape) {
+            inEscape = false;
+            continue;
+        }
+
+        if (char === '"' && !inEscape) {
+            inString = !inString;
+        }
+
+        if (!inString) {
+            if (char === '{') braceCount++;
+            else if (char === '}') braceCount--;
+        }
+
+        if (braceCount === 0) {
+            lastValidChar = i;
+            break;
+        }
     }
 
-    if (!inString) {
-      if (char === '{') braceCount++;
-      else if (char === '}') braceCount--;
+    if (lastValidChar === -1) {
+        return null;
     }
 
-    if (braceCount === 0) {
-      lastValidChar = i;
-      break; 
+    const jsonSubstring = text.substring(firstBrace, lastValidChar + 1);
+    try {
+        return JSON.parse(jsonSubstring);
+    } catch(e) {
+        console.error("Final attempt to parse JSON failed", e);
+        return null;
     }
-  }
-
-  if (lastValidChar === -1) {
-    return null;
-  }
-
-  const jsonSubstring = text.substring(firstBrace, lastValidChar + 1);
-  try {
-    return JSON.parse(jsonSubstring);
-  } catch(e) {
-    console.error("Final attempt to parse JSON failed", e);
-    return null;
-  }
 };
 
 
@@ -104,7 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
             },
             body: JSON.stringify({ email, password }),
         });
