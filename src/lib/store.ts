@@ -1440,14 +1440,13 @@ export type StudentAPIResponse = {
 }
 
 export async function getStudentProfiles(page = 1, limit = 1000): Promise<StudentAPIResponse> {
-    const apiUrl = `/api/students?page=${page}&limit=${limit}`;
+    const apiUrl = `/api/students`;
 
     if (typeof window === 'undefined') {
         return { students: [], pagination: { total: 0, page: 1, limit, pages: 1 } };
     }
 
     const token = localStorage.getItem('campusconnect_token');
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
     if (!token) {
         console.error("Auth token is missing. Cannot fetch students.");
@@ -1465,12 +1464,11 @@ export async function getStudentProfiles(page = 1, limit = 1000): Promise<Studen
             headers: {
                 'Content-Type': 'application/json',
                  'Authorization': `Bearer ${token}`,
-                 'X-API-KEY': apiKey || '',
             }
         });
 
         if (!response.ok) {
-            console.error("Failed to fetch students:", response.statusText);
+            console.error("Failed to fetch students:", response.statusText, "Using fallback.");
             const allStudents = getStudentProfilesFromStorage();
             const total = allStudents.length;
             const pages = Math.ceil(total / limit);
@@ -1585,7 +1583,6 @@ export async function getStudentProfileById(studentId: string): Promise<StudentP
     }
 
     const token = localStorage.getItem('campusconnect_token');
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
     if (!token) {
         console.error("Auth token is missing. Cannot fetch student profile.");
@@ -1598,12 +1595,11 @@ export async function getStudentProfileById(studentId: string): Promise<StudentP
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                'X-API-KEY': apiKey || '',
             }
         });
 
         if (!response.ok) {
-            console.error("Failed to fetch student profile:", response.statusText);
+            console.error("Failed to fetch student profile:", response.statusText, "Using fallback.");
             return getStudentProfilesFromStorage().find(p => p.student.student_no === studentId) || null;
         }
 
