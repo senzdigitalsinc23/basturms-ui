@@ -105,14 +105,15 @@ export function ScoreEntryForm() {
 
             setAssignmentName(undefined);
             
-            const allStudentsInClass = (await getStudentProfiles()).filter(p => p.admissionDetails.class_assigned === selectedClass);
+            const { students: allStudentsInClass } = await getStudentProfiles();
+            const filteredStudents = allStudentsInClass.filter(p => p.admissionDetails.class_assigned === selectedClass);
             
             const initialScores: Record<string, string> = {};
             subjectsToShow.forEach(sub => {
                 initialScores[sub.id] = '';
             });
             
-            setStudents(allStudentsInClass.map(p => ({
+            setStudents(filteredStudents.map(p => ({
                 id: p.student.student_no,
                 name: `${p.student.first_name} ${p.student.last_name}`,
                 scores: { ...initialScores } 
@@ -125,11 +126,11 @@ export function ScoreEntryForm() {
                 const activeTermInfo = activeYear.terms.find(t => t.status === 'Active');
                 if (activeTermInfo) {
                     const activeTermName = `${activeTermInfo.name} ${activeYear.year}`;
-                    const allReportsFinal = allStudentsInClass.every(student => {
+                    const allReportsFinal = filteredStudents.every(student => {
                         const report = getStudentReport(student.student.student_no, activeTermName);
                         return report?.status === 'Final';
                     });
-                    setIsTermFinalized(allReportsFinal && allStudentsInClass.length > 0);
+                    setIsTermFinalized(allReportsFinal && filteredStudents.length > 0);
                 }
             }
 

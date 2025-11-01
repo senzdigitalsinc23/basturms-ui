@@ -19,7 +19,7 @@ export default function HeadmasterDashboardPage() {
   useEffect(() => {
     async function fetchData() {
       const allStaff = getStaff();
-      const allStudents = await getStudentProfiles();
+      const { students: allStudents } = await getStudentProfiles();
 
       setStats(prev => ({
           ...prev,

@@ -16,7 +16,7 @@ export default function ParentDashboardPage() {
   useEffect(() => {
     async function fetchProfile() {
       if (user) {
-          const studentProfiles = await getStudentProfiles();
+          const { students: studentProfiles } = await getStudentProfiles();
           const profile = studentProfiles.find(p => p.guardianInfo.guardian_email === user.email);
           setChildProfile(profile || null);
       }

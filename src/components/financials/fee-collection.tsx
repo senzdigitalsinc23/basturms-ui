@@ -129,7 +129,7 @@ export function FeeCollection() {
     useEffect(() => {
       async function searchStudents() {
         if (searchQuery.length > 2) {
-            const profiles = await getStudentProfiles();
+            const { students: profiles } = await getStudentProfiles();
             const filtered = profiles.filter(p =>
                 p.student.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 p.student.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -151,7 +151,7 @@ export function FeeCollection() {
     
     const isReceiptNumberDuplicate = async (receiptNo: string): Promise<boolean> => {
         if (!receiptNo) return false;
-        const allProfiles = await getStudentProfiles();
+        const { students: allProfiles } = await getStudentProfiles();
         return allProfiles.some(profile =>
             profile.financialDetails?.payment_history.some(term =>
                 term.payments.some(p => p.receipt_number === receiptNo)

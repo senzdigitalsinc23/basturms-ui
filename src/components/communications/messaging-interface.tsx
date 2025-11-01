@@ -27,7 +27,8 @@ export function MessagingInterface() {
 
     useEffect(() => {
         async function fetchData() {
-            setStudents(await getStudentProfiles());
+            const { students: studentProfiles } = await getStudentProfiles();
+            setStudents(studentProfiles);
             const allStaff = getStaff().filter(s => s.user_id !== user?.id); // Exclude self
             setStaff(allStaff);
         }

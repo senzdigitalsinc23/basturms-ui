@@ -27,7 +27,7 @@ export function ParentManagement() {
 
     useEffect(() => {
         async function fetchData() {
-            const studentProfiles = await getStudentProfiles();
+            const { students: studentProfiles } = await getStudentProfiles();
             const classData = getClasses();
             setClasses(classData);
             const classMap = new Map(classData.map(c => [c.id, c.name]));

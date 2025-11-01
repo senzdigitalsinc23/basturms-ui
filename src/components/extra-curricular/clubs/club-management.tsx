@@ -69,7 +69,8 @@ export function ClubManagement() {
         async function fetchData() {
             setClubs(getClubs());
             setTeachers(getStaff().filter(s => s.roles.includes('Teacher')));
-            setStudents(await getStudentProfiles());
+            const { students: studentProfiles } = await getStudentProfiles();
+            setStudents(studentProfiles);
         }
         fetchData();
     }, []);

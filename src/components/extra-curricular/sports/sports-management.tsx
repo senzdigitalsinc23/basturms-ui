@@ -69,7 +69,8 @@ export function SportsManagement() {
         async function fetchData() {
             setSports(getSports());
             setTeachers(getStaff().filter(s => s.roles.includes('Teacher')));
-            setStudents(await getStudentProfiles());
+            const { students: studentProfiles } = await getStudentProfiles();
+            setStudents(studentProfiles);
         }
         fetchData();
     }, []);

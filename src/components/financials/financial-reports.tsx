@@ -54,7 +54,8 @@ export function FinancialReports() {
 
     useEffect(() => {
         async function fetchData() {
-            setAllProfiles(await getStudentProfiles());
+            const { students } = await getStudentProfiles();
+            setAllProfiles(students);
             setAllClasses(getClasses());
             setAllPayrolls(getPayrolls());
             setAllTermlyBills(getTermlyBills());

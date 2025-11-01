@@ -51,7 +51,7 @@ export function StudentFinancials() {
         async function fetchProfile() {
             if (user) {
                 let studentProfile;
-                const studentProfiles = await getStudentProfiles();
+                const { students: studentProfiles } = await getStudentProfiles();
                 if (user.role === 'Student') {
                     const studentUser = studentProfiles.find(p => p.contactDetails.email === user.email);
                     if (studentUser) {

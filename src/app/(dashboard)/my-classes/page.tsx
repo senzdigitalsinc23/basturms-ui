@@ -36,7 +36,8 @@ export default function MyClassesPage() {
                 }
                 setClasses(getClasses());
                 setSubjects(getSubjects());
-                setStudents(await getStudentProfiles());
+                const { students: studentProfiles } = await getStudentProfiles();
+                setStudents(studentProfiles);
             }
         }
         fetchData();

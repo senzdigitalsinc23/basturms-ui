@@ -27,7 +27,8 @@ export function StudentRanking() {
 
     useEffect(() => {
         async function fetchData() {
-            setProfiles(await getStudentProfiles());
+            const { students } = await getStudentProfiles();
+            setProfiles(students);
             setClasses(getClasses());
             setSubjects(getSubjects());
 

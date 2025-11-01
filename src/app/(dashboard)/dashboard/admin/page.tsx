@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
 
     useEffect(() => {
       async function fetchData() {
-        const studentProfiles = await getStudentProfiles();
+        const { students: studentProfiles } = await getStudentProfiles();
         const lastMonth = subDays(new Date(), 30);
         
         const totalStudents = studentProfiles.length;

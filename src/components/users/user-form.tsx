@@ -1,5 +1,4 @@
 
-
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -84,26 +83,29 @@ export function UserForm({
   const isStaffRole = selectedRole && selectedRole !== 'Student' && selectedRole !== 'Parent';
 
   useEffect(() => {
-    if (isEditMode) return;
+    async function fetchUnlinked() {
+        if (isEditMode) return;
 
-    const allUsers = getUsers();
-    
-    if (selectedRole === 'Student') {
-      const allStudents = getStudentProfiles();
-      const availableStudents = allStudents.filter(s => {
-        const studentUser = allUsers.find(u => u.email === s.contactDetails.email);
-        return !studentUser;
-      });
-      setUnlinkedStudents(availableStudents);
-      setUnlinkedStaff([]);
-    } else if (isStaffRole) {
-        const availableStaff = staffList.filter(staffMember => !staffMember.user_id);
-        setUnlinkedStaff(availableStaff);
-        setUnlinkedStudents([]);
-    } else {
-      setUnlinkedStudents([]);
-      setUnlinkedStaff([]);
+        const allUsers = getUsers();
+        
+        if (selectedRole === 'Student') {
+            const { students: allStudents } = await getStudentProfiles();
+            const availableStudents = allStudents.filter(s => {
+                const studentUser = allUsers.find(u => u.email === s.contactDetails.email);
+                return !studentUser;
+            });
+            setUnlinkedStudents(availableStudents);
+            setUnlinkedStaff([]);
+        } else if (isStaffRole) {
+            const availableStaff = staffList.filter(staffMember => !staffMember.user_id);
+            setUnlinkedStaff(availableStaff);
+            setUnlinkedStudents([]);
+        } else {
+            setUnlinkedStudents([]);
+            setUnlinkedStaff([]);
+        }
     }
+    fetchUnlinked();
   }, [selectedRole, isEditMode, isStaffRole, staffList]);
 
 

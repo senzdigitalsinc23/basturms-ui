@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { getClasses, getStudentProfiles, addAttendanceRecord, getStudentProfileById, addAuditLog, getStaff, getStaffAppointmentHistory } from '@/lib/store';
@@ -73,22 +74,25 @@ export function ClassAttendanceTracker() {
     }, [selectedClass, user]);
 
     useEffect(() => {
-        if (selectedClass) {
-            const allProfiles = getStudentProfiles();
-            const filteredStudents = allProfiles
-                .filter(p => p.admissionDetails.class_assigned === selectedClass && p.admissionDetails.admission_status === 'Admitted')
-                .map(p => {
-                    const todaysRecord = p.attendanceRecords?.find(rec => format(new Date(rec.date), 'yyyy-MM-dd') === format(attendanceDate, 'yyyy-MM-dd'));
-                    return {
-                        id: p.student.student_no,
-                        name: `${p.student.first_name} ${p.student.last_name}`,
-                        status: todaysRecord?.status || 'Present'
-                    };
-                });
-            setStudents(filteredStudents);
-        } else {
-            setStudents([]);
+        async function fetchStudents() {
+            if (selectedClass) {
+                const { students: allProfiles } = await getStudentProfiles();
+                const filteredStudents = allProfiles
+                    .filter(p => p.admissionDetails.class_assigned === selectedClass && p.admissionDetails.admission_status === 'Admitted')
+                    .map(p => {
+                        const todaysRecord = p.attendanceRecords?.find(rec => format(new Date(rec.date), 'yyyy-MM-dd') === format(attendanceDate, 'yyyy-MM-dd'));
+                        return {
+                            id: p.student.student_no,
+                            name: `${p.student.first_name} ${p.student.last_name}`,
+                            status: todaysRecord?.status || 'Present'
+                        };
+                    });
+                setStudents(filteredStudents);
+            } else {
+                setStudents([]);
+            }
         }
+        fetchStudents();
     }, [selectedClass, attendanceDate]);
 
     const handleStatusChange = (studentId: string, status: AttendanceRecord['status']) => {
