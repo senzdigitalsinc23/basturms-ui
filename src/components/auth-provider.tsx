@@ -226,6 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
                 }
             });
 

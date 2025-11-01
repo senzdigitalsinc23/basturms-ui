@@ -1464,6 +1464,7 @@ export async function getStudentProfiles(page = 1, limit = 1000): Promise<Studen
             headers: {
                 'Content-Type': 'application/json',
                  'Authorization': `Bearer ${token}`,
+                 'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
             }
         });
 
@@ -1595,6 +1596,7 @@ export async function getStudentProfileById(studentId: string): Promise<StudentP
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
+                'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
             }
         });
 
