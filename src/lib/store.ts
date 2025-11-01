@@ -1574,10 +1574,8 @@ export async function getStudentProfiles(page = 1, limit = 1000): Promise<Studen
     }
 }
 
-export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
-
 export async function getStudentProfileById(studentId: string): Promise<StudentProfile | null> {
-    const apiUrl = `/api/students/show/${studentId}`;
+    const apiUrl = `/api/students/show`;
 
     if (typeof window === 'undefined') {
         return null;
@@ -1592,12 +1590,13 @@ export async function getStudentProfileById(studentId: string): Promise<StudentP
     }
      try {
         const response = await fetch(apiUrl, {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
                 'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
-            }
+            },
+            body: JSON.stringify({ student_no: studentId })
         });
 
         if (!response.ok) {
@@ -1679,6 +1678,8 @@ export async function getStudentProfileById(studentId: string): Promise<StudentP
         return getStudentProfilesFromStorage().find(p => p.student.student_no === studentId) || null;
     }
 }
+
+export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
 
 export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, creatorId: string, classes?: Class[]): StudentProfile => {
     const profiles = getStudentProfilesFromStorage();
