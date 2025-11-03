@@ -2,7 +2,7 @@
 'use client';
 
 import { ProtectedRoute } from '@/components/protected-route';
-import { AddStudentForm } from '@/components/student-management/add-student-form';
+import { StudentForm } from '@/components/student-management/student-form';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -85,7 +85,7 @@ export default function AddStudentPage() {
             Download Admission Form
           </Button>
         </div>
-        <AddStudentForm />
+        <StudentForm />
       </div>
     </ProtectedRoute>
   );

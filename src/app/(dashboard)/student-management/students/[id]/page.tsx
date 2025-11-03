@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { EditStudentForm } from '@/components/student-management/profile/edit-student-form';
+import { StudentForm } from '@/components/student-management/student-form';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { AcademicRecordForm } from '@/components/student-management/profile/academic-record-form';
@@ -428,7 +428,7 @@ export default function StudentProfilePage() {
                                         <DialogTitle>Edit Student Profile</DialogTitle>
                                         <DialogDescription>Update details for {fullName}.</DialogDescription>
                                     </DialogHeader>
-                                    <EditStudentForm defaultValues={profile} onSubmit={handleUpdateProfile} classes={classes} />
+                                    <StudentForm isEditMode defaultValues={profile} onSubmit={handleUpdateProfile} />
                                 </DialogContent>
                             </Dialog>
                         </>
