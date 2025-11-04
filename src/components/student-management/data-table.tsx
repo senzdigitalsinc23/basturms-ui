@@ -458,7 +458,7 @@ export function StudentDataTable({
                     <Select
                         value={`${table.getState().pagination.pageSize}`}
                         onValueChange={(value) => {
-                            table.setPageSize(Number(value))
+                            setPagination(prev => ({ ...prev, pageIndex: 0, pageSize: Number(value) }));
                         }}
                         >
                         <SelectTrigger className="h-8 w-[70px]">
