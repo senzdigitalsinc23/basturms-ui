@@ -34,10 +34,24 @@ export function StudentManagement() {
   });
   const [pageCount, setPageCount] = useState(0);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+        setDebouncedSearchTerm(searchTerm);
+        setPagination(prev => ({...prev, pageIndex: 0})); // Reset to first page on new search
+    }, 500); // 500ms debounce delay
+
+    return () => {
+        clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
 
   const refreshStudents = async () => {
     setLoading(true);
-    const { students: profiles, pagination: paginationData } = await getStudentProfiles(pagination.pageIndex + 1, pagination.pageSize);
+    const { students: profiles, pagination: paginationData } = await getStudentProfiles(pagination.pageIndex + 1, pagination.pageSize, debouncedSearchTerm);
     const classesData = getClasses();
     setClasses(classesData);
     const classMap = new Map(classesData.map(c => [c.id, c.name]));
@@ -59,7 +73,7 @@ export function StudentManagement() {
 
   useEffect(() => {
     refreshStudents();
-  }, [pagination]);
+  }, [pagination, debouncedSearchTerm]);
 
   const handleImportStudents = (importedData: any[]) => {
     if (!currentUser) return;
@@ -149,6 +163,8 @@ export function StudentManagement() {
       pageCount={pageCount}
       totalRecords={totalRecords}
       isLoading={loading}
+      searchTerm={searchTerm}
+      setSearchTerm={setSearchTerm}
     />
   );
 }

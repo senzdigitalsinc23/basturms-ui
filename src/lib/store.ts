@@ -1439,8 +1439,15 @@ export type StudentAPIResponse = {
     };
 }
 
-export async function getStudentProfiles(page = 1, limit = 1000): Promise<StudentAPIResponse> {
-    const apiUrl = `/api/students`;
+export async function getStudentProfiles(page = 1, limit = 10, search = ''): Promise<StudentAPIResponse> {
+    const url = new URL(window.location.origin + "/api/students");
+    url.searchParams.append('page', String(page));
+    url.searchParams.append('limit', String(limit));
+    if (search) {
+        url.searchParams.append('search', search);
+    }
+    
+    const apiUrl = url.pathname + url.search;
 
     if (typeof window === 'undefined') {
         return { students: [], pagination: { total: 0, page: 1, limit, pages: 1 } };

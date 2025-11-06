@@ -58,6 +58,8 @@ interface StudentDataTableProps {
   pageCount: number;
   totalRecords: number;
   isLoading: boolean;
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
 }
 
 const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
@@ -78,10 +80,11 @@ export function StudentDataTable({
     pageCount,
     totalRecords,
     isLoading,
+    searchTerm,
+    setSearchTerm,
  }: StudentDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
   const [date, setDate] = useState<DateRange | undefined>()
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
@@ -98,17 +101,16 @@ export function StudentDataTable({
     manualPagination: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     onRowSelectionChange: setRowSelection,
+    manualFiltering: true, // Server-side filtering
     state: {
       sorting,
       columnFilters,
-      globalFilter,
       rowSelection,
       pagination,
     },
@@ -125,7 +127,7 @@ export function StudentDataTable({
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedStudentIds = selectedRows.map(row => row.original.student_id);
 
-  const isFiltered = table.getState().columnFilters.length > 0 || !!globalFilter;
+  const isFiltered = table.getState().columnFilters.length > 0;
   const isDateFiltered = !!date;
 
   const handleImportClick = () => {
@@ -273,9 +275,9 @@ export function StudentDataTable({
             <div className="flex flex-1 items-center space-x-2">
                 <Input
                     placeholder="Search by name, ID, class or email..."
-                    value={globalFilter ?? ''}
+                    value={searchTerm}
                     onChange={(event) =>
-                        setGlobalFilter(event.target.value)
+                        setSearchTerm(event.target.value)
                     }
                     className="h-8 w-[150px] lg:w-[250px]"
                 />
@@ -325,12 +327,12 @@ export function StudentDataTable({
                     />
                     </PopoverContent>
                 </Popover>
-                {(isFiltered || isDateFiltered) && (
+                {(isFiltered || isDateFiltered || searchTerm) && (
                     <Button
                     variant="ghost"
                     onClick={() => {
                         table.resetColumnFilters();
-                        setGlobalFilter('');
+                        setSearchTerm('');
                         setDate(undefined);
                     }}
                     className="h-8 px-2 lg:px-3"
