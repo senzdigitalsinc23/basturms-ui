@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -244,31 +244,31 @@ export function StudentForm({ isEditMode = false, defaultValues, onSubmit }: Stu
     defaultValues: isEditMode && defaultValues ? {
         first_name: defaultValues.student.first_name,
         last_name: defaultValues.student.last_name,
-        other_name: defaultValues.student.other_name,
+        other_name: defaultValues.student.other_name || '',
         dob: parseISO(defaultValues.student.dob),
         gender: defaultValues.student.gender,
         nhis_number: '', // Add if needed in StudentProfile
-        email: defaultValues.contactDetails.email,
-        phone: defaultValues.contactDetails.phone,
+        email: defaultValues.contactDetails.email || '',
+        phone: defaultValues.contactDetails.phone || '',
         country: defaultValues.contactDetails.country,
-        city: defaultValues.contactDetails.city,
+        city: defaultValues.contactDetails.city || '',
         hometown: defaultValues.contactDetails.hometown,
         residence: defaultValues.contactDetails.residence,
         house_no: defaultValues.contactDetails.house_no,
         gps_no: defaultValues.contactDetails.gps_no,
         guardian_name: defaultValues.guardianInfo.guardian_name,
         guardian_phone: defaultValues.guardianInfo.guardian_phone,
-        guardian_email: defaultValues.guardianInfo.guardian_email,
+        guardian_email: defaultValues.guardianInfo.guardian_email || '',
         guardian_relationship: defaultValues.guardianInfo.guardian_relationship,
-        guardian_occupation: defaultValues.guardianInfo.guardian_occupation,
-        father_name: defaultValues.guardianInfo.father_name,
-        father_phone: defaultValues.guardianInfo.father_phone,
-        father_email: defaultValues.guardianInfo.father_email,
-        father_occupation: defaultValues.guardianInfo.father_occupation,
-        mother_name: defaultValues.guardianInfo.mother_name,
-        mother_phone: defaultValues.guardianInfo.mother_phone,
-        mother_email: defaultValues.guardianInfo.mother_email,
-        mother_occupation: defaultValues.guardianInfo.mother_occupation,
+        guardian_occupation: defaultValues.guardianInfo.guardian_occupation || '',
+        father_name: defaultValues.guardianInfo.father_name || '',
+        father_phone: defaultValues.guardianInfo.father_phone || '',
+        father_email: defaultValues.guardianInfo.father_email || '',
+        father_occupation: defaultValues.guardianInfo.father_occupation || '',
+        mother_name: defaultValues.guardianInfo.mother_name || '',
+        mother_phone: defaultValues.guardianInfo.mother_phone || '',
+        mother_email: defaultValues.guardianInfo.mother_email || '',
+        mother_occupation: defaultValues.guardianInfo.mother_occupation || '',
         emergency_name: defaultValues.emergencyContact?.emergency_name,
         emergency_phone: defaultValues.emergencyContact?.emergency_phone,
         emergency_relationship: defaultValues.emergencyContact?.emergency_relationship as any,
