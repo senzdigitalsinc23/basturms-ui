@@ -1439,6 +1439,44 @@ export type StudentAPIResponse = {
     };
 }
 
+// Helper to fetch all pages from a paginated API endpoint
+async function fetchAllPages(url: URL, token: string): Promise<StudentProfile[]> {
+    let allStudents: StudentProfile[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+
+    while (currentPage <= totalPages) {
+        url.searchParams.set('page', String(currentPage));
+        url.searchParams.set('limit', '100'); // Use a reasonable page size
+        const apiUrl = url.pathname + url.search;
+
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch page ${currentPage}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data && Array.isArray(result.data.students)) {
+            allStudents.push(...result.data.students);
+            totalPages = result.data.pagination.pages;
+            currentPage++;
+        } else {
+            throw new Error(`API response for page ${currentPage} was not successful or malformed.`);
+        }
+    }
+    return allStudents;
+}
+
+
 export async function getStudentProfiles(page = 1, limit = 10, search = ''): Promise<StudentAPIResponse> {
     const url = new URL(window.location.origin + "/api/students");
     url.searchParams.append('page', String(page));
@@ -1447,8 +1485,6 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
         url.searchParams.append('search', search);
     }
     
-    const apiUrl = url.pathname + url.search;
-
     if (typeof window === 'undefined') {
         return { students: [], pagination: { total: 0, page: 1, limit, pages: 1 } };
     }
@@ -1466,6 +1502,40 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
     }
 
     try {
+        // If a large limit is requested, it means we need all students.
+        if (limit > 100) {
+            const allStudents = await fetchAllPages(url, token);
+            const transformedProfiles = allStudents.map((apiStudent: any): StudentProfile => {
+                const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
+                const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
+                const mother = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'mother') || {};
+                return {
+                    student: {
+                        student_no: apiStudent.student_no, first_name: apiStudent.first_name, last_name: apiStudent.last_name, other_name: apiStudent.other_name, dob: apiStudent.dob, gender: apiStudent.gender, created_at: new Date().toISOString(), created_by: apiStudent.created_by, updated_at: new Date().toISOString(), updated_by: apiStudent.created_by, avatarUrl: `https://picsum.photos/seed/${apiStudent.student_no}/200/200`,
+                    },
+                    contactDetails: {
+                        student_no: apiStudent.student_no, email: apiStudent.email, phone: apiStudent.phone, country: apiStudent.country_id, city: apiStudent.city, hometown: apiStudent.hometown, residence: apiStudent.residence, house_no: apiStudent.house_no, gps_no: apiStudent.gps_no,
+                    },
+                    guardianInfo: {
+                        student_no: apiStudent.student_no, guardian_name: guardian.guardian_name, guardian_phone: guardian.guardian_phone, guardian_email: guardian.guardian_email, guardian_relationship: guardian.guardian_relationship, father_name: father.guardian_name, father_phone: father.guardian_phone, mother_name: mother.guardian_name, mother_phone: mother.guardian_phone,
+                    },
+                    emergencyContact: {
+                        student_no: apiStudent.student_no, emergency_name: apiStudent.emergency_contact?.emergency_name, emergency_phone: apiStudent.emergency_contact?.emergency_phone, emergency_relationship: apiStudent.emergency_contact?.emergency_relationship,
+                    },
+                    admissionDetails: {
+                        student_no: apiStudent.student_no, admission_no: apiStudent.admission_no, enrollment_date: apiStudent.enrollment_date, class_assigned: apiStudent.class_assigned, admission_status: apiStudent.admission_status === 'Active' ? 'Admitted' : apiStudent.admission_status,
+                    },
+                };
+            });
+            return {
+                students: transformedProfiles,
+                pagination: { total: allStudents.length, page: 1, limit: allStudents.length, pages: 1 },
+            };
+        }
+
+
+        // Regular paginated request
+        const apiUrl = url.pathname + url.search;
         const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
@@ -1484,22 +1554,8 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
             return { students: paginatedStudents, pagination: { total, page, limit, pages } };
         }
         
-        const responseText = await response.text();
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (e) {
-            // Attempt to parse the first JSON object if there's trailing text
-            const firstBrace = responseText.indexOf('{');
-            const lastBrace = responseText.lastIndexOf('}');
-            if (firstBrace !== -1 && lastBrace > firstBrace) {
-                const jsonString = responseText.substring(firstBrace, lastBrace + 1);
-                result = JSON.parse(jsonString);
-            } else {
-                throw new Error("Could not find a valid JSON object in the response.");
-            }
-        }
-
+        const result = await response.json();
+        
         if (result.success && result.data && Array.isArray(result.data.students)) {
             const transformedProfiles = result.data.students.map((apiStudent: any): StudentProfile => {
                  const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
