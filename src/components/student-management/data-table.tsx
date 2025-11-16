@@ -28,7 +28,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useEffect, useRef, useState } from 'react';
 import { StudentDisplay } from './student-management';
-import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2, FileDown, FileBadge, FileText } from 'lucide-react';
+import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2, FileDown, FileBadge, FileText, Loader2 } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -417,7 +417,16 @@ export function StudentDataTable({
                 ))}
             </TableHeader>
             <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                     <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                           <div className="flex justify-center items-center gap-2">
+                             <Loader2 className="h-6 w-6 animate-spin" />
+                             <p>Loading students...</p>
+                           </div>
+                        </TableCell>
+                    </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                     <TableRow
                     key={row.id}
@@ -439,7 +448,7 @@ export function StudentDataTable({
                     colSpan={columns.length}
                     className="h-24 text-center"
                     >
-                    {isLoading ? "Fetching students..." : "No results."}
+                    No results.
                     </TableCell>
                 </TableRow>
                 )}

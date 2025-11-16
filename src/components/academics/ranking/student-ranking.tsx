@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 
 type StudentRank = {
     studentId: string;
@@ -24,9 +25,11 @@ export function StudentRanking() {
     const [filterType, setFilterType] = useState<'class' | 'level' | 'school'>('class');
     const [selectedFilter, setSelectedFilter] = useState<string>('');
     const [rankedStudents, setRankedStudents] = useState<StudentRank[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchData() {
+            setLoading(true);
             const { students } = await getStudentProfiles();
             setProfiles(students);
             setClasses(getClasses());
@@ -39,6 +42,7 @@ export function StudentRanking() {
                     setActiveTermName(`${activeTerm.name} ${activeYear.year}`);
                 }
             }
+            setLoading(false);
         }
         fetchData();
     }, []);
@@ -53,6 +57,7 @@ export function StudentRanking() {
 
     useEffect(() => {
         let filteredProfiles = profiles;
+        setLoading(true);
 
         if (filterType === 'class' && selectedFilter) {
             filteredProfiles = profiles.filter(p => p.admissionDetails.class_assigned === selectedFilter);
@@ -81,6 +86,7 @@ export function StudentRanking() {
         });
 
         setRankedStudents(ranked);
+        setLoading(false);
 
     }, [profiles, filterType, selectedFilter, classMap]);
     
@@ -152,7 +158,16 @@ export function StudentRanking() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {rankedStudents.length > 0 ? (
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="h-24 text-center">
+                                            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                                <Loader2 className="h-5 w-5 animate-spin"/>
+                                                <span>Calculating rankings...</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : rankedStudents.length > 0 ? (
                                     rankedStudents.map(student => (
                                         <TableRow key={student.studentId}>
                                             <TableCell className="font-bold text-lg">{student.rank}</TableCell>

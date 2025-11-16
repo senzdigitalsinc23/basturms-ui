@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, Download, Search, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, Search, X, RefreshCw } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -51,14 +51,17 @@ export function FinancialReports() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [selectedClass, setSelectedClass] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchData() {
+            setLoading(true);
             const { students } = await getStudentProfiles();
             setAllProfiles(students);
             setAllClasses(getClasses());
             setAllPayrolls(getPayrolls());
             setAllTermlyBills(getTermlyBills());
+            setLoading(false);
         }
         fetchData();
     }, []);
@@ -277,7 +280,7 @@ export function FinancialReports() {
                             <CardTitle className="text-sm font-medium">Total Fees Paid</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(summary.totalPaid)}</div>
+                            {loading ? <RefreshCw className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{formatCurrency(summary.totalPaid)}</div>}
                             <p className="text-xs text-muted-foreground">Within selected filters</p>
                         </CardContent>
                     </Card>
@@ -286,7 +289,7 @@ export function FinancialReports() {
                             <CardTitle className="text-sm font-medium">Total Fees Expected</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(summary.totalExpected)}</div>
+                            {loading ? <RefreshCw className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{formatCurrency(summary.totalExpected)}</div>}
                              <p className="text-xs text-muted-foreground">In selected date range</p>
                         </CardContent>
                     </Card>
@@ -349,7 +352,7 @@ export function FinancialReports() {
                             <CardTitle className="text-sm font-medium text-destructive">Total Outstanding Balance</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-destructive">{formatCurrency(summary.totalOutstanding)}</div>
+                            {loading ? <RefreshCw className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold text-destructive">{formatCurrency(summary.totalOutstanding)}</div>}
                             <p className="text-xs text-muted-foreground">Across all filtered students</p>
                         </CardContent>
                     </Card>

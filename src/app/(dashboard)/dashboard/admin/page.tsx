@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { Users, DollarSign, BarChart3, CalendarCheck, BookCopy } from 'lucide-react';
+import { Users, DollarSign, BarChart3, CalendarCheck, BookCopy, RefreshCw } from 'lucide-react';
 import { PromotionSuggestions } from '@/components/dashboard/admin/promotion-suggestions';
 import { useEffect, useState } from 'react';
 import { getStudentProfiles, getStaff, getAnnouncements, Announcement, getExpenses, getPayrolls } from '@/lib/store';
 import { format, subDays } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function RecentNotices() {
   const [notices, setNotices] = useState<Announcement[]>([]);
@@ -75,9 +76,11 @@ export default function AdminDashboardPage() {
         avgPerformance: 0,
     });
     const [financeChartData, setFinanceChartData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
       async function fetchData() {
+        setLoading(true);
         const { students: studentProfiles } = await getStudentProfiles();
         const lastMonth = subDays(new Date(), 30);
         
@@ -130,6 +133,7 @@ export default function AdminDashboardPage() {
             avgAttendance,
             avgPerformance,
         });
+        setLoading(false);
       }
       fetchData();
     }, []);
@@ -140,65 +144,76 @@ export default function AdminDashboardPage() {
     <ProtectedRoute allowedRoles={['Admin']}>
         <div className="flex flex-col gap-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-              <Users className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudents}</div>
-              <p className="text-xs text-muted-foreground">+{stats.studentChange} from last month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
-               <p className="text-xs text-muted-foreground">+{stats.revenueChange}% from last month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Attendance</CardTitle>
-              <CalendarCheck className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className='flex items-center gap-4'>
-                    <div className="text-2xl font-bold">{stats.avgAttendance.toFixed(1)}%</div>
-                    <div className="w-12 h-12 relative">
-                        <svg className="w-full h-full" viewBox="0 0 36 36">
-                            <path
-                                className="stroke-current text-muted/20"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                fill="none"
-                                strokeWidth="3"
-                            />
-                            <path
-                                className="stroke-current text-primary"
-                                strokeDasharray={`${stats.avgAttendance.toFixed(0)}, 100`}
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                fill="none"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                transform="rotate(-90 18 18)"
-                            />
-                        </svg>
+          {loading ? (
+            <>
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+            </>
+          ) : (
+            <>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                <Users className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-bold">{stats.totalStudents}</div>
+                <p className="text-xs text-muted-foreground">+{stats.studentChange} from last month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
+                <p className="text-xs text-muted-foreground">+{stats.revenueChange}% from last month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Attendance</CardTitle>
+                <CalendarCheck className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className='flex items-center gap-4'>
+                        <div className="text-2xl font-bold">{stats.avgAttendance.toFixed(1)}%</div>
+                        <div className="w-12 h-12 relative">
+                            <svg className="w-full h-full" viewBox="0 0 36 36">
+                                <path
+                                    className="stroke-current text-muted/20"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    strokeWidth="3"
+                                />
+                                <path
+                                    className="stroke-current text-primary"
+                                    strokeDasharray={`${stats.avgAttendance.toFixed(0)}, 100`}
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                    transform="rotate(-90 18 18)"
+                                />
+                            </svg>
+                        </div>
                     </div>
-                </div>
-            </CardContent>
-          </Card>
-           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Performance</CardTitle>
-              <BarChart3 className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.avgPerformance.toFixed(1)}%</div>
-            </CardContent>
-          </Card>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Performance</CardTitle>
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-bold">{stats.avgPerformance.toFixed(1)}%</div>
+                </CardContent>
+            </Card>
+            </>
+          )}
         </div>
 
         <PromotionSuggestions />
