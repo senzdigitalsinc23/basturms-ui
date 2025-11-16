@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useForm, FormProvider, useFieldArray, useFormContext, Controller } from 'react-hook-form';
@@ -269,13 +270,20 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     mode: 'onChange',
     defaultValues: isEditMode && defaultValues ? {
         ...defaultValues,
+        other_name: defaultValues.other_name || '',
+        snnit_no: defaultValues.snnit_no || '',
+        email: defaultValues.email || '',
+        address: {
+            ...defaultValues.address,
+            city: defaultValues.address.city || ''
+        },
         signature: getUserById(defaultValues.user_id)?.signature || '',
         appointment_date: new Date(defaultValues.date_of_joining),
         roles: defaultValues.roles || [],
         appointment_status: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.appointment_status || 'Appointed',
         class_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.class_assigned,
         subjects_assigned: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.subjects_assigned,
-        is_class_teacher_for_class_id: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.is_class_teacher_for_class_id,
+        is_class_teacher_for_class_id: getStaffAppointmentHistory().find(a => a.staff_id === defaultValues.staff_id)?.is_class_teacher_for_class_id || '',
         academic_history: storeGetStaffAcademicHistory().filter(h => h.staff_id === defaultValues.staff_id),
         documents: getStaffDocuments().filter(d => d.staff_id === defaultValues.staff_id).map(d => ({name: d.document_name, file: d.file})),
     } : {
@@ -472,7 +480,7 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
                 <Tabs value={String(currentStep)} className="w-full">
                 <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 mb-6">
                     {tabs.map(tab => (
-                        <TabsTrigger key={tab.id} value={String(tab.id)} disabled={currentStep < tab.id} onClick={() => setCurrentStep(tab.id)}>
+                        <TabsTrigger key={tab.id} value={String(tab.id)} disabled={currentStep < tab.id && tab.id !== MAX_STEPS} onClick={() => setCurrentStep(tab.id)}>
                             {tab.name}
                         </TabsTrigger>
                     ))}
@@ -884,3 +892,5 @@ export function AddStaffForm({ isEditMode = false, defaultValues, onSubmit }: Ad
     </Card>
   );
 }
+
+    
