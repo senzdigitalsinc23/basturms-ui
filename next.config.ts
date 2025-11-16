@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
       {
         source: '/api/:path*',
         destination: `${process.env.NEXT_PUBLIC_API_BASE_URI}/:path*`,
+        headers: [
+            {
+                key: 'X-API-KEY',
+                value: process.env.NEXT_PUBLIC_API_KEY || '',
+            }
+        ]
       },
     ];
   },

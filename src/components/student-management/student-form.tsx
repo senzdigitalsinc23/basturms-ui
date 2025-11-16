@@ -433,7 +433,7 @@ We look forward to welcoming you to our school community.`;
             guardians.push({
                 guardian_name: data.father_name,
                 guardian_phone: data.father_phone,
-                guardian_email: data.father_email,
+                guardian_email: data.father_email || "",
                 guardian_relationship: 'father'
             });
         }
@@ -441,7 +441,7 @@ We look forward to welcoming you to our school community.`;
             guardians.push({
                 guardian_name: data.mother_name,
                 guardian_phone: data.mother_phone,
-                guardian_email: data.mother_email,
+                guardian_email: data.mother_email || "",
                 guardian_relationship: 'mother'
             });
         }
@@ -449,7 +449,7 @@ We look forward to welcoming you to our school community.`;
             guardians.push({
                 guardian_name: data.guardian_name,
                 guardian_phone: data.guardian_phone,
-                guardian_email: data.guardian_email,
+                guardian_email: data.guardian_email || "",
                 guardian_relationship: data.guardian_relationship.toLowerCase()
             });
         }
@@ -496,8 +496,7 @@ We look forward to welcoming you to our school community.`;
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(payload)
             });
