@@ -418,7 +418,7 @@ We look forward to welcoming you to our school community.`;
     }
     setIsLoading(true);
     
-    if (isEditMode && defaultValues) {
+    if (isEditMode && defaultValues && onSubmit) {
         const profileData: Partial<StudentProfile> = {
             student: { ...defaultValues.student, first_name: data.first_name, last_name: data.last_name, other_name: data.other_name, dob: data.dob.toISOString(), gender: data.gender },
             contactDetails: { ...defaultValues.contactDetails, email: data.email, phone: data.phone, country: data.country, city: data.city, hometown: data.hometown, residence: data.residence, house_no: data.house_no, gps_no: data.gps_no },
@@ -426,30 +426,123 @@ We look forward to welcoming you to our school community.`;
             emergencyContact: { ...defaultValues.emergencyContact, emergency_name: data.emergency_name, emergency_phone: data.emergency_phone, emergency_relationship: data.emergency_relationship },
             admissionDetails: { ...defaultValues.admissionDetails, enrollment_date: data.enrollment_date.toISOString(), class_assigned: data.class_assigned, admission_status: data.admission_status }
         };
-        if(onSubmit) onSubmit(profileData);
+        onSubmit(profileData);
     } else {
-        const profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'> = {
-            student: { first_name: data.first_name, last_name: data.last_name, other_name: data.other_name, dob: data.dob.toISOString(), gender: data.gender },
-            contactDetails: { email: data.email, phone: data.phone, country: data.country, city: data.city, hometown: data.hometown, residence: data.residence, house_no: data.house_no, gps_no: data.gps_no },
-            guardianInfo: { guardian_name: data.guardian_name, guardian_phone: data.guardian_phone, guardian_email: data.guardian_email, guardian_relationship: data.guardian_relationship, guardian_occupation: data.guardian_occupation, father_name: data.father_name, father_phone: data.father_phone, father_email: data.father_email, father_occupation: data.father_occupation, mother_name: data.mother_name, mother_phone: data.mother_phone, mother_email: data.mother_email, mother_occupation: data.mother_occupation },
-            emergencyContact: { emergency_name: data.emergency_name, emergency_phone: data.emergency_phone, emergency_relationship: data.emergency_relationship },
-            admissionDetails: { enrollment_date: data.enrollment_date.toISOString(), class_assigned: data.class_assigned, admission_status: data.admission_status }
+        const guardians = [];
+        if (data.father_name && data.father_phone) {
+            guardians.push({
+                guardian_name: data.father_name,
+                guardian_phone: data.father_phone,
+                guardian_email: data.father_email,
+                guardian_relationship: 'father'
+            });
+        }
+        if (data.mother_name && data.mother_phone) {
+            guardians.push({
+                guardian_name: data.mother_name,
+                guardian_phone: data.mother_phone,
+                guardian_email: data.mother_email,
+                guardian_relationship: 'mother'
+            });
+        }
+        if (data.guardian_relationship.toLowerCase() !== 'father' && data.guardian_relationship.toLowerCase() !== 'mother') {
+            guardians.push({
+                guardian_name: data.guardian_name,
+                guardian_phone: data.guardian_phone,
+                guardian_email: data.guardian_email,
+                guardian_relationship: data.guardian_relationship.toLowerCase()
+            });
+        }
+
+
+        const payload = {
+            student_info: {
+                first_name: data.first_name,
+                last_name: data.last_name,
+                other_name: data.other_name || "",
+                gender: data.gender,
+                dob: format(data.dob, 'yyyy-MM-dd'),
+                nhis_no: data.nhis_number || "",
+                created_by: user.id
+            },
+            contact_address: {
+                email: data.email || "",
+                phone: data.phone || "",
+                country_id: "GH",
+                city: data.city || "",
+                hometown: data.hometown,
+                residence: data.residence,
+                house_no: data.house_no,
+                gps_no: data.gps_no
+            },
+            admission_info: {
+                admission_no: generatedAdmissionNo,
+                admission_status: "Active",
+                class_assigned: data.class_assigned,
+                enrollment_date: format(data.enrollment_date, 'yyyy-MM-dd')
+            },
+            guardians: guardians,
+            emergency_contact: {
+                emergency_name: data.emergency_name,
+                emergency_phone: data.emergency_phone,
+                emergency_email: "",
+                emergency_relationship: data.emergency_relationship
+            }
         };
-        const newProfile = addStudentProfile(profileData, user.id, classes);
-        const admissionFormPdf = generateAdmissionFormPdf(data, newProfile.student.student_no, newProfile.admissionDetails.admission_no);
-        addUploadedDocument(newProfile.student.student_no, { name: 'Admission Form.pdf', type: 'Admission Form', url: admissionFormPdf, uploaded_at: new Date().toISOString() }, user.id);
-        const admissionLetterPdf = generateAdmissionLetterPdf(data, newProfile.student.student_no, newProfile.admissionDetails.admission_no);
-        addUploadedDocument(newProfile.student.student_no, { name: 'Admission Letter.pdf', type: 'Admission Letter', url: admissionLetterPdf, uploaded_at: new Date().toISOString() }, user.id);
-        const studentNameForFile = `${newProfile.student.first_name}_${newProfile.student.last_name}`;
-        const studentNoForFile = newProfile.student.student_no;
-        downloadPdf(admissionFormPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Form.pdf`);
-        downloadPdf(admissionLetterPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Letter.pdf`);
-        
-        toast({
-            title: 'Student Enrolled Successfully',
-            description: `${newProfile.student.first_name} ${newProfile.student.last_name} has been added.`
-        });
-        router.push(`/student-management/students/${newProfile.student.student_no}`);
+
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const response = await fetch('/api/students/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create student.');
+            }
+
+            const result = await response.json();
+            const newStudent = result.data;
+
+            const newProfile: StudentProfile = {
+                student: { ...newStudent.student_info, student_no: newStudent.student_no, avatarUrl: `https://picsum.photos/seed/${newStudent.student_no}/200/200` },
+                contactDetails: newStudent.contact_address,
+                guardianInfo: newStudent.guardians[0], // Simplified for now
+                emergencyContact: newStudent.emergency_contact,
+                admissionDetails: { ...newStudent.admission_info, student_no: newStudent.student_no }
+            };
+            
+            // Generate and attach PDFs
+            const admissionFormPdf = generateAdmissionFormPdf(data, newStudent.student_no, newStudent.admission_no);
+            addUploadedDocument(newStudent.student_no, { name: 'Admission Form.pdf', type: 'Admission Form', url: admissionFormPdf, uploaded_at: new Date().toISOString() }, user.id);
+            const admissionLetterPdf = generateAdmissionLetterPdf(data, newStudent.student_no, newStudent.admission_no);
+            addUploadedDocument(newStudent.student_no, { name: 'Admission Letter.pdf', type: 'Admission Letter', url: admissionLetterPdf, uploaded_at: new Date().toISOString() }, user.id);
+            
+            // Download PDFs
+            const studentNameForFile = `${newProfile.student.first_name}_${newProfile.student.last_name}`;
+            const studentNoForFile = newProfile.student.student_no;
+            downloadPdf(admissionFormPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Form.pdf`);
+            downloadPdf(admissionLetterPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Letter.pdf`);
+
+            toast({
+                title: 'Student Enrolled Successfully',
+                description: `${newProfile.student.first_name} ${newProfile.student.last_name} has been added.`
+            });
+            router.push(`/student-management/students/${newProfile.student.student_no}`);
+
+        } catch(e: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Error creating student',
+                description: e.message || 'An unexpected error occurred.',
+            });
+        }
     }
     
     setIsLoading(false);
