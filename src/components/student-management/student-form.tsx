@@ -496,7 +496,8 @@ We look forward to welcoming you to our school community.`;
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || ''
                 },
                 body: JSON.stringify(payload)
             });
