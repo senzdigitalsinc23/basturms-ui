@@ -1,6 +1,6 @@
-
-
 'use client';
+
+import { v4 as uuidv4 } from 'uuid';
 
 import {
   User,
@@ -59,11 +59,18 @@ import {
   DepartmentRequestStatus,
   Book,
   BorrowingRecord,
+  ApiResponse,
+  ClassApiResponse,
+  SubjectApiResponse,
+  TeacherSubjectApiResponse,
+  StudentFeeApiResponse
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
 import { SchoolProfileData } from '@/components/settings/school-profile-settings';
 import { FullSchedule } from '@/components/academics/timetable/timetable-scheduler';
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URI || 'http://localhost:9002/api/v1';
 
 export type StudentReport = {
     student: StudentProfile;
@@ -103,6 +110,7 @@ const LOGS_KEY = 'campusconnect_logs';
 const AUTH_LOGS_KEY = 'campusconnect_auth_logs';
 const STUDENTS_KEY = 'campusconnect_students';
 const CLASSES_KEY = 'campusconnect_classes';
+const CLASS_SUBJECT_ASSIGNMENTS_KEY = 'campusconnect_class_subject_assignments';
 const STAFF_PROFILES_KEY = 'campusconnect_staff_profiles';
 const SCHOOL_KEY = 'campusconnect_school';
 const FEE_STRUCTURES_KEY = 'campusconnect_fee_structures';
@@ -144,7 +152,7 @@ export const LEAVE_REQUESTS_KEY = 'campusconnect_leave_requests';
 
 // New keys for subjects
 const SUBJECTS_KEY = 'campusconnect_subjects';
-const CLASS_SUBJECTS_KEY = 'campusconnect_class_subjects';
+const CLASS_SUBJECTS_KEY = 'classSubjects';
 const TEACHER_SUBJECTS_KEY = 'campusconnect_teacher_subjects';
 
 
@@ -233,8 +241,8 @@ const getInitialClasses = (): Class[] => {
     return [
         { id: 'nur1', name: 'Nursery 1' },
         { id: 'nur2', name: 'Nursery 2' },
-        { id: 'kg1', name: 'Kingdergarten 1' },
-        { id: 'kg2', name: 'Kingdergarten 2' },
+        { id: 'kg1', name: 'Kindergarten 1' },
+        { id: 'kg2', name: 'Kindergarten 2' },
         { id: 'b1', name: 'Basic 1' },
         { id: 'b2', name: 'Basic 2' },
         { id: 'b3', name: 'Basic 3' },
@@ -244,6 +252,7 @@ const getInitialClasses = (): Class[] => {
         { id: 'jhs1', name: 'Junior High School 1' },
         { id: 'jhs2', name: 'Junior High School 2' },
         { id: 'jhs3', name: 'Junior High School 3' },
+        { id: 'cre', name: 'Creche' },
     ];
 };
 
@@ -254,7 +263,10 @@ const getInitialSubjects = (): Subject[] => {
         'Numeracy', 'Language & Literacy', 'Creative Art', 'Social Studies', 
         'Basic Design and Technology', 'Ghanaian Language & Culture', 
         'Information and Communications Technology', 'Fante', 'Asante Twi', 
-        'Akwapim Twi', 'Dagomba', 'Ewe'
+        'Akwapim Twi', 'Dagomba', 'Ewe', 'Arabic', 'Business Studies', 'Career Technology', 
+        'Environmental Studies', 'General Agriculture', 'General Knowledge in Art', 
+        'Home Economics', 'Integrated Science', 'Personal and Social Development', 
+        'Visual Arts', 'Creative Arts' // Added 'Creative Arts' as per API response
     ];
     return subjectNames.map((name, index) => ({
         id: `SUB${(index + 1).toString().padStart(3, '0')}`,
@@ -394,7 +406,9 @@ export const initializeStore = () => {
         saveToStorage(AUTH_LOGS_KEY, []);
         saveToStorage(STUDENTS_KEY, []); // Start with an empty student list
         saveToStorage(STUDENT_REPORTS_KEY, []);
-        saveToStorage(CLASSES_KEY, getInitialClasses());
+        // Fetch classes and subjects from API on initialization
+        fetchClassesFromApi();
+        fetchSubjectsFromApi();
         saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
         saveToStorage(FEE_STRUCTURES_KEY, []);
         saveToStorage(TERMLY_BILLS_KEY, []);
@@ -424,7 +438,6 @@ export const initializeStore = () => {
         saveToStorage(STAFF_DOCUMENTS_KEY, []);
         saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, []);
         saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, []);
-        saveToStorage(SUBJECTS_KEY, getInitialSubjects());
         saveToStorage(CLASS_SUBJECTS_KEY, []);
         saveToStorage(TEACHER_SUBJECTS_KEY, []);
     }
@@ -631,7 +644,7 @@ export const getStudentReport = (studentId: string, termName: string): StudentRe
 
 export const calculateStudentReport = (studentId: string, termName: string, allStudentsInClass: StudentProfile[]): StudentReport | null => {
     const student = getStudentProfileById(studentId);
-    if (!student) return null;
+    if (!student || !student.admissionDetails?.class_assigned) return null;
 
     const allSubjects = getSubjects();
     const classSubjects = addClassSubject().filter(cs => cs.class_id === student.admissionDetails.class_assigned).map(cs => allSubjects.find(s => s.id === cs.subject_id)).filter(Boolean) as Subject[];
@@ -679,7 +692,9 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
             }
         }
         
-        const allScoresForSubject = allStudentsInClass.map(s => {
+        const allScoresForSubject = allStudentsInClass
+            .filter(s => s && s.admissionDetails?.class_assigned) // Add defensive filter
+            .map(s => {
             const scores = s.assignmentScores?.filter(sc => sc.subject_id === subject.id) || [];
             
             let studentSbaScore = 0;
@@ -1325,6 +1340,112 @@ export const bulkDeleteStaff = (staffIds: string[], editorId: string): number =>
 // Subject Management Functions
 export const getSubjects = (): Subject[] => getFromStorage<Subject[]>(SUBJECTS_KEY, []);
 
+export const fetchSubjectsFromApi = async (refetch: boolean = false): Promise<Subject[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const storedSubjects = getFromStorage<Subject[]>(SUBJECTS_KEY, []);
+
+    if (storedSubjects.length > 0 && !refetch) {
+        return storedSubjects;
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+    try {
+        const response = await fetch('/api/academic/subjects/list', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Failed to fetch subjects from API:', response.statusText, 'Error Data:', errorData);
+            return getFromStorage<Subject[]>(SUBJECTS_KEY, []);
+        }
+
+        const result: SubjectApiResponse = await response.json();
+
+        console.log('Subjects API Response:', result);
+        
+        if (result.success && Array.isArray(result.data)) {
+            const subjects = result.data.map(item => ({
+                id: item.id.toString(),
+                name: item.name,
+                code: item.code,
+                level: item.level,
+                category: item.category,
+                description: item.description,
+                is_active: item.is_active,
+            }));
+            saveToStorage(SUBJECTS_KEY, subjects);
+            return subjects;
+        }
+        return getFromStorage<Subject[]>(SUBJECTS_KEY, []);
+    } catch (error) {
+        console.error('Error fetching subjects from API:', error);
+        return getFromStorage<Subject[]>(SUBJECTS_KEY, []);
+    }
+};
+
+export const fetchClassesFromApi = async (): Promise<Class[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+    try {
+        const apiUrl = '/api/academic/classes/list';
+        console.log('fetchClassesFromApi: Making request to:', apiUrl);
+        console.log('fetchClassesFromApi: Request Headers:', {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
+            'X-API-KEY': apiKey,
+        });
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+            },
+        });
+
+        console.log('fetchClassesFromApi: Raw Response Status:', response.status);
+        const responseText = await response.text();
+        console.log('fetchClassesFromApi: Raw Response Body:', responseText);
+
+        if (!response.ok) {
+            const errorData = JSON.parse(responseText).catch(() => ({}));
+            console.error('fetchClassesFromApi: Failed to fetch classes from API:', response.statusText, 'Error Data:', errorData);
+            return getFromStorage<Class[]>(CLASSES_KEY, []);
+        }
+
+        const result: ClassApiResponse = JSON.parse(responseText);
+        console.log('Class API Response Data:', result.data); // Add this line
+        if (result.success && Array.isArray(result.data)) {
+            const classes = result.data.map(item => ({
+                id: item.class_id, // Changed from item.id.toString() to item.class_id
+                name: item.class_name,
+                class_id: item.class_id,
+            }));
+            saveToStorage(CLASSES_KEY, classes);
+            return classes;
+        }
+        return getFromStorage<Class[]>(CLASSES_KEY, []);
+    } catch (error) {
+        console.error('Error fetching classes from API:', error);
+        return getFromStorage<Class[]>(CLASSES_KEY, []);
+    }
+};
+
+export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
+
 export const addSubject = (subjectName: string): void => {
     const subjects = getSubjects();
     const newSubject: Subject = {
@@ -1339,12 +1460,12 @@ export const deleteSubject = (subjectId: string): void => {
     subjects = subjects.filter(s => s.id !== subjectId);
     saveToStorage(SUBJECTS_KEY, subjects);
 
-    let classSubjects = addClassSubject();
+    let classSubjects = getClassesSubjects();
     classSubjects = classSubjects.filter(cs => cs.subject_id !== subjectId);
     saveToStorage(CLASS_SUBJECTS_KEY, classSubjects);
 };
 
-export const addClassSubject = (): ClassSubject[] => getFromStorage<ClassSubject[]>(CLASS_SUBJECTS_KEY, []);
+export const getClassesSubjects = (): ClassSubject[] => getFromStorage<ClassSubject[]>(CLASS_SUBJECTS_KEY, []);
 export const saveClassSubjects = (assignments: ClassSubject[]): void => saveToStorage(CLASS_SUBJECTS_KEY, assignments);
 
 export const addTeacherSubject = (teacherId: string, subjectId: string): void => {
@@ -1439,8 +1560,15 @@ export type StudentAPIResponse = {
     };
 }
 
+export type StudentFilters = {
+    search?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+}
+
 // Helper to fetch all pages from a paginated API endpoint
-async function fetchAllPages(url: URL, token: string): Promise<StudentProfile[]> {
+async function fetchAllPages(url: URL, token: string, apiKey: string, userId?: string): Promise<StudentProfile[]> {
     let allStudents: StudentProfile[] = [];
     let currentPage = 1;
     let totalPages = 1;
@@ -1448,14 +1576,14 @@ async function fetchAllPages(url: URL, token: string): Promise<StudentProfile[]>
     while (currentPage <= totalPages) {
         url.searchParams.set('page', String(currentPage));
         url.searchParams.set('limit', '100'); // Use a reasonable page size
-        const apiUrl = url.pathname + url.search;
+        const apiUrl = url.toString();
 
         const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+                'X-API-KEY': apiKey,
+                'X-User-ID': userId || '',
             }
         });
         
@@ -1477,12 +1605,23 @@ async function fetchAllPages(url: URL, token: string): Promise<StudentProfile[]>
 }
 
 
-export async function getStudentProfiles(page = 1, limit = 10, search = ''): Promise<StudentAPIResponse> {
-    const url = new URL(window.location.origin + "/api/students");
+export async function getStudentProfiles(
+    page = 1,
+    limit = 10,
+    search = '',
+    status?: string,
+    userId?: string
+): Promise<StudentAPIResponse> {
+    const url = new URL('/api/students', typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002');
+    
+    console.log('Fetching students from:', url.toString());
     url.searchParams.append('page', String(page));
     url.searchParams.append('limit', String(limit));
     if (search) {
         url.searchParams.append('search', search);
+    }
+    if (status) {
+        url.searchParams.append('status', status);
     }
     
     if (typeof window === 'undefined') {
@@ -1490,21 +1629,15 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
     }
 
     const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123'; // Fallback for development
 
-    if (!token) {
-        console.error("Auth token is missing. Cannot fetch students.");
-        // Fallback to local storage if API call is not possible
-        const allStudents = getStudentProfilesFromStorage();
-        const total = allStudents.length;
-        const pages = Math.ceil(total / limit);
-        const paginatedStudents = allStudents.slice((page - 1) * limit, page * limit);
-        return { students: paginatedStudents, pagination: { total, page, limit, pages } };
-    }
+    // Note: Students endpoint only requires API key, not authentication token
+    // But we'll include token if available for consistency
 
     try {
         // If a large limit is requested, it means we need all students.
         if (limit > 100) {
-            const allStudents = await fetchAllPages(url, token);
+            const allStudents = await fetchAllPages(url, token || '', apiKey, userId);
             const transformedProfiles = allStudents.map((apiStudent: any): StudentProfile => {
                 const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
                 const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
@@ -1535,18 +1668,31 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
 
 
         // Regular paginated request
-        const apiUrl = url.pathname + url.search;
+        const apiUrl = url.toString();
+        console.log('Making request to:', apiUrl);
+        
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            'X-API-KEY': apiKey,
+        };
+        
+        // Only add Authorization header if token exists
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                 'Authorization': `Bearer ${token}`,
-                 'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+                'Authorization': token ? `Bearer ${token}` : undefined,
+                'X-API-KEY': apiKey,
+                'X-User-ID': userId || '',
             }
         });
 
         if (!response.ok) {
-            console.error("Failed to fetch students:", response.statusText, "Using fallback.");
+            const errorText = await response.text().catch(() => '');
+            console.error("Failed to fetch students:", response.status, response.statusText, errorText);
             const allStudents = getStudentProfilesFromStorage();
             const total = allStudents.length;
             const pages = Math.ceil(total / limit);
@@ -1555,6 +1701,9 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
         }
         
         const result = await response.json();
+
+        console.log("Student List: " + result);
+        
         
         if (result.success && result.data && Array.isArray(result.data.students)) {
             const transformedProfiles = result.data.students.map((apiStudent: any): StudentProfile => {
@@ -1628,7 +1777,11 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
         }
 
     } catch (error) {
-        console.error("Error fetching students from API:", error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorDetails = error instanceof TypeError && error.message.includes('fetch')
+          ? `Network error: Unable to connect to ${apiBaseUrl}/students. Please ensure the backend server is running on port 8000.`
+          : `Error fetching students from API: ${errorMessage}`;
+        console.error(errorDetails, error);
         const allStudents = getStudentProfilesFromStorage();
         const total = allStudents.length;
         const pages = Math.ceil(total / limit);
@@ -1637,14 +1790,15 @@ export async function getStudentProfiles(page = 1, limit = 10, search = ''): Pro
     }
 }
 
-export async function getStudentProfileById(studentId: string): Promise<StudentProfile | null> {
-    const apiUrl = `/api/students/show`;
+export async function getStudentProfileById(studentId: string, userId?: string): Promise<StudentProfile | null> {
+    const apiUrl = '/api/students/show';
 
     if (typeof window === 'undefined') {
         return null;
     }
 
     const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123'; // Fallback for development
 
     if (!token) {
         console.error("Auth token is missing. Cannot fetch student profile.");
@@ -1657,7 +1811,8 @@ export async function getStudentProfileById(studentId: string): Promise<StudentP
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+                'X-API-KEY': apiKey,
+                'X-User-ID': userId || '',
             },
             body: JSON.stringify({ student_no: studentId })
         });
@@ -1742,7 +1897,6 @@ export async function getStudentProfileById(studentId: string): Promise<StudentP
     }
 }
 
-export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
 
 export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, creatorId: string, classes?: Class[]): StudentProfile => {
     const profiles = getStudentProfilesFromStorage();
@@ -1784,39 +1938,154 @@ export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.stu
     return newProfile;
 };
 
-export const updateStudentProfile = (studentId: string, updatedData: Partial<StudentProfile>, editorId: string): StudentProfile | null => {
+export const updateStudentProfile = async (studentId: string, updatedData: Partial<StudentProfile>, editorId: string): Promise<StudentProfile | null> => {
+    // First, try to get the current profile (from API or storage)
+    let currentProfile: StudentProfile | null = null;
+    
+    // Check local storage first
     const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+    
+    if (studentIndex !== -1) {
+        currentProfile = profiles[studentIndex];
+    } else {
+        // If not in storage, try to fetch from API
+        try {
+            currentProfile = await getStudentProfileById(studentId);
+            if (currentProfile) {
+                // Cache it in local storage
+                profiles.push(currentProfile);
+                saveToStorage(STUDENTS_KEY, profiles);
+            }
+        } catch (error) {
+            console.error("Failed to fetch student profile for update:", error);
+            return null;
+        }
+    }
 
-    if (studentIndex === -1) {
+    if (!currentProfile) {
+        console.error("Student profile not found for update:", studentId);
         return null;
     }
 
-    const currentProfile = profiles[studentIndex];
-
+    // Merge the updated data
     const newProfile: StudentProfile = {
         ...currentProfile,
         ...updatedData,
-        student: { ...currentProfile.student, ...updatedData.student, updated_at: new Date().toISOString(), updated_by: editorId },
-        contactDetails: { ...currentProfile.contactDetails, ...updatedData.contactDetails, student_no: studentId },
-        guardianInfo: { ...currentProfile.guardianInfo, ...updatedData.guardianInfo, student_no: studentId },
-        emergencyContact: { ...currentProfile.emergencyContact, ...updatedData.emergencyContact, student_no: studentId },
-        admissionDetails: { ...currentProfile.admissionDetails, ...updatedData.admissionDetails, student_no: studentId }
+        student: { 
+            ...currentProfile.student, 
+            ...updatedData.student, 
+            updated_at: new Date().toISOString(), 
+            updated_by: editorId 
+        },
+        contactDetails: { 
+            ...currentProfile.contactDetails, 
+            ...updatedData.contactDetails, 
+            student_no: studentId 
+        },
+        guardianInfo: { 
+            ...currentProfile.guardianInfo, 
+            ...updatedData.guardianInfo, 
+            student_no: studentId 
+        },
+        emergencyContact: { 
+            ...currentProfile.emergencyContact, 
+            ...updatedData.emergencyContact, 
+            student_no: studentId 
+        },
+        admissionDetails: { 
+            ...currentProfile.admissionDetails, 
+            ...updatedData.admissionDetails, 
+            student_no: studentId 
+        }
     };
     
-    profiles[studentIndex] = newProfile;
-    saveToStorage(STUDENTS_KEY, profiles);
+    // Update in local storage
+    const updatedProfiles = getStudentProfilesFromStorage();
+    const updatedIndex = updatedProfiles.findIndex(p => p.student.student_no === studentId);
+    if (updatedIndex !== -1) {
+        updatedProfiles[updatedIndex] = newProfile;
+    } else {
+        updatedProfiles.push(newProfile);
+    }
+    saveToStorage(STUDENTS_KEY, updatedProfiles);
+    
+    // TODO: Call API update endpoint when it's available
+    // For now, we only update local storage
+    
     return newProfile;
 };
 
-export const updateStudentStatus = (studentId: string, status: AdmissionStatus, editorId: string): StudentProfile | null => {
-    const profiles = getStudentProfilesFromStorage();
-    const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    if (studentIndex === -1) return null;
-    
-    profiles[studentIndex].admissionDetails.admission_status = status;
-    saveToStorage(STUDENTS_KEY, profiles);
-    return profiles[studentIndex];
+export interface UpdateStatusResult {
+    success: boolean;
+    message?: string;
+}
+
+export const updateStudentStatus = async (studentId: string, status: AdmissionStatus, userId?: string): Promise<UpdateStatusResult> => {
+    const apiUrl = '/api/students/state';
+
+    if (typeof window === 'undefined') {
+        return { success: false, message: 'Cannot run on server' };
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+    if (!token) {
+        console.error('Auth token is missing. Cannot update student status.');
+        return { success: false, message: 'Authentication token is missing' };
+    }
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': apiKey,
+                'X-User-ID': userId || '',
+            },
+            body: JSON.stringify({ student_no: studentId, status }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+            } catch {
+                if (errorText) {
+                    errorMessage = errorText;
+                }
+            }
+            console.error('Failed to update student status:', response.status, response.statusText, errorText);
+            return { success: false, message: errorMessage };
+        }
+
+        const result = await response.json().catch(() => null);
+        console.log('Server response when updating student status:', result);
+
+        if (result?.success) {
+            const successMessage = result.message || `Status updated to ${status}`;
+            // Update local storage for offline fallbacks
+            const profiles = getStudentProfilesFromStorage();
+            const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
+            if (studentIndex !== -1) {
+                profiles[studentIndex].admissionDetails.admission_status = status;
+                saveToStorage(STUDENTS_KEY, profiles);
+            }
+            return { success: true, message: successMessage };
+        }
+
+        const errorMessage = result?.message || 'Failed to update student status';
+        console.error('Failed to update student status:', errorMessage);
+        return { success: false, message: errorMessage };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        console.error('Error updating student status:', error);
+        return { success: false, message: errorMessage };
+    }
 };
 
 export const promoteStudents = (studentIds: string[], toClassId: string, editorId: string): number => {
@@ -1847,13 +2116,58 @@ export const graduateStudents = (studentIds: string[], editorId: string): number
     return updatedCount;
 }
 
-export const deleteStudentProfile = (studentId: string): boolean => {
-    const profiles = getStudentProfilesFromStorage();
-    const updatedProfiles = profiles.filter(p => p.student.student_no !== studentId);
-    if (profiles.length === updatedProfiles.length) return false;
-    saveToStorage(STUDENTS_KEY, updatedProfiles);
-    return true;
-}
+export const deleteStudentProfile = async (studentId: string, status: string = 'Stopped', userId?: string): Promise<boolean> => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URI || 'http://127.0.0.1:8000/api/v1';
+    const apiUrl = typeof window === 'undefined' ? `${apiBaseUrl}/students/delete` : '/api/students/delete';
+
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+    if (!token) {
+        console.error('Auth token is missing. Cannot delete student.');
+        return false;
+    }
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': apiKey,
+                'X-User-ID': userId || '',
+            },
+            body: JSON.stringify({ student_no: studentId, status }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            console.error('Failed to delete student:', response.status, response.statusText, errorText);
+            return false;
+        }
+
+        const result = await response.json().catch(() => null);
+        console.log('Server response when deleting student:', result);
+
+        if (result?.success) {
+            // Keep local storage in sync for offline fallbacks
+            const profiles = getStudentProfilesFromStorage();
+            const updatedProfiles = profiles.filter(p => p.student.student_no !== studentId);
+            saveToStorage(STUDENTS_KEY, updatedProfiles);
+            return true;
+        }
+
+        console.error('Failed to delete student:', result?.message || 'Unknown error');
+        return false;
+    } catch (error) {
+        console.error('Error deleting student:', error);
+        return false;
+    }
+};
 
 // Student Profile sub-record functions
 export const addAcademicRecord = (studentId: string, record: AcademicRecord, editorId: string): StudentProfile | null => {
@@ -2164,3 +2478,65 @@ export const getBooks = (): Book[] => getFromStorage<Book[]>(BOOKS_KEY, []);
 export const saveBooks = (books: Book[]): void => saveToStorage(BOOKS_KEY, books);
 export const getBorrowingRecords = (): BorrowingRecord[] => getFromStorage<BorrowingRecord[]>(BORROWING_KEY, []);
 export const saveBorrowingRecords = (records: BorrowingRecord[]): void => saveToStorage(BORROWING_KEY, records);
+
+export interface ClassSubjectAssignmentApiResponse extends ApiResponse<ClassSubjectAssignment[]> {}
+
+export const fetchClassSubjectAssignmentsFromApi = async (refetch: boolean = false, classId?: string): Promise<ClassSubjectAssignment[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const storedAssignments = getFromStorage<ClassSubjectAssignment[]>(CLASS_SUBJECT_ASSIGNMENTS_KEY, []);
+    if (!refetch && !classId && storedAssignments.length > 0) {
+        return storedAssignments;
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+    try {
+        const body = classId ? JSON.stringify({ class_id: classId }) : undefined;
+
+        alert(body);
+
+        const response = await fetch('/api/academic/class-subjects/list', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+            },
+            body: body,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Failed to fetch class-subject assignments from API:', response.statusText, 'Error Data:', errorData);
+            return getFromStorage<ClassSubjectAssignment[]>(CLASS_SUBJECT_ASSIGNMENTS_KEY, []);
+        }
+
+        const result: ClassSubjectAssignmentApiResponse = await response.json();
+
+        console.log('Class-Subject Assignments API Response:', result);
+
+        if (result.success && Array.isArray(result.data)) {
+            const assignments = result.data.map(item => ({
+                id: item.id.toString(),
+                class_name: item.class_name,
+                subject_name: item.subject_name,
+                class_id: item.class_id,
+                subject_id: item.subject_id,
+                academic_year: item.academic_year,
+                semester: item.semester,
+                assigned_date: item.assigned_date,
+                is_active: item.is_active,
+            }));
+            if (!classId) {
+                saveToStorage(CLASS_SUBJECT_ASSIGNMENTS_KEY, assignments);
+            }
+            return assignments;
+        }
+        return getFromStorage<ClassSubjectAssignment[]>(CLASS_SUBJECT_ASSIGNMENTS_KEY, []);
+    } catch (error) {
+        console.error('Error fetching class-subject assignments:', error);
+        return getFromStorage<ClassSubjectAssignment[]>(CLASS_SUBJECT_ASSIGNMENTS_KEY, []);
+    }
+};

@@ -89,7 +89,7 @@ export function UserForm({
         const allUsers = getUsers();
         
         if (selectedRole === 'Student') {
-            const { students: allStudents } = await getStudentProfiles();
+            const { students: allStudents } = await getStudentProfiles(1, 1000);
             const availableStudents = allStudents.filter(s => {
                 const studentUser = allUsers.find(u => u.email === s.contactDetails.email);
                 return !studentUser;

@@ -24,7 +24,10 @@ import Link from 'next/link';
 
 
 type ColumnsProps = {
-    onUpdateStatus: (studentId: string, status: AdmissionStatus) => void;
+    onDeleteStudent: (studentId: string) => void;
+    onEditStudent: (studentId: string) => void;
+    onChangeStatus: (studentId: string, status: AdmissionStatus) => void;
+    isSuperAdmin?: boolean;
 };
 
 const statusColors: Record<AdmissionStatus, string> = {
@@ -38,7 +41,7 @@ const statusColors: Record<AdmissionStatus, string> = {
 };
 
 
-export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisplay>[] => [
+export const columns = ({ onDeleteStudent, onEditStudent, onChangeStatus, isSuperAdmin = false }: ColumnsProps): ColumnDef<StudentDisplay>[] => [
     {
         id: 'select',
         header: ({ table }) => (
@@ -153,7 +156,7 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisp
                             View Profile
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEditStudent(student.student_id)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                     </DropdownMenuItem>
@@ -163,28 +166,33 @@ export const columns = ({ onUpdateStatus }: ColumnsProps): ColumnDef<StudentDisp
                             Generate ID Card
                         </Link>
                     </DropdownMenuItem>
-                     <DropdownMenuSub>
+                    <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
                             <ChevronsUpDown className="mr-2 h-4 w-4" />
                             Change Status
                         </DropdownMenuSubTrigger>
                         <DropdownMenuSubContent>
-                            {ALL_ADMISSION_STATUSES.map(status => (
-                                <DropdownMenuItem 
-                                    key={status}
-                                    onClick={() => onUpdateStatus(student.student_id, status)}
-                                    disabled={student.status === status}
-                                >
-                                    {status}
-                                </DropdownMenuItem>
-                            ))}
+                            {ALL_ADMISSION_STATUSES
+                                .filter(status => status !== student.status)
+                                .map(status => (
+                                    <DropdownMenuItem
+                                        key={status}
+                                        onClick={() => onChangeStatus(student.student_id, status)}
+                                    >
+                                        {status}
+                                    </DropdownMenuItem>
+                                ))}
                         </DropdownMenuSubContent>
                     </DropdownMenuSub>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:text-destructive">
-                        <UserX className="mr-2 h-4 w-4" />
-                        Suspend
-                    </DropdownMenuItem>
+                    {isSuperAdmin && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDeleteStudent(student.student_id)}>
+                                <UserX className="mr-2 h-4 w-4" />
+                                Delete
+                            </DropdownMenuItem>
+                        </>
+                    )}
                 </DropdownMenuContent>
                 </DropdownMenu>
             </div>

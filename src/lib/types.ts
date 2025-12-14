@@ -251,8 +251,23 @@ export type StudentReport = {
 
 
 export interface Class {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
+    class_name: string; // Added this line
+    is_active: boolean;
+    class_id: string;
+}
+
+export interface ClassSubjectAssignment {
+    id: string;
+    class_name: string;
+    subject_name: string;
+    class_id: string;
+    subject_id: string;
+    academic_year: string;
+    semester: string;
+    assigned_date: string;
+    is_active: boolean;
 }
 
 export type SchoolLevel = 'Pre-School' | 'Lower Primary' | 'Upper Primary' | 'JHS' | 'Final Year';
@@ -306,12 +321,16 @@ export interface Term {
     startDate: string;
     endDate: string;
     status: 'Upcoming' | 'Active' | 'Completed';
+    id?: number; // From API
+    added_by?: string; // From API
+    added_on?: string; // From API
 }
 
 export interface AcademicYear {
     year: string; // e.g., "2023/2024"
     terms: Term[];
     status: AcademicYearStatus;
+    number_of_terms?: number; // Number of terms from API
 }
 
 export type CalendarEventCategory = 'Holiday' | 'Exam' | 'School Event' | 'Other';
@@ -671,7 +690,11 @@ export interface StaffProfile {
 // Subject Management Types
 export interface Subject {
     id: string;
+    code: string;
     name: string;
+    level: 'Creche' | 'KG' | 'Primary' | 'JHS';
+    category: 'Core' | 'Elective';
+    description?: string;
 }
 
 export interface ClassSubject {

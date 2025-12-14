@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getClasses, getStudentProfiles, promoteStudents, graduateStudents, addAuditLog } from '@/lib/store';
+import { getClasses, getStudentProfiles, addAuditLog } from '@/lib/store';
 import { Class, StudentProfile } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +36,7 @@ export default function PromotionsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSpecialPromotion, setIsSpecialPromotion] = useState(false);
     const [specialPromotionReason, setSpecialPromotionReason] = useState('');
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     
     const { user } = useAuth();
     const { toast } = useToast();
@@ -55,7 +55,7 @@ export default function PromotionsPage() {
             const { students: allStudentProfiles } = await getStudentProfiles(1, 1000); 
             const classMap = new Map(classes.map(c => [c.id, c.name]));
             const filteredStudents = allStudentProfiles
-                .filter(p => p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
+                .filter(p => p && p.admissionDetails && p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
                 .map(p => ({
                     id: p.student.student_no,
                     name: `${p.student.first_name} ${p.student.last_name}`,
@@ -110,68 +110,206 @@ export default function PromotionsPage() {
     }
 
     const handlePromotion = async () => {
-        if (!user || !fromClass || !toClass || studentIdsToPromote.length === 0) return;
+        console.log('Promotion button clicked', { fromClass, toClass, count: studentIdsToPromote.length, isSpecialPromotion });
+
+        if (!user) {
+            console.log('Early return: no user');
+            return;
+        }
+        if (!fromClass) {
+            console.log('Early return: no fromClass');
+            return;
+        }
+        if (!toClass) {
+            console.log('Early return: no toClass');
+            return;
+        }
+        if (studentIdsToPromote.length === 0) {
+            console.log('Early return: no students selected');
+            return;
+        }
         if (isSpecialPromotion && !specialPromotionReason) {
              toast({
                 variant: 'destructive',
                 title: 'Reason Required',
                 description: `A reason must be provided for a special promotion.`,
             });
+            console.log('Early return: special promotion requires reason');
             return;
         }
 
         setIsLoading(true);
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const updatedCount = promoteStudents(studentIdsToPromote, toClass, user.id);
-        
-        fetchStudentData(); // Re-fetch students after promotion
 
-        setIsLoading(false);
-        setFromClass(undefined);
-        setToClass(undefined);
-        setSelectedStudents({});
-        setIsSpecialPromotion(false);
-        setSpecialPromotionReason('');
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+            const baseUri = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1/8000/api/v1';
+            
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+            };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        toast({
-            title: 'Promotion Successful',
-            description: `${updatedCount} student(s) have been promoted.`,
-        });
+            let endpoint: string;
+            let payload: any;
 
-        addAuditLog({
-            user: user.email,
-            name: user.name,
-            action: isSpecialPromotion ? 'Special Promotion' : 'Promote Students',
-            details: `Promoted ${updatedCount} students from class ID ${fromClass} to ${toClass}. ${isSpecialPromotion ? `Reason: ${specialPromotionReason}` : ''}`,
-        });
+            if (isSpecialPromotion) {
+                endpoint = '/api/promotions/special';
+                if (studentIdsToPromote.length === 1) {
+                    payload = {
+                        student_no: studentIdsToPromote[0],
+                        target_class_id: toClass,
+                        remarks: specialPromotionReason,
+                    };
+                } else {
+                    const studentsObj: Record<string, { student_no: string }> = {};
+                    studentIdsToPromote.forEach((sno, idx) => {
+                        studentsObj[String(idx + 1)] = { student_no: sno };
+                    });
+                    payload = {
+                        students: studentsObj,
+                        target_class_id: toClass,
+                        remarks: specialPromotionReason,
+                    };
+                }
+            } else {
+                endpoint = "/api/promotions/normal";
+
+                if (studentIdsToPromote.length === 1) {
+                    payload = { student_no: studentIdsToPromote[0] };
+                } else {
+                    const studentsObj: Record<string, { student_no: string }> = {};
+                    studentIdsToPromote.forEach((sno, idx) => {
+                        studentsObj[String(idx + 1)] = { student_no: sno };
+                    });
+                    payload = { students: studentsObj };
+                }
+            }
+
+            console.log('Promotion request', endpoint, payload);
+            
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': apiKey,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const responseBody = await res.json().catch(() => ({}));
+            console.log('Promotion response', res.status, responseBody);
+
+            if (!res.ok) {
+                throw new Error(responseBody?.message || `Promotion failed: ${res.status} ${res.statusText}`);
+            }
+
+            fetchStudentData();
+
+            setIsLoading(false);
+            setFromClass(undefined);
+            setToClass(undefined);
+            setSelectedStudents({});
+            setIsSpecialPromotion(false);
+            setSpecialPromotionReason('');
+
+            const promotedCount = responseBody?.data?.promoted_count ?? studentIdsToPromote.length;
+            toast({
+                title: 'Promotion Successful',
+                description: `${promotedCount} student(s) have been promoted.`,
+            });
+
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: isSpecialPromotion ? 'Special Promotion' : 'Promote Students',
+                details: `${isSpecialPromotion ? 'Special' : 'Standard'} promotion performed from ${fromClass} to ${toClass} for ${studentIdsToPromote.length} student(s). ${isSpecialPromotion ? `Reason: ${specialPromotionReason}` : ''}`,
+            });
+        } catch (err: any) {
+            console.error('Promotion error', err);
+            setErrorMessage(err.message || 'Unable to promote students.');
+            setIsLoading(false);
+        }
     }
 
     const handleGraduation = async () => {
-        if (!user || studentIdsToPromote.length === 0) return;
-        
+        console.log('Graduation button clicked', { fromClass, count: studentIdsToPromote.length });
+
+        if (!user) {
+            console.log('Early return: no user');
+            return;
+        }
+        if (studentIdsToPromote.length === 0) {
+            console.log('Early return: no students selected');
+            return;
+        }
+
         setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const updatedCount = graduateStudents(studentIdsToPromote, user.id);
-        
-        fetchStudentData(); // Re-fetch students after graduation
 
-        setIsLoading(false);
-        setFromClass(undefined);
-        setSelectedStudents({});
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
 
-        toast({
-            title: 'Graduation Successful',
-            description: `${updatedCount} student(s) have been marked as graduated.`,
-        });
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+            };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        addAuditLog({
-            user: user.email,
-            name: user.name,
-            action: 'Graduate Students',
-            details: `Graduated ${updatedCount} students from class ID ${fromClass}.`,
-        });
+            const endpoint = '/api/promotions/graduate';
+            let payload: any;
+
+            if (studentIdsToPromote.length === 1) {
+                payload = { student_no: studentIdsToPromote[0] };
+            } else {
+                const studentsObj: Record<string, { student_no: string }> = {};
+                studentIdsToPromote.forEach((sno, idx) => {
+                    studentsObj[String(idx + 1)] = { student_no: sno };
+                });
+                payload = { students: studentsObj };
+            }
+
+            console.log('Graduation request', endpoint, payload);
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': apiKey,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const responseBody = await res.json().catch(() => ({}));
+            console.log('Graduation response', res.status, responseBody);
+
+            if (!res.ok) {
+                throw new Error(responseBody?.message || `Graduation failed: ${res.status} ${res.statusText}`);
+            }
+
+            fetchStudentData();
+
+            setIsLoading(false);
+            setFromClass(undefined);
+            setSelectedStudents({});
+
+            const graduatedCount = responseBody?.data?.graduated_count ?? studentIdsToPromote.length;
+            toast({
+                title: 'Graduation Successful',
+                description: `${graduatedCount} student(s) have been marked as graduated.`,
+            });
+
+            addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Graduate Students',
+                details: `Graduated ${studentIdsToPromote.length} student(s) from class ID ${fromClass}.`,
+            });
+        } catch (err: any) {
+            console.error('Graduation error', err);
+            setErrorMessage(err.message || 'Unable to graduate students.');
+            setIsLoading(false);
+        }
     }
     
     let isPromotionDisabled = isLoading || !fromClass || !toClass || studentIdsToPromote.length === 0 || fromClass === toClass || isInvalidStandardPromotion;
@@ -318,7 +456,7 @@ export default function PromotionsPage() {
                              {fromClass === FINAL_CLASS_ID ? (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button disabled={isGraduationDisabled} size="sm">
+                                        <Button disabled={isGraduationDisabled} size="sm" onClick={() => console.log('Graduation button clicked (trigger)', { fromClass, count: studentIdsToPromote.length })}>
                                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             <GraduationCap className="mr-2 h-4 w-4" />
                                             Graduate Selected ({studentIdsToPromote.length})
@@ -333,14 +471,16 @@ export default function PromotionsPage() {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleGraduation}>Proceed</AlertDialogAction>
+                                            <AlertDialogAction asChild>
+                                                <Button onClick={() => { console.log('Confirm graduation clicked'); handleGraduation(); }}>Proceed</Button>
+                                            </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
                              ) : (
                                  <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button disabled={isPromotionDisabled} size="sm">
+                                        <Button disabled={isPromotionDisabled} size="sm" onClick={() => console.log('Promotion button clicked (trigger)', { fromClass, toClass, count: studentIdsToPromote.length, isSpecialPromotion })}>
                                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             {isSpecialPromotion && <ChevronsRight className="mr-2 h-4 w-4" />}
                                             Promote Selected ({studentIdsToPromote.length})
@@ -355,7 +495,9 @@ export default function PromotionsPage() {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handlePromotion}>Confirm</AlertDialogAction>
+                                            <AlertDialogAction asChild>
+                                                <Button onClick={() => { console.log('Confirm promotion clicked'); handlePromotion(); }}>Confirm</Button>
+                                            </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
@@ -363,6 +505,20 @@ export default function PromotionsPage() {
                         </CardFooter>
                     </Card>
                 )}
+
+                <AlertDialog open={!!errorMessage} onOpenChange={() => setErrorMessage(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Error</AlertDialogTitle>
+                        </AlertDialogHeader>
+                        <AlertDialogDescription className="max-h-96 overflow-y-auto whitespace-pre-wrap break-words">
+                            {errorMessage}
+                        </AlertDialogDescription>
+                        <AlertDialogFooter>
+                            <AlertDialogAction onClick={() => setErrorMessage(null)}>Close</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </ProtectedRoute>
     );

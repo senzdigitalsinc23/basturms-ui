@@ -212,19 +212,34 @@ export default function StudentProfilePage() {
     };
 
 
-    const handleUpdateProfile = (values: Partial<StudentProfile>) => {
+    const handleUpdateProfile = async (values: Partial<StudentProfile>) => {
         if (!currentUser || !profile) return;
         
-        const updatedProfile = updateStudentProfile(profile.student.student_no, values, currentUser.id);
-        if (updatedProfile) {
-            setProfile(updatedProfile);
-            fetchProfile(); // re-fetch to ensure all derived state is updated
-            
+        try {
+            const updatedProfile = await updateStudentProfile(profile.student.student_no, values, currentUser.id);
+            if (updatedProfile) {
+                setProfile(updatedProfile);
+                fetchProfile(); // re-fetch to ensure all derived state is updated
+                
+                toast({
+                    title: 'Profile Updated',
+                    description: "The student's profile has been successfully updated.",
+                });
+                setIsEditFormOpen(false);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Update Failed',
+                    description: "Failed to update student profile. Please try again.",
+                });
+            }
+        } catch (error) {
+            console.error("Error updating student profile:", error);
             toast({
-                title: 'Profile Updated',
-                description: "The student's profile has been successfully updated.",
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: "An error occurred while updating the student profile.",
             });
-            setIsEditFormOpen(false);
         }
     };
     
@@ -423,7 +438,7 @@ export default function StudentProfilePage() {
                                 <DialogTrigger asChild>
                                     <Button size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Profile</Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-4xl">
+                                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                                     <DialogHeader>
                                         <DialogTitle>Edit Student Profile</DialogTitle>
                                         <DialogDescription>Update details for {fullName}.</DialogDescription>

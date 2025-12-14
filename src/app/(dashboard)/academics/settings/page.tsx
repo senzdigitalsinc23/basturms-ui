@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SubjectManagement } from '@/components/academics/subjects/subject-management';
 import { AssignmentActivityManagement } from '@/components/academics/assignments/assignment-activity-management';
+import { ClassManagement } from '@/components/academics/classes/class-management';
 import { PromotionCriteriaSettings } from '@/components/settings/promotion-criteria-settings';
 
 export default function AcademicSettingsPage() {
@@ -24,7 +25,7 @@ export default function AcademicSettingsPage() {
         <Tabs defaultValue="academic-year">
             <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="academic-year">Academic Year</TabsTrigger>
-                <TabsTrigger value="subjects">Subjects</TabsTrigger>
+                <TabsTrigger value="subjects-classes">Subjects/Classes</TabsTrigger>
                 <TabsTrigger value="assignments">Assignments</TabsTrigger>
                 <TabsTrigger value="grading-scheme">Grading Scheme</TabsTrigger>
                 <TabsTrigger value="promotion">Promotion Criteria</TabsTrigger>
@@ -42,16 +43,35 @@ export default function AcademicSettingsPage() {
                 </Card>
             </TabsContent>
 
-            <TabsContent value="subjects">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Subject Management</CardTitle>
-                        <CardDescription>Create subjects and assign them to classes.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <SubjectManagement />
-                    </CardContent>
-                </Card>
+            <TabsContent value="subjects-classes">
+                <Tabs defaultValue="subject-management" className="space-y-4">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="subject-management">Subject Management</TabsTrigger>
+                        <TabsTrigger value="class-management">Class Management</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="subject-management">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Subject Management</CardTitle>
+                                <CardDescription>Create and manage subjects.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <SubjectManagement />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="class-management">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Class Management</CardTitle>
+                                <CardDescription>Create, edit, and delete classes.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ClassManagement />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </TabsContent>
 
             <TabsContent value="assignments">

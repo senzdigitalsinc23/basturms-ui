@@ -4,8 +4,9 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Role } from '@/lib/types';
-import { initializeStore, addAuthLog } from '@/lib/store';
+import { initializeStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import { handleServerResponse, handleApiError } from '@/lib/api-response-handler';
 
 interface AuthResult {
   success: boolean;
@@ -98,29 +99,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      const apiUrl = `/api/login`;
+      const apiUrl = '/api/login';
       
       try {
+        console.log('Attempting login to:', apiUrl);
+        const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123'; // Fallback for development
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+                'X-API-KEY': apiKey,
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email, password, user_id: email }),
         });
         
         const responseText = await response.text();
         
         if (!response.ok) {
-            const errorMessage = `Server error: ${response.status} ${response.statusText}. Response: ${responseText}`;
-            addAuthLog({
-                email,
-                event: 'Login Failure',
-                status: 'Failure',
-                details: errorMessage,
+            let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = JSON.parse(responseText);
+                errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+                if (responseText) {
+                    errorMessage = responseText;
+                }
+            }
+
+            toast({
+                title: 'Login Failed',
+                description: errorMessage,
+                variant: 'destructive',
             });
-          return { success: false, message: `Server error: ${response.statusText}` };
+            return { success: false, message: errorMessage };
         }
         
         let result;
@@ -128,14 +139,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             result = parseFirstJson(responseText);
             if (result === null) throw new Error("No valid JSON found in response.");
         } catch (error: any) {
-             const errorMessage = `Failed to parse server response: ${error.message}. Response: ${responseText}`;
-             addAuthLog({
-                email,
-                event: 'Login Failure',
-                status: 'Failure',
-                details: errorMessage,
+            const errorMessage = 'The login service is currently unavailable. Please try again later.';
+            toast({
+                title: 'Login Failed',
+                description: errorMessage,
+                variant: 'destructive',
             });
-            return { success: false, message: 'The login service is currently unavailable. Please try again later.' };
+            return { success: false, message: errorMessage };
         }
 
 
@@ -168,13 +178,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(appUser));
             sessionStorage.setItem(TOKEN_KEY, token);
 
-            addAuthLog({
-                email,
-                event: 'Login Success',
-                status: 'Success',
-                details: `User ${email} logged in successfully.`,
-            });
-            
              toast({
                 title: 'Login Successful',
                 description: 'Welcome back!',
@@ -182,59 +185,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.replace('/dashboard');
             return { success: true };
         } else {
-             const errorMessage = result.message || 'Invalid credentials provided.';
-             addAuthLog({
-                email,
-                event: 'Login Failure',
-                status: 'Failure',
-                details: errorMessage,
+            const errorMessage = result.message || 'Invalid credentials provided.';
+            toast({
+                title: 'Login Failed',
+                description: errorMessage,
+                variant: 'destructive',
             });
-            return { success: false, message: errorMessage};
+            return { success: false, message: errorMessage };
         }
 
       } catch (error) {
         console.error("Login API call failed:", error);
         const message = error instanceof Error ? error.message : "An unknown error occurred.";
-        addAuthLog({
-            email,
-            event: 'Login Failure',
-            status: 'Failure',
-            details: `Failed to connect to the login service. Error: ${message}`,
+        const errorDetails = error instanceof TypeError && error.message.includes('fetch')
+          ? `Network error: Unable to connect to ${apiUrl}. Please ensure the backend server is running on port 8000.`
+          : `Failed to connect to the login service: ${message}`;
+        toast({
+          title: 'Login Failed',
+          description: errorDetails,
+          variant: 'destructive',
         });
-        return { success: false, message: `Failed to connect to the login service: ${message}` };
+        return { success: false, message: errorDetails };
       }
     },
     [router, toast]
   );
 
-  const logout = useCallback(async () => {
+    const logout = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
-    const apiUrl = `/api/logout`;
+    const apiUrl = '/api/logout';
 
-    if (user) {
-      addAuthLog({
-        email: user.email,
-        event: 'Logout',
-        status: 'Success',
-        details: `User ${user.email} logged out.`,
-      });
-    }
-
-    if (token) {
+    if (token && user) {
         try {
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
             const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || '',
+                    'X-API-KEY': apiKey,
+                    'X-User-ID': user.email,
                 }
             });
 
+            const responseText = await response.text();
+
             if (!response.ok) {
-              console.error("Server logout failed:", response.statusText);
+                console.error("Server logout failed:", response.statusText);
+                try {
+                    const errorData = JSON.parse(responseText);
+                    toast({
+                        title: 'Logout Warning',
+                        description: errorData.message || 'Logout failed on server',
+                        variant: 'destructive',
+                    });
+                } catch {
+                    toast({
+                        title: 'Logout Warning',
+                        description: 'Logout failed on server',
+                        variant: 'destructive',
+                    });
+                }
+            } else {
+                toast({
+                    title: 'Logged Out',
+                    description: 'You have been logged out successfully',
+                });
             }
         } catch (error) {
             console.error("Logout API call failed:", error);
+            toast({
+                title: 'Logout Warning',
+                description: 'Failed to logout from server',
+                variant: 'destructive',
+            });
         }
     }
     
@@ -245,7 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.removeItem(USER_SESSION_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
     router.push('/login');
-  }, [router, user]);
+  }, [router, user, toast]);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout }}>

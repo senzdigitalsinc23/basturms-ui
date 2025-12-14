@@ -109,7 +109,6 @@ const menuItems: Record<Role, NavItem[]> = {
       icon: BookMarked,
       items: [
         { href: '/academics/calendar', label: 'Academic Calendar' },
-        { href: '/academics/classes', label: 'Class Subjects' },
         { href: '/academics/ranking', label: 'Ranking' },
         { href: '/academics/grading', label: 'Score Entry' },
         { href: '/academics/settings', label: 'Academic Settings' },

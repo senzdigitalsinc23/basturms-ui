@@ -30,14 +30,19 @@ interface DataTableFacetedFilterProps<TData, TValue> {
     value: string
     icon?: React.ComponentType<{ className?: string }>
   }[]
+  value?: string[]
+  onValueChange?: (values: string[]) => void
 }
 
 export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,
   options,
+  value,
+  onValueChange,
 }: DataTableFacetedFilterProps<TData, TValue>) {
-  const selectedValues = new Set(column?.getFilterValue() as string[])
+  const filterValue = value || (column?.getFilterValue() as string[]) || [];
+  const selectedValues = new Set(filterValue)
 
   return (
     <Popover>
@@ -98,6 +103,9 @@ export function DataTableFacetedFilter<TData, TValue>({
                         selectedValues.add(option.value)
                       }
                       const filterValues = Array.from(selectedValues)
+                      if (onValueChange) {
+                        onValueChange(filterValues.length ? filterValues : [])
+                      }
                       column?.setFilterValue(
                         filterValues.length ? filterValues : undefined
                       )
@@ -126,7 +134,12 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem
-                    onSelect={() => column?.setFilterValue(undefined)}
+                    onSelect={() => {
+                      if (onValueChange) {
+                        onValueChange([])
+                      }
+                      column?.setFilterValue(undefined)
+                    }}
                     className="justify-center text-center"
                   >
                     Clear filters

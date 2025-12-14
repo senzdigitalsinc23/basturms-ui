@@ -238,21 +238,25 @@ export function ReportCardGenerator() {
         }
 
         setIsLoading(true);
-        const allStudentsInClass = (await getStudentProfiles()).filter(p => p.admissionDetails.class_assigned === selectedClass);
+        const result = await getStudentProfiles(1, 10000); // Fetch all students
+        const allStudentsInClass = result.students.filter(p => p && p.admissionDetails?.class_assigned === selectedClass);
         const skippedStudents: string[] = [];
 
-        const reports = allStudentsInClass.map(student => {
-            const isFeeDefaulter = (student.financialDetails?.account_balance || 0) < 0;
-            if (isFeeDefaulter && !generateForDefaulters) {
-                skippedStudents.push(`${student.student.first_name} ${student.student.last_name}`);
-                return null;
-            }
+        const reports = allStudentsInClass
+            .map(student => {
+                if (!student || !student.student?.student_no) return null; // Add defensive check
+                const isFeeDefaulter = (student.financialDetails?.account_balance || 0) < 0;
+                if (isFeeDefaulter && !generateForDefaulters) {
+                    skippedStudents.push(`${student.student.first_name} ${student.student.last_name}`);
+                    return null;
+                }
 
-            const existingReport = getStudentReport(student.student.student_no, selectedTerm);
-            if (existingReport) return existingReport;
-            
-            return calculateStudentReport(student.student.student_no, selectedTerm, allStudentsInClass);
-        }).filter((report): report is StudentReport => report !== null);
+                const existingReport = getStudentReport(student.student.student_no, selectedTerm);
+                if (existingReport) return existingReport;
+                
+                return calculateStudentReport(student.student.student_no, selectedTerm, allStudentsInClass);
+            })
+            .filter((report): report is StudentReport => report !== null);
         
         if (skippedStudents.length > 0) {
             toast({

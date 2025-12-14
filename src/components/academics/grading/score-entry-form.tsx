@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getSubjects, addClassSubject, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities, getStaff, getStaffAppointmentHistory, getStudentReport, getAcademicYears } from '@/lib/store';
+import { getClasses, getStudentProfiles, getSubjects, saveClassSubjects, addScore, getScoresForClass, getAssignmentActivities, getClassAssignmentActivities, getStaff, getStaffAppointmentHistory, getStudentReport, getAcademicYears } from '@/lib/store';
 import { Class, StudentProfile, Subject, ClassSubject, AssignmentScore, AssignmentActivity } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -63,7 +63,7 @@ export function ScoreEntryForm() {
             let subjectsToShow: Subject[] = [];
 
             if (user?.role === 'Admin' || user?.role === 'Headmaster') {
-                const assignmentsForClass = addClassSubject().filter(cs => cs.class_id === selectedClass);
+                const assignmentsForClass = saveClassSubjects().filter(cs => cs.class_id === selectedClass);
                 const subjectIds = assignmentsForClass.map(cs => cs.subject_id);
                 subjectsToShow = allSubjects.filter(s => subjectIds.includes(s.id));
             } else if (user?.role === 'Teacher') {
@@ -75,7 +75,7 @@ export function ScoreEntryForm() {
                     
                     if (latestAppointment?.subjects_assigned && latestAppointment.class_assigned?.includes(selectedClass)) {
                          // Filter subjects assigned to the class AND to the teacher.
-                        const classSubjectIds = addClassSubject().filter(cs => cs.class_id === selectedClass).map(cs => cs.subject_id);
+                        const classSubjectIds = saveClassSubjects().filter(cs => cs.class_id === selectedClass).map(cs => cs.subject_id);
                         const teacherAndClassSubjectIds = latestAppointment.subjects_assigned.filter(subId => classSubjectIds.includes(subId));
                         subjectsToShow = allSubjects.filter(s => teacherAndClassSubjectIds.includes(s.id));
                     }

@@ -26,40 +26,48 @@ import {
 } from '@/components/ui/table';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { useEffect, useRef, useState } from 'react';
+import { Label } from '../ui/label';
+import React, { useEffect, useRef, useState } from 'react';
 import { StudentDisplay } from './student-management';
-import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2, FileDown, FileBadge, FileText, Loader2 } from 'lucide-react';
+import { FilePlus, PlusCircle, Upload, Download, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronsUpDown, Trash2, FileDown, FileBadge, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { DataTableFacetedFilter } from '../users/data-table-faceted-filter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import Papa from 'papaparse';
-import { ImportPreviewDialog } from './import-preview-dialog';
 import { ALL_ADMISSION_STATUSES, AdmissionStatus, Class } from '@/lib/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuSeparator } from '../ui/dropdown-menu';
 import { DateRange } from 'react-day-picker';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface StudentDataTableProps {
   columns: ColumnDef<StudentDisplay>[];
   data: StudentDisplay[];
   classes: Class[];
-  onImport: (data: any[]) => void;
+  onImport: (file: File) => void;
   onBulkUpdateStatus: (studentIds: string[], status: AdmissionStatus) => void;
   onBulkDelete: (studentIds: string[]) => void;
+  onRefresh: () => void;
   pagination: PaginationState;
   setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
   pageCount: number;
   totalRecords: number;
   isLoading: boolean;
+  isImportLoading?: boolean;
+  isSuperAdmin?: boolean;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  statusFilter?: string;
+  setStatusFilter?: (status: string | undefined) => void;
+  dateRange?: { from?: Date; to?: Date };
+  setDateRange?: (range: { from?: Date; to?: Date } | undefined) => void;
 }
 
 const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
@@ -68,27 +76,35 @@ const statusOptions = ALL_ADMISSION_STATUSES.map(status => ({
 }));
 
 
-export function StudentDataTable({ 
-    columns, 
-    data, 
-    classes, 
-    onImport, 
-    onBulkUpdateStatus, 
+export function StudentDataTable({
+    columns,
+    data,
+    classes,
+    onImport,
+    onBulkUpdateStatus,
     onBulkDelete,
+    onRefresh,
     pagination,
     setPagination,
     pageCount,
     totalRecords,
     isLoading,
+    isImportLoading = false,
+  isSuperAdmin = false,
     searchTerm,
     setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    dateRange: propDateRange,
+    setDateRange: setPropDateRange,
  }: StudentDataTableProps) {
+  const { toast } = useToast();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [date, setDate] = useState<DateRange | undefined>()
+  const [date, setDate] = useState<DateRange | undefined>(propDateRange ? { from: propDateRange.from, to: propDateRange.to } : undefined)
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewData, setPreviewData] = useState<any[]>([]);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
@@ -116,16 +132,59 @@ export function StudentDataTable({
     },
   });
 
+  // Use a ref to track if we're updating from user action to prevent loops
+  const isUserUpdateRef = React.useRef(false);
+  
+  // Sync local date state with prop only when prop changes externally (not from user action)
   useEffect(() => {
-    if (date?.from && date?.to) {
-        table.getColumn('admission_date')?.setFilterValue([date.from.toISOString(), date.to.toISOString()]);
-    } else {
-        table.getColumn('admission_date')?.setFilterValue(undefined);
+    // Skip if this update came from user action
+    if (isUserUpdateRef.current) {
+      isUserUpdateRef.current = false;
+      return;
     }
-  }, [date, table]);
+    
+    // Compare dates properly to avoid infinite loops
+    const datesEqual = (d1: Date | undefined, d2: Date | undefined): boolean => {
+      if (!d1 && !d2) return true;
+      if (!d1 || !d2) return false;
+      return d1.getTime() === d2.getTime();
+    };
+    
+    const propFrom = propDateRange?.from;
+    const propTo = propDateRange?.to;
+    const localFrom = date?.from;
+    const localTo = date?.to;
+    
+    const areEqual = datesEqual(propFrom, localFrom) && datesEqual(propTo, localTo);
+    
+    // Only update if they're actually different
+    if (!areEqual) {
+      if (propDateRange) {
+        setDate({ from: propDateRange.from, to: propDateRange.to });
+      } else {
+        setDate(undefined);
+      }
+    }
+  }, [propDateRange]);
   
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedStudentIds = selectedRows.map(row => row.original.student_id);
+
+  useEffect(() => {
+    const statusColumn = table.getColumn('status');
+    if (!statusColumn) return;
+    const desiredValue = statusFilter ? [statusFilter] : undefined;
+    const currentValue = statusColumn.getFilterValue() as string[] | undefined;
+    const isSame =
+      (!desiredValue && !currentValue) ||
+      (desiredValue &&
+        currentValue &&
+        desiredValue.length === currentValue.length &&
+        desiredValue.every((value, index) => value === currentValue[index]));
+    if (!isSame) {
+      statusColumn.setFilterValue(desiredValue);
+    }
+  }, [statusFilter, table]);
 
   const isFiltered = table.getState().columnFilters.length > 0;
   const isDateFiltered = !!date;
@@ -137,27 +196,31 @@ export function StudentDataTable({
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          setPreviewData(results.data);
-          setIsPreviewOpen(true);
-           if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        },
-        error: (error: any) => {
-          console.error("Error parsing CSV:", error);
-        }
-      });
+      // Validate file type
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid File Type',
+          description: 'Please select a CSV file.',
+        });
+        return;
+      }
+
+      setSelectedFile(file);
+      setIsConfirmDialogOpen(true);
+
+      // Clear the input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
-  const handleConfirmImport = () => {
-    onImport(previewData);
-    setIsPreviewOpen(false);
-    setPreviewData([]);
+  const handleConfirmImport = async () => {
+    if (selectedFile) {
+      await onImport(selectedFile);
+      setSelectedFile(null);
+    }
   };
 
   const handleDownloadTemplate = () => {
@@ -181,19 +244,21 @@ export function StudentDataTable({
     document.body.removeChild(link);
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     const rows = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
     const dataToExport = rows.map(row => row.original);
-    const csv = Papa.unparse(dataToExport);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'students.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+
+    // Convert data to worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Students');
+
+    // Generate Excel file
+    XLSX.writeFile(wb, 'students.xlsx');
   };
 
   const handleExportPDF = () => {
@@ -248,8 +313,13 @@ export function StudentDataTable({
             </div>
             <div className="flex items-center gap-2">
                  <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileUpload} />
-                 
+
                  <Button variant="outline" size="sm" onClick={handleDownloadTemplate}><FileDown className="mr-2 h-4 w-4" /> CSV Template</Button>
+
+                 <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+                   <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                   Refresh
+                 </Button>
 
                  <Button variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200" onClick={handleImportClick} size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
                 <DropdownMenu>
@@ -259,7 +329,7 @@ export function StudentDataTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={handleExportCSV}>Export as CSV</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportExcel}>Export as Excel</DropdownMenuItem>
                     <DropdownMenuItem onClick={handleExportPDF}>Export as PDF</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -286,9 +356,17 @@ export function StudentDataTable({
                     column={table.getColumn("status")}
                     title="Status"
                     options={statusOptions}
+                    value={statusFilter ? [statusFilter] : []}
+                    onValueChange={(values) => {
+                      const status = values.length > 0 ? values[0] : undefined;
+                      if (setStatusFilter) {
+                        setStatusFilter(status);
+                      }
+                      table.getColumn("status")?.setFilterValue(values.length > 0 ? values : undefined);
+                    }}
                     />
                 )}
-                 <Popover>
+                    <Popover>
                     <PopoverTrigger asChild>
                     <Button
                         id="date"
@@ -313,27 +391,98 @@ export function StudentDataTable({
                         )}
                     </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={date}
-                        onSelect={setDate}
-                        numberOfMonths={2}
-                        captionLayout="dropdown-buttons"
-                        fromYear={1990}
-                        toYear={new Date().getFullYear()}
-                    />
+                    <PopoverContent className="w-auto p-4" align="start">
+                        <div className="space-y-4">
+                            {/* Manual date entry */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="from-date" className="text-sm font-medium">From</Label>
+                                    <Input
+                                        id="from-date"
+                                        type="date"
+                                        value={date?.from ? format(date.from, 'yyyy-MM-dd') : ''}
+                                        onChange={(e) => {
+                                            const selectedDate = e.target.value ? new Date(e.target.value) : undefined;
+                                            isUserUpdateRef.current = true;
+                                            const newDate = {
+                                                from: selectedDate,
+                                                to: date?.to
+                                            };
+                                            setDate(newDate);
+                                            if (setPropDateRange) {
+                                                setPropDateRange(newDate.from || newDate.to ? newDate : undefined);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="to-date" className="text-sm font-medium">To</Label>
+                                    <Input
+                                        id="to-date"
+                                        type="date"
+                                        value={date?.to ? format(date.to, 'yyyy-MM-dd') : ''}
+                                        onChange={(e) => {
+                                            const selectedDate = e.target.value ? new Date(e.target.value) : undefined;
+                                            isUserUpdateRef.current = true;
+                                            const newDate = {
+                                                from: date?.from,
+                                                to: selectedDate
+                                            };
+                                            setDate(newDate);
+                                            if (setPropDateRange) {
+                                                setPropDateRange(newDate.from || newDate.to ? newDate : undefined);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Calendar picker */}
+                            <div className="border-t pt-4">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    selected={date}
+                                    onSelect={(newDate) => {
+                                      isUserUpdateRef.current = true; // Mark as user update
+                                      // Ensure from date is not after to date
+                                      if (newDate?.from && newDate?.to && newDate.from > newDate.to) {
+                                        // If from is after to, swap them
+                                        setDate({ from: newDate.to, to: newDate.from });
+                                        if (setPropDateRange) {
+                                          setPropDateRange({ from: newDate.to, to: newDate.from });
+                                        }
+                                      } else {
+                                        setDate(newDate);
+                                        // Update parent immediately when user selects a date
+                                        if (setPropDateRange) {
+                                          setPropDateRange(newDate ? { from: newDate.from, to: newDate.to } : undefined);
+                                        }
+                                      }
+                                    }}
+                                    numberOfMonths={2}
+                                    captionLayout="dropdown-buttons"
+                                    fromYear={1990}
+                                    toYear={new Date().getFullYear()}
+                                />
+                            </div>
+                        </div>
                     </PopoverContent>
                 </Popover>
-                {(isFiltered || isDateFiltered || searchTerm) && (
+                {(isFiltered || isDateFiltered || searchTerm || statusFilter) && (
                     <Button
                     variant="ghost"
                     onClick={() => {
                         table.resetColumnFilters();
                         setSearchTerm('');
                         setDate(undefined);
+                        if (setStatusFilter) {
+                          setStatusFilter(undefined);
+                        }
+                        // Also reset the parent date range
+                        if (setPropDateRange) {
+                          setPropDateRange(undefined);
+                        }
                     }}
                     className="h-8 px-2 lg:px-3"
                     >
@@ -361,18 +510,32 @@ export function StudentDataTable({
                                     <FileText className="mr-2 h-4 w-4" /> Generate Report Cards
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleExportCSV}>Export Selected (CSV)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportExcel}>Export Selected (Excel)</DropdownMenuItem>
                             <DropdownMenuItem onClick={handleExportPDF}>Export Selected (PDF)</DropdownMenuItem>
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent>
-                                    {ALL_ADMISSION_STATUSES.map(status => (
-                                        <DropdownMenuItem key={status} onClick={() => handleBulkStatusUpdate(status)}>{status}</DropdownMenuItem>
-                                    ))}
+                                    {ALL_ADMISSION_STATUSES
+                                        .filter(status => {
+                                            // Hide status if all selected students already have this status
+                                            const allHaveThisStatus = selectedRows.length > 0 &&
+                                                selectedRows.every(row => row.original.status === status);
+                                            return !allHaveThisStatus;
+                                        })
+                                        .map(status => (
+                                            <DropdownMenuItem
+                                                key={status}
+                                                onClick={() => handleBulkStatusUpdate(status)}
+                                            >
+                                                {status}
+                                            </DropdownMenuItem>
+                                        ))}
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
-                             <DropdownMenuSeparator />
-                             <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                            {isSuperAdmin && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                                 <AlertDialogTrigger asChild>
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
                                         <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
@@ -390,7 +553,9 @@ export function StudentDataTable({
                                         <AlertDialogAction onClick={handleConfirmBulkDelete}>Delete</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
-                             </AlertDialog>
+                                    </AlertDialog>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -457,12 +622,11 @@ export function StudentDataTable({
         </div>
         <div className="flex items-center justify-between py-4">
             <div className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {totalRecords} row(s) selected.
+              {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
             </div>
             <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium">
-                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                    Page {pagination.pageIndex + 1} of {pageCount || 1}
                 </span>
                  <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">Rows:</p>
@@ -489,8 +653,8 @@ export function StudentDataTable({
                     <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex - 1 }))}
+                    disabled={pagination.pageIndex === 0}
                     >
                     <ChevronLeft className="mr-1 h-4 w-4" />
                     Previous
@@ -498,8 +662,8 @@ export function StudentDataTable({
                     <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
+                    onClick={() => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex + 1 }))}
+                    disabled={pagination.pageIndex >= pageCount - 1}
                     >
                     Next
                     <ChevronRight className="ml-1 h-4 w-4" />
@@ -507,12 +671,30 @@ export function StudentDataTable({
                 </div>
             </div>
         </div>
-        <ImportPreviewDialog 
-            isOpen={isPreviewOpen}
-            onClose={() => setIsPreviewOpen(false)}
-            onConfirm={handleConfirmImport}
-            data={previewData}
-        />
+        <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Student Import</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to import students from "{selectedFile?.name}"?
+                        This will upload the CSV file to the server for processing.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isImportLoading}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmImport} disabled={isImportLoading}>
+                        {isImportLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Importing...
+                            </>
+                        ) : (
+                            'Import Students'
+                        )}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

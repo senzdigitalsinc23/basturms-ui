@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getClasses, addStudentProfile, addAuditLog, addUploadedDocument, getStudentProfiles, updateStudentProfile } from '@/lib/store';
+import { getClasses, addUploadedDocument } from '@/lib/store';
 import { Class, StudentProfile, AdmissionStatus, ALL_ADMISSION_STATUSES } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +28,50 @@ import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const MAX_STEPS = 6;
+
+type GuardianPayload = {
+    guardian_name: string;
+    guardian_phone: string;
+    guardian_email?: string;
+    guardian_relationship: string;
+};
+
+type StudentRegistrationPayload = {
+    student_info: {
+        student_no?: string;
+        first_name: string;
+        last_name: string;
+        other_name?: string;
+        gender: string;
+        dob: string;
+        nhis_no?: string;
+        created_by?: string;
+        updated_by?: string;
+    };
+    contact_address: {
+        email?: string;
+        phone?: string;
+        country_id: string;
+        city?: string;
+        hometown?: string;
+        residence?: string;
+        house_no?: string;
+        gps_no?: string;
+    };
+    admission_info: {
+        admission_no?: string;
+        admission_status: string;
+        class_assigned: string;
+        enrollment_date: string;
+    };
+    guardians: GuardianPayload[];
+    emergency_contact: {
+        emergency_name: string;
+        emergency_phone: string;
+        emergency_email?: string;
+        emergency_relationship: string;
+    };
+};
 
 const formSchema = z.object({
   // Personal
@@ -85,6 +129,72 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const COUNTRIES = [
+  { code: 'GH', name: 'Ghana' },
+  { code: 'NG', name: 'Nigeria' },
+  { code: 'CI', name: "Côte d'Ivoire" },
+  { code: 'BF', name: 'Burkina Faso' },
+  { code: 'TG', name: 'Togo' },
+  { code: 'BJ', name: 'Benin' },
+  { code: 'LR', name: 'Liberia' },
+  { code: 'SL', name: 'Sierra Leone' },
+  { code: 'GN', name: 'Guinea' },
+  { code: 'ML', name: 'Mali' },
+  { code: 'NE', name: 'Niger' },
+  { code: 'TD', name: 'Chad' },
+  { code: 'CM', name: 'Cameroon' },
+  { code: 'GQ', name: 'Equatorial Guinea' },
+  { code: 'GA', name: 'Gabon' },
+  { code: 'CG', name: 'Congo' },
+  { code: 'CD', name: 'Democratic Republic of the Congo' },
+  { code: 'AO', name: 'Angola' },
+  { code: 'ZM', name: 'Zambia' },
+  { code: 'ZW', name: 'Zimbabwe' },
+  { code: 'MZ', name: 'Mozambique' },
+  { code: 'BW', name: 'Botswana' },
+  { code: 'NA', name: 'Namibia' },
+  { code: 'SZ', name: 'Eswatini' },
+  { code: 'LS', name: 'Lesotho' },
+  { code: 'KE', name: 'Kenya' },
+  { code: 'UG', name: 'Uganda' },
+  { code: 'TZ', name: 'Tanzania' },
+  { code: 'RW', name: 'Rwanda' },
+  { code: 'BI', name: 'Burundi' },
+  { code: 'ET', name: 'Ethiopia' },
+  { code: 'SO', name: 'Somalia' },
+  { code: 'DJ', name: 'Djibouti' },
+  { code: 'ER', name: 'Eritrea' },
+  { code: 'SS', name: 'South Sudan' },
+  { code: 'SD', name: 'Sudan' },
+  { code: 'EG', name: 'Egypt' },
+  { code: 'LY', name: 'Libya' },
+  { code: 'MR', name: 'Mauritania' },
+  { code: 'SN', name: 'Senegal' },
+  { code: 'GM', name: 'Gambia' },
+  { code: 'GW', name: 'Guinea-Bissau' },
+  { code: 'CV', name: 'Cape Verde' },
+  { code: 'ST', name: "São Tomé and Príncipe" },
+  { code: 'US', name: 'United States' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'NL', name: 'Netherlands' },
+];
+
+const getCountryCode = (countryName: string): string | null => {
+  const country = COUNTRIES.find(c => c.name.toLowerCase() === countryName.toLowerCase().trim());
+  return country?.code || null;
+};
+
+const getCountryName = (countryCode: string): string | null => {
+  const country = COUNTRIES.find(c => c.code === countryCode);
+  return country?.name || null;
+};
 
 
 function PreviewItem({ label, value }: { label: string, value?: string | null }) {
@@ -216,10 +326,232 @@ function ParentGuardianFields() {
     );
 }
 
+const buildGuardiansPayload = (data: FormData): GuardianPayload[] => {
+    const guardians: GuardianPayload[] = [];
+
+    if (data.father_name && data.father_phone) {
+        guardians.push({
+            guardian_name: data.father_name,
+            guardian_phone: data.father_phone,
+            guardian_email: data.father_email || '',
+            guardian_relationship: 'father',
+        });
+    }
+
+    if (data.mother_name && data.mother_phone) {
+        guardians.push({
+            guardian_name: data.mother_name,
+            guardian_phone: data.mother_phone,
+            guardian_email: data.mother_email || '',
+            guardian_relationship: 'mother',
+        });
+    }
+
+    const relationship = data.guardian_relationship?.toLowerCase().trim();
+    if (
+        relationship &&
+        relationship !== 'father' &&
+        relationship !== 'mother' &&
+        data.guardian_name &&
+        data.guardian_phone
+    ) {
+        guardians.push({
+            guardian_name: data.guardian_name,
+            guardian_phone: data.guardian_phone,
+            guardian_email: data.guardian_email || '',
+            guardian_relationship: relationship,
+        });
+    }
+
+    return guardians;
+};
+
+const buildStudentPayload = (
+    data: FormData,
+    guardians: GuardianPayload[],
+    meta?: { studentNo?: string; admissionNo?: string; createdBy?: string; updatedBy?: string }
+): StudentRegistrationPayload => {
+    return {
+        student_info: {
+            ...(meta?.studentNo ? { student_no: meta.studentNo } : {}),
+            first_name: data.first_name,
+            last_name: data.last_name,
+            other_name: data.other_name || '',
+            gender: data.gender,
+            dob: format(data.dob, 'yyyy-MM-dd'),
+            nhis_no: data.nhis_number || '',
+            created_by: meta?.createdBy || meta?.updatedBy || '',
+            ...(meta?.updatedBy ? { updated_by: meta.updatedBy } : {}),
+        },
+        contact_address: {
+            email: data.email || '',
+            phone: data.phone || '',
+            country_id: getCountryCode(data.country) || 'GH',
+            city: data.city || '',
+            hometown: data.hometown,
+            residence: data.residence,
+            house_no: data.house_no,
+            gps_no: data.gps_no,
+        },
+        admission_info: {
+            ...(meta?.admissionNo ? { admission_no: meta.admissionNo } : {}),
+            admission_status: data.admission_status || 'Active',
+            class_assigned: data.class_assigned,
+            enrollment_date: format(data.enrollment_date, 'yyyy-MM-dd'),
+        },
+        guardians,
+        emergency_contact: {
+            emergency_name: data.emergency_name,
+            emergency_phone: data.emergency_phone,
+            emergency_email: '',
+            emergency_relationship: data.emergency_relationship,
+        },
+    };
+};
+
+const transformResponseToProfile = (
+    responseData: any,
+    payload: StudentRegistrationPayload,
+    fallbackUserId: string
+): StudentProfile => {
+    const studentNo =
+        responseData.studentInfo?.studentNo ||
+        responseData.student_no ||
+        payload.student_info.student_no ||
+        '';
+    const admissionNo =
+        responseData.admissionInfo?.admissionNo ||
+        responseData.admission_no ||
+        payload.admission_info.admission_no ||
+        '';
+
+    return {
+        student: {
+            student_no: studentNo,
+            first_name:
+                responseData.studentInfo?.firstName ||
+                responseData.student_info?.first_name ||
+                payload.student_info.first_name,
+            last_name:
+                responseData.studentInfo?.lastName ||
+                responseData.student_info?.last_name ||
+                payload.student_info.last_name,
+            other_name:
+                responseData.studentInfo?.otherName ||
+                responseData.student_info?.other_name ||
+                payload.student_info.other_name ||
+                '',
+            dob:
+                responseData.studentInfo?.dob ||
+                responseData.student_info?.dob ||
+                payload.student_info.dob,
+            gender:
+                responseData.studentInfo?.gender ||
+                responseData.student_info?.gender ||
+                payload.student_info.gender ||
+                'Male',
+            created_at: new Date().toISOString(),
+            created_by:
+                responseData.studentInfo?.createdBy?.toString() ||
+                responseData.student_info?.created_by ||
+                payload.student_info.created_by ||
+                fallbackUserId,
+            updated_at: new Date().toISOString(),
+            updated_by:
+                responseData.studentInfo?.updatedBy?.toString() ||
+                responseData.student_info?.updated_by ||
+                payload.student_info.updated_by ||
+                fallbackUserId,
+            avatarUrl: `https://picsum.photos/seed/${studentNo}/200/200`,
+        },
+        contactDetails: {
+            student_no: studentNo,
+            email:
+                responseData.contactAddressInfo?.email ||
+                responseData.contact_address?.email ||
+                payload.contact_address.email ||
+                '',
+            phone:
+                responseData.contactAddressInfo?.phone ||
+                responseData.contact_address?.phone ||
+                payload.contact_address.phone ||
+                '',
+            country:
+                responseData.contactAddressInfo?.countryId ||
+                responseData.contact_address?.country_id ||
+                payload.contact_address.country_id ||
+                'GH',
+            city:
+                responseData.contactAddressInfo?.city ||
+                responseData.contact_address?.city ||
+                payload.contact_address.city ||
+                '',
+            hometown:
+                responseData.contactAddressInfo?.hometown ||
+                responseData.contact_address?.hometown ||
+                payload.contact_address.hometown ||
+                '',
+            residence:
+                responseData.contactAddressInfo?.residence ||
+                responseData.contact_address?.residence ||
+                payload.contact_address.residence ||
+                '',
+            house_no:
+                responseData.contactAddressInfo?.houseNo ||
+                responseData.contact_address?.house_no ||
+                payload.contact_address.house_no ||
+                '',
+            gps_no:
+                responseData.contactAddressInfo?.gpsNo ||
+                responseData.contact_address?.gps_no ||
+                payload.contact_address.gps_no ||
+                '',
+        },
+        guardianInfo: {
+            student_no: studentNo,
+            guardian_name: payload.guardians?.[0]?.guardian_name || '',
+            guardian_phone: payload.guardians?.[0]?.guardian_phone || '',
+            guardian_email: payload.guardians?.[0]?.guardian_email || '',
+            guardian_relationship: payload.guardians?.[0]?.guardian_relationship || '',
+            father_name:
+                payload.guardians?.find(g => g.guardian_relationship === 'father')?.guardian_name || '',
+            father_phone:
+                payload.guardians?.find(g => g.guardian_relationship === 'father')?.guardian_phone || '',
+            mother_name:
+                payload.guardians?.find(g => g.guardian_relationship === 'mother')?.guardian_name || '',
+            mother_phone:
+                payload.guardians?.find(g => g.guardian_relationship === 'mother')?.guardian_phone || '',
+        },
+        emergencyContact: {
+            student_no: studentNo,
+            emergency_name: payload.emergency_contact.emergency_name || '',
+            emergency_phone: payload.emergency_contact.emergency_phone || '',
+            emergency_relationship: payload.emergency_contact.emergency_relationship || '',
+        },
+        admissionDetails: {
+            student_no: studentNo,
+            admission_no: admissionNo,
+            enrollment_date:
+                responseData.admissionInfo?.enrollmentDate ||
+                responseData.admission_info?.enrollment_date ||
+                payload.admission_info.enrollment_date,
+            class_assigned:
+                responseData.admissionInfo?.classAssigned ||
+                responseData.admission_info?.class_assigned ||
+                payload.admission_info.class_assigned,
+            admission_status:
+                responseData.admissionInfo?.admissionStatus ||
+                responseData.admission_info?.admission_status ||
+                payload.admission_info.admission_status ||
+                'Admitted',
+        },
+    };
+};
+
 type StudentFormProps = {
-    isEditMode?: boolean;
-    defaultValues?: StudentProfile;
-    onSubmit?: (values: Partial<StudentProfile>) => void;
+  isEditMode?: boolean;
+  defaultValues?: StudentProfile;
+  onSubmit?: (profile: StudentProfile) => void;
 };
 
 
@@ -227,8 +559,6 @@ export function StudentForm({ isEditMode = false, defaultValues, onSubmit }: Stu
   const [currentStep, setCurrentStep] = useState(1);
   const [classes, setClasses] = useState<Class[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [generatedStudentNo, setGeneratedStudentNo] = useState(defaultValues?.student.student_no || '');
-  const [generatedAdmissionNo, setGeneratedAdmissionNo] = useState(defaultValues?.admissionDetails.admission_no || '');
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -250,7 +580,7 @@ export function StudentForm({ isEditMode = false, defaultValues, onSubmit }: Stu
         nhis_number: '', // Add if needed in StudentProfile
         email: defaultValues.contactDetails.email || '',
         phone: defaultValues.contactDetails.phone || '',
-        country: defaultValues.contactDetails.country,
+        country: getCountryName(defaultValues.contactDetails.country) || 'Ghana',
         city: defaultValues.contactDetails.city || '',
         hometown: defaultValues.contactDetails.hometown,
         residence: defaultValues.contactDetails.residence,
@@ -317,22 +647,6 @@ export function StudentForm({ isEditMode = false, defaultValues, onSubmit }: Stu
     }
   }, [dob]);
 
-  useEffect(() => {
-    if (!isEditMode && enrollmentDate) {
-        getStudentProfiles().then(({ students: profiles }) => {
-            const admissionYear = new Date(enrollmentDate).getFullYear();
-            const yearYY = admissionYear.toString().slice(-2);
-            
-            const studentsInYear = profiles.filter(p => new Date(p.admissionDetails.enrollment_date).getFullYear() === admissionYear);
-
-            const nextInYear = studentsInYear.length + 1;
-            const nextNumberPadded = nextInYear.toString().padStart(3, '0');
-            
-            setGeneratedStudentNo(`WR-TK001-LBA${yearYY}${nextNumberPadded}`);
-            setGeneratedAdmissionNo(`ADM${yearYY}${nextNumberPadded}`);
-        });
-    }
-  }, [enrollmentDate, isEditMode]);
 
   const tabs = [
     { id: 1, name: 'Personal', fields: ['first_name', 'last_name', 'dob', 'gender'] },
@@ -443,124 +757,162 @@ We look forward to welcoming you to our school community.`;
         return;
     }
     setIsLoading(true);
-    
-    if (isEditMode && defaultValues && onSubmit) {
-        const profileData: Partial<StudentProfile> = {
-            student: { ...defaultValues.student, first_name: data.first_name, last_name: data.last_name, other_name: data.other_name, dob: data.dob.toISOString(), gender: data.gender },
-            contactDetails: { ...defaultValues.contactDetails, email: data.email, phone: data.phone, country: data.country, city: data.city, hometown: data.hometown, residence: data.residence, house_no: data.house_no, gps_no: data.gps_no },
-            guardianInfo: { ...defaultValues.guardianInfo, guardian_name: data.guardian_name, guardian_phone: data.guardian_phone, guardian_email: data.guardian_email, guardian_relationship: data.guardian_relationship, guardian_occupation: data.guardian_occupation, father_name: data.father_name, father_phone: data.father_phone, father_email: data.father_email, father_occupation: data.father_occupation, mother_name: data.mother_name, mother_phone: data.mother_phone, mother_email: data.mother_email, mother_occupation: data.mother_occupation },
-            emergencyContact: { ...defaultValues.emergencyContact, emergency_name: data.emergency_name, emergency_phone: data.emergency_phone, emergency_relationship: data.emergency_relationship },
-            admissionDetails: { ...defaultValues.admissionDetails, enrollment_date: data.enrollment_date.toISOString(), class_assigned: data.class_assigned, admission_status: data.admission_status }
-        };
-        onSubmit(profileData);
-    } else {
-        const guardians = [];
-        if (data.father_name && data.father_phone) {
-            guardians.push({
-                guardian_name: data.father_name,
-                guardian_phone: data.father_phone,
-                guardian_email: data.father_email || "",
-                guardian_relationship: 'father'
-            });
-        }
-        if (data.mother_name && data.mother_phone) {
-            guardians.push({
-                guardian_name: data.mother_name,
-                guardian_phone: data.mother_phone,
-                guardian_email: data.mother_email || "",
-                guardian_relationship: 'mother'
-            });
-        }
-        if (data.guardian_relationship.toLowerCase() !== 'father' && data.guardian_relationship.toLowerCase() !== 'mother') {
-            guardians.push({
-                guardian_name: data.guardian_name,
-                guardian_phone: data.guardian_phone,
-                guardian_email: data.guardian_email || "",
-                guardian_relationship: data.guardian_relationship.toLowerCase()
-            });
-        }
 
+    const guardiansPayload = buildGuardiansPayload(data);
 
-        const payload = {
-            student_info: {
-                first_name: data.first_name,
-                last_name: data.last_name,
-                other_name: data.other_name || "",
-                gender: data.gender,
-                dob: format(data.dob, 'yyyy-MM-dd'),
-                nhis_no: data.nhis_number || "",
-                created_by: user.id
-            },
-            contact_address: {
-                email: data.email || "",
-                phone: data.phone || "",
-                country_id: "GH",
-                city: data.city || "",
-                hometown: data.hometown,
-                residence: data.residence,
-                house_no: data.house_no,
-                gps_no: data.gps_no
-            },
-            admission_info: {
-                admission_no: generatedAdmissionNo,
-                admission_status: "Active",
-                class_assigned: data.class_assigned,
-                enrollment_date: format(data.enrollment_date, 'yyyy-MM-dd')
-            },
-            guardians: guardians,
-            emergency_contact: {
-                emergency_name: data.emergency_name,
-                emergency_phone: data.emergency_phone,
-                emergency_email: "",
-                emergency_relationship: data.emergency_relationship
-            }
-        };
+    if (isEditMode && defaultValues) {
+        const payload = buildStudentPayload(data, guardiansPayload, {
+            studentNo: defaultValues.student.student_no,
+            admissionNo: defaultValues.admissionDetails.admission_no,
+            createdBy: defaultValues.student.created_by || user.id,
+            updatedBy: user.id,
+        });
 
         try {
+            const apiUrl = '/api/students/update';
             const token = localStorage.getItem('campusconnect_token');
-            const response = await fetch('/api/students/create', {
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+            console.log('Updating student at:', apiUrl);
+            console.log('Payload being sent:', JSON.stringify(payload, null, 2));
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || ''
+                    'X-API-KEY': apiKey,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || errorMessage;
+                    if (errorData.errors) {
+                        errorMessage += `: ${JSON.stringify(errorData.errors)}`;
+                    }
+                } catch (e) {
+                    const errorText = await response.text();
+                    if (errorText) {
+                        errorMessage = errorText;
+                    }
+                }
+                throw new Error(errorMessage);
+            }
+
+            const result = await response.json();
+            console.log('Server response when updating student:', result);
+
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to update student.');
+            }
+
+            const responseData = result.data;
+            const updatedProfile = transformResponseToProfile(responseData, payload, user.id);
+
+            toast({
+                title: 'Student Updated',
+                description: `${updatedProfile.student.first_name} ${updatedProfile.student.last_name}'s details have been updated.`,
+            });
+            onSubmit?.(updatedProfile);
+        } catch (e: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Error updating student',
+                description: e.message || 'An unexpected error occurred.',
+            });
+        }
+    } else {
+        const payload = buildStudentPayload(data, guardiansPayload, { createdBy: user.id });
+
+        try {
+            // Use Next.js proxy to avoid CORS issues
+            const apiUrl = '/api/students/create';
+            const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123'; // Fallback for development
+            
+            console.log('Creating student at:', apiUrl);
+            console.log('Payload being sent:', JSON.stringify(payload, null, 2));
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': apiKey
                 },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create student.');
+                let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || errorMessage;
+                    if (errorData.errors) {
+                        errorMessage += `: ${JSON.stringify(errorData.errors)}`;
+                    }
+                } catch (e) {
+                    const errorText = await response.text();
+                    if (errorText) {
+                        errorMessage = errorText;
+                    }
+                }
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
-            const newStudent = result.data;
-
-            const newProfile: StudentProfile = {
-                student: { ...newStudent.student_info, student_no: newStudent.student_no, avatarUrl: `https://picsum.photos/seed/${newStudent.student_no}/200/200` },
-                contactDetails: newStudent.contact_address,
-                guardianInfo: newStudent.guardians[0], // Simplified for now
-                emergencyContact: newStudent.emergency_contact,
-                admissionDetails: { ...newStudent.admission_info, student_no: newStudent.student_no }
-            };
+            console.log('Server response when creating student:', result);
             
-            // Generate and attach PDFs
-            const admissionFormPdf = generateAdmissionFormPdf(data, newStudent.student_no, newStudent.admission_no);
-            addUploadedDocument(newStudent.student_no, { name: 'Admission Form.pdf', type: 'Admission Form', url: admissionFormPdf, uploaded_at: new Date().toISOString() }, user.id);
-            const admissionLetterPdf = generateAdmissionLetterPdf(data, newStudent.student_no, newStudent.admission_no);
-            addUploadedDocument(newStudent.student_no, { name: 'Admission Letter.pdf', type: 'Admission Letter', url: admissionLetterPdf, uploaded_at: new Date().toISOString() }, user.id);
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to create student.');
+            }
+            
+            const responseData = result.data;
+            const newProfile = transformResponseToProfile(responseData, payload, user.id);
+            const studentNo = newProfile.student.student_no;
+            
+            // Fetch the full student profile from /api/students/show endpoint
+            const showApiUrl = '/api/students/show';
+            const showToken = localStorage.getItem('campusconnect_token');
+            const showApiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+            const showResponse = await fetch(showApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${showToken}`,
+                    'X-API-KEY': showApiKey,
+                },
+                body: JSON.stringify({ student_no: studentNo }),
+            });
+            
+            let fullProfile = newProfile;
+            if (showResponse.ok) {
+                const showResult = await showResponse.json();
+                if (showResult.success && showResult.data) {
+                    fullProfile = transformResponseToProfile(showResult.data, payload, user.id);
+                    console.log('Full student profile fetched from /api/students/show:', fullProfile);
+                }
+            }
+            
+            // Generate and attach PDFs using full profile
+            const admissionFormPdf = generateAdmissionFormPdf(data, fullProfile.student.student_no, fullProfile.admissionDetails.admission_no);
+            addUploadedDocument(fullProfile.student.student_no, { name: 'Admission Form.pdf', type: 'Admission Form', url: admissionFormPdf, uploaded_at: new Date().toISOString() }, user.id);
+            const admissionLetterPdf = generateAdmissionLetterPdf(data, fullProfile.student.student_no, fullProfile.admissionDetails.admission_no);
+            addUploadedDocument(fullProfile.student.student_no, { name: 'Admission Letter.pdf', type: 'Admission Letter', url: admissionLetterPdf, uploaded_at: new Date().toISOString() }, user.id);
             
             // Download PDFs
-            const studentNameForFile = `${newProfile.student.first_name}_${newProfile.student.last_name}`;
-            const studentNoForFile = newProfile.student.student_no;
+            const studentNameForFile = `${fullProfile.student.first_name}_${fullProfile.student.last_name}`;
+            const studentNoForFile = fullProfile.student.student_no;
             downloadPdf(admissionFormPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Form.pdf`);
             downloadPdf(admissionLetterPdf, `${studentNameForFile}_${studentNoForFile}_Admission_Letter.pdf`);
 
             toast({
                 title: 'Student Enrolled Successfully',
-                description: `${newProfile.student.first_name} ${newProfile.student.last_name} has been added.`
+                description: `${fullProfile.student.first_name} ${fullProfile.student.last_name} has been added.`
             });
-            router.push(`/student-management/students/${newProfile.student.student_no}`);
+            router.push(`/student-management/students/${fullProfile.student.student_no}`);
 
         } catch(e: any) {
              toast({
@@ -636,14 +988,35 @@ We look forward to welcoming you to our school community.`;
                         <FormField name="email" render={({ field }) => (
                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} placeholder="student@example.com" /></FormControl><FormMessage /></FormItem>
                         )}/>
+                        <FormField
+                          control={methods.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Country *</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select country" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {COUNTRIES.map((country) => (
+                                    <SelectItem key={country.code} value={country.name}>
+                                      {country.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         <FormField name="phone" render={({ field }) => (
                             <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="024-123-4567" /></FormControl><FormMessage /></FormItem>
                         )}/>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <FormField name="country" render={({ field }) => (
-                            <FormItem><FormLabel>Country *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                         )} />
                          <FormField name="city" render={({ field }) => (
                             <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                          )} />
@@ -707,11 +1080,11 @@ We look forward to welcoming you to our school community.`;
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <FormItem>
                             <FormLabel>Student No</FormLabel>
-                            <FormControl><Input value={generatedStudentNo} readOnly disabled /></FormControl>
+                            <FormControl><Input value="Auto-generated by backend" readOnly disabled placeholder="Will be generated upon creation" /></FormControl>
                         </FormItem>
                         <FormItem>
                             <FormLabel>Admission No</FormLabel>
-                            <FormControl><Input value={generatedAdmissionNo} readOnly disabled /></FormControl>
+                            <FormControl><Input value="Auto-generated by backend" readOnly disabled placeholder="Will be generated upon creation" /></FormControl>
                         </FormItem>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">

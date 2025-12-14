@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { CalendarIcon, PlusCircle, Trash2, Edit } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2, Edit, Loader2 } from "lucide-react";
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +22,8 @@ import { format, parseISO } from 'date-fns';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { DialogTrigger } from '@radix-ui/react-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ClassManagement } from '@/components/academics/classes/class-management';
 
 const termSchema = z.object({
     name: z.string().min(1, 'Term name is required.'),
@@ -50,6 +52,7 @@ export function AcademicSettings() {
     const [isEditYearOpen, setIsEditYearOpen] = useState(false);
     const [selectedYear, setSelectedYear] = useState<AcademicYear | null>(null);
     const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+    const [isLoading, setIsLoading] = useState(true);
     const { user } = useAuth();
     const { toast } = useToast();
     
@@ -76,14 +79,92 @@ export function AcademicSettings() {
     });
 
     useEffect(() => {
-        setAcademicYears(getAcademicYears());
-    }, []);
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch academic years
+                const token = localStorage.getItem('campusconnect_token');
+                const yearsRes = await fetch('/api/academic/years/list', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` }),
+                        'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    },
+                });
 
-    const handleAddYear = (values: z.infer<typeof addAcademicYearSchema>) => {
+                if (!yearsRes.ok) {
+                    throw new Error(`Failed to fetch academic years: ${yearsRes.statusText}`);
+                }
+
+                const yearsResponse = await yearsRes.json();
+
+                let yearsData = [];
+                if (Array.isArray(yearsResponse.data)) {
+                    yearsData = yearsResponse.data;
+                } else if (yearsResponse.data && Array.isArray(yearsResponse.data.academic_years)) {
+                    yearsData = yearsResponse.data.academic_years;
+                }
+
+                const years: AcademicYear[] = yearsData.map(item => ({
+                    year: item.academic_year?.year || item.year,
+                    status: item.academic_year?.status || item.status || 'Upcoming',
+                    number_of_terms: item.terms?.length || 0,
+                    terms: (item.terms || []).map(term => ({
+                        name: term.term || 'Unnamed Term',
+                        startDate: term.start_date || new Date().toISOString(),
+                        endDate: term.end_date || new Date().toISOString(),
+                        status: term.status || 'Upcoming',
+                        id: term.id,
+                        added_by: term.added_by,
+                        added_on: term.added_on,
+                    })),
+                }));
+                
+                setAcademicYears(years);
+
+            } catch (err: any) {
+                console.error('Failed to fetch academic years:', err);
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to load academic years.' });
+                setAcademicYears(getAcademicYears());
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [toast]);
+
+    const handleAddYear = async (values: z.infer<typeof addAcademicYearSchema>) => {
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const res = await fetch('/api/academic/years/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                },
+                body: JSON.stringify({
+                    academic_year: values.year,
+                    status: values.status,
+                    number_of_terms: values.numberOfTerms,
+                }),
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to create academic year: ${res.statusText}`);
+            }
+
+            const response = await res.json();
+
+            // Update local state with the response data
         const newYear: AcademicYear = {
-            year: values.year,
-            status: values.status,
-            terms: Array.from({ length: values.numberOfTerms }, (_, i) => ({
+                year: response.data?.year || values.year,
+                status: response.data?.status || values.status,
+                number_of_terms: response.data?.number_of_terms || values.numberOfTerms,
+                terms: response.data?.terms || Array.from({ length: values.numberOfTerms }, (_, i) => ({
                 name: `Term ${i + 1}`,
                 startDate: new Date().toISOString(),
                 endDate: new Date().toISOString(),
@@ -107,6 +188,14 @@ export function AcademicSettings() {
         toast({ title: 'Academic Year Added', description: `The year ${values.year} has been created.` });
         setIsAddDialogOpen(false);
         addForm.reset();
+        } catch (err: any) {
+            console.error('Failed to create academic year:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: err.message || 'Failed to create academic year. Please try again.'
+            });
+        }
     };
     
     const handleManageTerms = (year: AcademicYear) => {
@@ -127,9 +216,33 @@ export function AcademicSettings() {
         setIsEditYearOpen(true);
     }
     
-    const processYearUpdate = (values: z.infer<typeof editAcademicYearSchema>) => {
+    const processYearUpdate = async (values: z.infer<typeof editAcademicYearSchema>) => {
         if (!selectedYear) return;
 
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const res = await fetch('/api/academic/years/status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                },
+                body: JSON.stringify({
+                    academic_year: selectedYear.year,
+                    new_academic_year: values.year,
+                    status: values.status,
+                }),
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to update academic year: ${res.statusText}`);
+            }
+
+            const response = await res.json();
+
+            // Update local state after successful API update
         const updatedYears = academicYears.map(year => 
             year.year === selectedYear.year ? { ...year, year: values.year, status: values.status } : year
         );
@@ -149,6 +262,14 @@ export function AcademicSettings() {
         toast({ title: 'Academic Year Updated', description: `The year ${selectedYear.year} has been updated.` });
         setIsEditYearOpen(false);
         setSelectedYear(null);
+        } catch (err: any) {
+            console.error('Failed to update academic year:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: err.message || 'Failed to update academic year. Please try again.'
+            });
+        }
     }
 
     const handleUpdateYear = (values: z.infer<typeof academicYearSchema>) => {
@@ -175,23 +296,83 @@ export function AcademicSettings() {
         setSelectedYear(null);
     }
 
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         const yearsToDelete = Object.keys(rowSelection).filter(key => rowSelection[key]);
+
+        if (yearsToDelete.length === 0) return;
+
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const res = await fetch('/api/academic/years/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                },
+                body: JSON.stringify({
+                    years: yearsToDelete,
+                }),
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to delete academic years: ${res.statusText}`);
+            }
+
+            const response = await res.json();
+
+            // Update local state after successful API deletion
         const newYears = academicYears.filter(year => !yearsToDelete.includes(year.year));
         saveAcademicYears(newYears);
         setAcademicYears(newYears);
         setRowSelection({});
+
+            if(user) {
+                addAuditLog({
+                    user: user.email,
+                    name: user.name,
+                    action: 'Delete Academic Years',
+                    details: `Deleted ${yearsToDelete.length} academic year(s): ${yearsToDelete.join(', ')}`,
+                });
+            }
+
         toast({
             title: 'Academic Years Deleted',
             description: `${yearsToDelete.length} academic year(s) have been deleted.`
         });
+        } catch (err: any) {
+            console.error('Failed to delete academic years:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: err.message || 'Failed to delete academic years. Please try again.'
+            });
+        }
     }
 
     const isAllSelected = academicYears.length > 0 && Object.keys(rowSelection).length === academicYears.length;
 
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 text-muted-foreground animate-spin mr-2" />
+                <p className="text-muted-foreground">Loading academic years...</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="space-y-6">
-            <div>
+        <Tabs defaultValue="academic-years" className="space-y-4">
+            <TabsList>
+                <TabsTrigger value="academic-years">Academic Years</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="academic-years" className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline">Academic Year Settings</h1>
+                    <p className="text-muted-foreground">Manage academic years and their terms.</p>
+                </div>
                 <div className="flex justify-between items-center mt-2">
                     <div>
                         {Object.keys(rowSelection).length > 0 && (
@@ -251,21 +432,25 @@ export function AcademicSettings() {
                             <TableRow>
                                 <TableHead className="w-[50px]"><Checkbox checked={isAllSelected} onCheckedChange={checked => {
                                     const newRowSelection: Record<string, boolean> = {};
-                                    if (checked) { academicYears.forEach(y => newRowSelection[y.year] = true); }
+                                    if (checked) { 
+                                        academicYears.forEach(y => {
+                                            if (y.year) newRowSelection[y.year] = true;
+                                        }); 
+                                    }
                                     setRowSelection(newRowSelection);
                                 }}/></TableHead>
                                 <TableHead>Academic Year</TableHead>
-                                <TableHead>Terms</TableHead>
+                                <TableHead>Number of Terms</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {academicYears.map(year => (
+                            {academicYears.map((year) => (
                                 <TableRow key={year.year}>
                                     <TableCell><Checkbox checked={rowSelection[year.year] || false} onCheckedChange={checked => setRowSelection(prev => ({...prev, [year.year]: !!checked}))} /></TableCell>
                                     <TableCell>{year.year}</TableCell>
-                                    <TableCell>{Array.isArray(year.terms) ? year.terms.length : 0}</TableCell>
+                                    <TableCell>{year.number_of_terms ?? (Array.isArray(year.terms) ? year.terms.length : 0)}</TableCell>
                                     <TableCell>{year.status}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="sm" onClick={() => handleEditYear(year)}><Edit className="mr-2 h-4 w-4"/> Edit</Button>
@@ -276,7 +461,18 @@ export function AcademicSettings() {
                         </TableBody>
                     </Table>
                 </div>
-            </div>
+            </TabsContent>
+
+            <TabsContent value="class-management">
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline">Class & Subject Management</h1>
+                        <p className="text-muted-foreground">Manage classes and assign subjects to them.</p>
+                    </div>
+                    <ClassManagement />
+                </div>
+            </TabsContent>
+
              <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
@@ -361,6 +557,6 @@ export function AcademicSettings() {
                     </Form>
                 </DialogContent>
              </Dialog>
-        </div>
+        </Tabs>
     )
 }

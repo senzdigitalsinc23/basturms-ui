@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -51,10 +50,11 @@ export default function PromotionsPage() {
     useEffect(() => {
       async function fetchStudents() {
         if (fromClass) {
-            const allStudentProfiles = await getStudentProfiles();
+            // Fetch all students for promotion logic
+            const { students: allStudentProfiles } = await getStudentProfiles(1, 1000); 
             const classMap = new Map(classes.map(c => [c.id, c.name]));
             const filteredStudents = allStudentProfiles
-                .filter(p => p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
+                .filter(p => p && p.admissionDetails && p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
                 .map(p => ({
                     id: p.student.student_no,
                     name: `${p.student.first_name} ${p.student.last_name}`,
@@ -140,111 +140,62 @@ export default function PromotionsPage() {
         setIsLoading(true);
 
         try {
-            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
             const token = localStorage.getItem('campusconnect_token');
-            let promotedCount: number | null = null;
-
-            const parseResponse = async (res: Response) => {
-                let body: any = null;
-                try { body = await res.json(); } catch (e) { /* ignore non-json */ }
-                console.log('Promotion response', res.status, body);
-                return body;
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
             };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            let endpoint: string;
+            let payload: any;
 
             if (isSpecialPromotion) {
-                const endpoint = '/api/promotions/special';
-
+                endpoint = '/promotions/special';
                 if (studentIdsToPromote.length === 1) {
-                    const payload = {
+                    payload = {
                         student_no: studentIdsToPromote[0],
                         target_class_id: toClass,
                         remarks: specialPromotionReason,
                     };
-
-                    console.log('Promotion request', endpoint, payload);
-                    const headers: HeadersInit = {
-                        'Content-Type': 'application/json',
-                        'X-API-KEY': apiKey,
-                    };
-                    if (token) headers['Authorization'] = `Bearer ${token}`;
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify(payload),
-                    });
-
-                    const body = await parseResponse(res);
-                    if (!res.ok || (body && body.success === false)) throw new Error(body?.message || `Special promotion failed: ${res.status} ${res.statusText}`);
-                    promotedCount = body?.data?.promoted_count ?? body?.data?.count ?? 1;
                 } else {
                     const studentsObj: Record<string, { student_no: string }> = {};
-                    studentIdsToPromote.forEach((sno, idx) => { studentsObj[String(idx + 1)] = { student_no: sno }; });
-                    const payload = {
+                    studentIdsToPromote.forEach((sno, idx) => {
+                        studentsObj[String(idx + 1)] = { student_no: sno };
+                    });
+                    payload = {
                         students: studentsObj,
                         target_class_id: toClass,
                         remarks: specialPromotionReason,
                     };
-
-                    console.log('Promotion request', endpoint, payload);
-                    const headers: HeadersInit = {
-                        'Content-Type': 'application/json',
-                        'X-API-KEY': apiKey,
-                    };
-                    if (token) headers['Authorization'] = `Bearer ${token}`;
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify(payload),
-                    });
-
-                    const body = await parseResponse(res);
-                    if (!res.ok || (body && body.success === false)) throw new Error(body?.message || `Bulk special promotion failed: ${res.status} ${res.statusText}`);
-                    promotedCount = body?.data?.promoted_count ?? body?.data?.count ?? Object.keys(studentsObj).length;
                 }
             } else {
-                const endpoint = '/promotions/normal';
-
+                endpoint = '/promotions/normal';
                 if (studentIdsToPromote.length === 1) {
-                    const payload = { student_no: studentIdsToPromote[0] };
-                    console.log('Promotion request', endpoint, payload);
-                    const headers: HeadersInit = {
-                        'Content-Type': 'application/json',
-                        'X-API-KEY': apiKey,
-                    };
-                    if (token) headers['Authorization'] = `Bearer ${token}`;
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify(payload),
-                    });
-
-                    const body = await parseResponse(res);
-                    if (!res.ok || (body && body.success === false)) throw new Error(body?.message || `Promotion failed: ${res.status} ${res.statusText}`);
-                    promotedCount = body?.data?.promoted_count ?? body?.data?.count ?? 1;
+                    payload = { student_no: studentIdsToPromote[0] };
                 } else {
                     const studentsObj: Record<string, { student_no: string }> = {};
-                    studentIdsToPromote.forEach((sno, idx) => { studentsObj[String(idx + 1)] = { student_no: sno }; });
-                    const payload = { students: studentsObj };
-                    console.log('Promotion request', endpoint, payload);
-                    const headers: HeadersInit = {
-                        'Content-Type': 'application/json',
-                        'X-API-KEY': apiKey,
-                    };
-                    if (token) headers['Authorization'] = `Bearer ${token}`;
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify(payload),
+                    studentIdsToPromote.forEach((sno, idx) => {
+                        studentsObj[String(idx + 1)] = { student_no: sno };
                     });
-
-                    const body = await parseResponse(res);
-                    if (!res.ok || (body && body.success === false)) throw new Error(body?.message || `Bulk promotion failed: ${res.status} ${res.statusText}`);
-                    promotedCount = body?.data?.promoted_count ?? body?.data?.count ?? Object.keys(studentsObj).length;
+                    payload = { students: studentsObj };
                 }
             }
 
-            // On success, refresh and show toast
-            fetchStudentData(); // Re-fetch students after promotion
+            console.log('Promotion request', endpoint, payload);
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+            });
+
+            const responseBody = await res.json().catch(() => ({}));
+            console.log('Promotion response', res.status, responseBody);
+
+            if (!res.ok) {
+                throw new Error(responseBody?.message || `Promotion failed: ${res.status} ${res.statusText}`);
+            }
+
+            fetchStudentData();
 
             setIsLoading(false);
             setFromClass(undefined);
@@ -253,11 +204,11 @@ export default function PromotionsPage() {
             setIsSpecialPromotion(false);
             setSpecialPromotionReason('');
 
-            if (typeof promotedCount === 'number') {
-                toast({ title: 'Promotion Successful', description: `${promotedCount} student(s) have been promoted.` });
-            } else {
-                toast({ title: 'Promotion Successful', description: `Selected student promotion completed.` });
-            }
+            const promotedCount = responseBody?.data?.promoted_count ?? studentIdsToPromote.length;
+            toast({
+                title: 'Promotion Successful',
+                description: `${promotedCount} student(s) have been promoted.`,
+            });
 
             addAuditLog({
                 user: user.email,
@@ -267,70 +218,57 @@ export default function PromotionsPage() {
             });
         } catch (err: any) {
             console.error('Promotion error', err);
-            let errorMessage = 'Unable to promote students.';
-            if (err instanceof TypeError) {
-                errorMessage = 'Network error: Unable to connect to the server. Please check your connection.';
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-            toast({ variant: 'destructive', title: 'Promotion Failed', description: errorMessage });
+            toast({ variant: 'destructive', title: 'Promotion Failed', description: err.message || 'Unable to promote students.' });
             setIsLoading(false);
         }
     }
 
     const handleGraduation = async () => {
-        if (!user || studentIdsToPromote.length === 0) return;
+        console.log('Graduation button clicked', { fromClass, count: studentIdsToPromote.length });
+
+        if (!user) {
+            console.log('Early return: no user');
+            return;
+        }
+        if (studentIdsToPromote.length === 0) {
+            console.log('Early return: no students selected');
+            return;
+        }
 
         setIsLoading(true);
-        try {
-            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
-            const token = localStorage.getItem('campusconnect_token');
-            const endpoint = '/api/promotions/graduate';
-            let graduatedCount: number | null = null;
 
-            const parseResponse = async (res: Response) => {
-                let body: any = null;
-                try { body = await res.json(); } catch (e) { /* ignore non-json */ }
-                console.log('Graduation response', res.status, body);
-                return body;
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
             };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const endpoint = '/promotions/graduate';
+            let payload: any;
 
             if (studentIdsToPromote.length === 1) {
-                const payload = { student_no: studentIdsToPromote[0] };
-                console.log('Graduation request', endpoint, payload);
-                const headers: HeadersInit = {
-                    'Content-Type': 'application/json',
-                    'X-API-KEY': apiKey,
-                };
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(payload),
-                });
-
-                const body = await parseResponse(res);
-                if (!res.ok || (body && body.success === false)) throw new Error(body?.message || `Graduation failed: ${res.status} ${res.statusText}`);
-                graduatedCount = body?.data?.graduated_count ?? body?.data?.count ?? 1;
+                payload = { student_no: studentIdsToPromote[0] };
             } else {
                 const studentsObj: Record<string, { student_no: string }> = {};
-                studentIdsToPromote.forEach((sno, idx) => { studentsObj[String(idx + 1)] = { student_no: sno }; });
-                const payload = { students: studentsObj };
-                console.log('Graduation request', endpoint, payload);
-                const headers: HeadersInit = {
-                    'Content-Type': 'application/json',
-                    'X-API-KEY': apiKey,
-                };
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(payload),
+                studentIdsToPromote.forEach((sno, idx) => {
+                    studentsObj[String(idx + 1)] = { student_no: sno };
                 });
+                payload = { students: studentsObj };
+            }
 
-                const body = await parseResponse(res);
-                if (!res.ok || (body && body.success === false)) throw new Error(body?.message || `Bulk graduation failed: ${res.status} ${res.statusText}`);
-                graduatedCount = body?.data?.graduated_count ?? body?.data?.count ?? Object.keys(studentsObj).length;
+            console.log('Graduation request', endpoint, payload);
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+            });
+
+            const responseBody = await res.json().catch(() => ({}));
+            console.log('Graduation response', res.status, responseBody);
+
+            if (!res.ok) {
+                throw new Error(responseBody?.message || `Graduation failed: ${res.status} ${res.statusText}`);
             }
 
             fetchStudentData();
@@ -339,11 +277,11 @@ export default function PromotionsPage() {
             setFromClass(undefined);
             setSelectedStudents({});
 
-            if (typeof graduatedCount === 'number') {
-                toast({ title: 'Graduation Successful', description: `${graduatedCount} student(s) have been marked as graduated.` });
-            } else {
-                toast({ title: 'Graduation Successful', description: `Selected student(s) have been marked as graduated.` });
-            }
+            const graduatedCount = responseBody?.data?.graduated_count ?? studentIdsToPromote.length;
+            toast({
+                title: 'Graduation Successful',
+                description: `${graduatedCount} student(s) have been marked as graduated.`,
+            });
 
             addAuditLog({
                 user: user.email,
@@ -353,13 +291,7 @@ export default function PromotionsPage() {
             });
         } catch (err: any) {
             console.error('Graduation error', err);
-            let errorMessage = 'Unable to graduate students.';
-            if (err instanceof TypeError) {
-                errorMessage = 'Network error: Unable to connect to the server. Please check your connection.';
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-            toast({ variant: 'destructive', title: 'Graduation Failed', description: errorMessage });
+            toast({ variant: 'destructive', title: 'Graduation Failed', description: err.message || 'Unable to graduate students.' });
             setIsLoading(false);
         }
     }
@@ -508,7 +440,7 @@ export default function PromotionsPage() {
                              {fromClass === FINAL_CLASS_ID ? (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button disabled={isGraduationDisabled} size="sm">
+                                        <Button disabled={isGraduationDisabled} size="sm" onClick={() => console.log('Graduation button clicked (trigger)', { fromClass, count: studentIdsToPromote.length })}>
                                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             <GraduationCap className="mr-2 h-4 w-4" />
                                             Graduate Selected ({studentIdsToPromote.length})
@@ -523,7 +455,9 @@ export default function PromotionsPage() {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleGraduation}>Proceed</AlertDialogAction>
+                                            <AlertDialogAction asChild>
+                                                <Button onClick={() => { console.log('Confirm graduation clicked'); handleGraduation(); }}>Proceed</Button>
+                                            </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
@@ -545,7 +479,9 @@ export default function PromotionsPage() {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => { console.log('Confirm promotion clicked'); handlePromotion(); }}>Confirm</AlertDialogAction>
+                                            <AlertDialogAction asChild>
+                                                <Button onClick={() => { console.log('Confirm promotion clicked'); handlePromotion(); }}>Confirm</Button>
+                                            </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
