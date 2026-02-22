@@ -25,6 +25,13 @@ export type StudentDisplay = {
 };
 
 
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { flattenStudentProfile, cn } from '@/lib/utils';
+import { AVAILABLE_FIELDS } from './export-field-selector';
+import { format } from 'date-fns';
+
 export function StudentManagement() {
   const [students, setStudents] = useState<StudentDisplay[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -45,15 +52,18 @@ export function StudentManagement() {
   const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
   const [isFetchingProfile, setIsFetchingProfile] = useState(false);
   const [isImportLoading, setIsImportLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const csrfToken = localStorage.getItem('csrf_token') || '';
 
   useEffect(() => {
     const handler = setTimeout(() => {
-        setDebouncedSearchTerm(searchTerm);
-        setPagination(prev => ({...prev, pageIndex: 0})); // Reset to first page on new search
+      setDebouncedSearchTerm(searchTerm);
+      setPagination(prev => ({ ...prev, pageIndex: 0 })); // Reset to first page on new search
     }, 500); // 500ms debounce delay
 
     return () => {
-        clearTimeout(handler);
+      clearTimeout(handler);
     };
   }, [searchTerm]);
 
@@ -92,43 +102,43 @@ export function StudentManagement() {
     await fetchClassesFromApi(); // Ensure classes are fetched before getting them from storage
     const classesData = getClasses();
     setClasses(classesData);
-    const classMap = new Map(classesData.map(c => [c.id, c.name]));
+    const classMap = new Map(classesData.map(c => [c.class_id, c.name]));
 
     let displayData = profiles.map(p => {
-        return {
-            student_id: p.student.student_no,
-            name: `${p.student.first_name} ${p.student.last_name}`,
-            class_name: classMap.get(p.admissionDetails.class_assigned) || 'N/A',
-            class_id: p.admissionDetails.class_assigned,
-            status: p.admissionDetails.admission_status,
-            admission_date: p.admissionDetails.enrollment_date,
-            email: p.contactDetails.email,
-        };
+      return {
+        student_id: p.student.student_no,
+        name: `${p.student.first_name} ${p.student.last_name}`,
+        class_name: classMap.get(p.admissionDetails.class_assigned) || 'N/A',
+        class_id: p.admissionDetails.class_assigned,
+        status: p.admissionDetails.admission_status,
+        admission_date: p.admissionDetails.enrollment_date,
+        email: p.contactDetails.email,
+      };
     });
 
     // Client-side date filtering (backend doesn't support date filtering yet)
     if (dateRange?.from || dateRange?.to) {
-        displayData = displayData.filter(student => {
-            if (!student.admission_date) return false;
-            const admissionDate = new Date(student.admission_date);
-            if (isNaN(admissionDate.getTime())) return false;
+      displayData = displayData.filter(student => {
+        if (!student.admission_date) return false;
+        const admissionDate = new Date(student.admission_date);
+        if (isNaN(admissionDate.getTime())) return false;
 
-            // Normalize dates to start of day for comparison
-            const admissionDateOnly = new Date(admissionDate.getFullYear(), admissionDate.getMonth(), admissionDate.getDate());
+        // Normalize dates to start of day for comparison
+        const admissionDateOnly = new Date(admissionDate.getFullYear(), admissionDate.getMonth(), admissionDate.getDate());
 
-            if (dateRange.from && dateRange.to) {
-                const fromDateOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
-                const toDateOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
-                return admissionDateOnly >= fromDateOnly && admissionDateOnly <= toDateOnly;
-            } else if (dateRange.from) {
-                const fromDateOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
-                return admissionDateOnly >= fromDateOnly;
-            } else if (dateRange.to) {
-                const toDateOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
-                return admissionDateOnly <= toDateOnly;
-            }
-            return true;
-        });
+        if (dateRange.from && dateRange.to) {
+          const fromDateOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
+          const toDateOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
+          return admissionDateOnly >= fromDateOnly && admissionDateOnly <= toDateOnly;
+        } else if (dateRange.from) {
+          const fromDateOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
+          return admissionDateOnly >= fromDateOnly;
+        } else if (dateRange.to) {
+          const toDateOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
+          return admissionDateOnly <= toDateOnly;
+        }
+        return true;
+      });
     }
 
     displayData.sort((a, b) => new Date(b.admission_date).getTime() - new Date(a.admission_date).getTime());
@@ -160,6 +170,202 @@ export function StudentManagement() {
     refreshStudents();
   }, [pagination, debouncedSearchTerm, statusFilter, dateRange]);
 
+
+  const getFilteredProfilesForExport = async (selectedIds?: string[]) => {
+    // If selectedIds are provided and not empty, we only care about those specific students
+    if (selectedIds && selectedIds.length > 0) {
+      // We still fetch with the large limit but we filter by the specific IDs
+      const result = await getStudentProfiles(
+        1,
+        10000,
+        debouncedSearchTerm,
+        statusFilter,
+        currentUser?.email
+      );
+      return result.students.filter(p => selectedIds.includes(p.student.student_no));
+    }
+
+    // Always fetch all matching records for export when no specific selection
+    const result = await getStudentProfiles(
+      1,
+      10000,
+      debouncedSearchTerm,
+      statusFilter,
+      currentUser?.email
+    );
+    let profiles = result.students;
+
+    // Apply client-side date filtering if needed
+    if (dateRange?.from || dateRange?.to) {
+      profiles = profiles.filter(p => {
+        const dateStr = p.admissionDetails?.enrollment_date;
+        if (!dateStr) return false;
+        const admissionDate = new Date(dateStr);
+        if (isNaN(admissionDate.getTime())) return false;
+        const admissionDateOnly = new Date(admissionDate.getFullYear(), admissionDate.getMonth(), admissionDate.getDate());
+
+        if (dateRange.from && dateRange.to) {
+          const fromDateOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
+          const toDateOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
+          return admissionDateOnly >= fromDateOnly && admissionDateOnly <= toDateOnly;
+        } else if (dateRange.from) {
+          const fromDateOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
+          return admissionDateOnly >= fromDateOnly;
+        } else if (dateRange.to) {
+          const toDateOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
+          return admissionDateOnly <= toDateOnly;
+        }
+        return true;
+      });
+    }
+    return profiles;
+  };
+
+  const handleExportExcel = async (selectedIds: string[], fieldIds: string[]) => {
+    if (isExporting) return;
+    setIsExporting(true);
+    toast({ title: "Getting data ready...", description: "Preparing Excel export." });
+
+    try {
+      const profiles = await getFilteredProfilesForExport(selectedIds);
+
+      const fieldMap: Record<string, string> = {
+        'student_no': 'Student ID',
+        'first_name': 'First Name',
+        'last_name': 'Last Name',
+        'other_name': 'Other Name',
+        'gender': 'Gender',
+        'dob': 'Date of Birth',
+        'class_assigned': 'Class Assigned',
+        'admission_status': 'Admission Status',
+        'enrollment_date': 'Enrollment Date',
+        'phone': 'Phone',
+        'email': 'Email',
+        'address': 'Address',
+        'city': 'City',
+        'guardian_name': 'Guardian Name',
+        'guardian_phone': 'Guardian Phone',
+        'father_name': 'Father Name',
+        'mother_name': 'Mother Name',
+        'blood_group': 'Blood Group',
+        'allergies': 'Allergies',
+        'account_balance': 'Account Balance'
+      };
+
+      const dataToExport = profiles.map(p => {
+        const flatP = flattenStudentProfile(p);
+        const filteredP: Record<string, any> = {};
+        fieldIds.forEach(id => {
+          const excelHeader = fieldMap[id] || id;
+          filteredP[excelHeader] = flatP[excelHeader];
+        });
+        return filteredP;
+      });
+
+      if (dataToExport.length === 0) {
+        toast({ variant: "destructive", title: "No Data", description: "No students match the current selection/filters." });
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      XLSX.utils.book_append_sheet(wb, ws, 'Students');
+      XLSX.writeFile(wb, `students_export_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+
+      toast({ title: "Export Complete", description: `Exported ${dataToExport.length} students to Excel.` });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({ variant: "destructive", title: "Export Failed", description: "Could not generate Excel file." });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPDF = async (selectedFieldIds: string[], selectedIds: string[]) => {
+    if (isExporting) return;
+    setIsExporting(true);
+    toast({ title: "Getting data ready...", description: "Preparing PDF export." });
+
+    try {
+      const profiles = await getFilteredProfilesForExport(selectedIds);
+      if (profiles.length === 0) {
+        toast({ variant: "destructive", title: "No Data", description: "No students match the current filters." });
+        return;
+      }
+
+      const doc = new jsPDF();
+
+      // Get headers based on selected IDs
+      const headers = selectedFieldIds.map(id => {
+        const field = AVAILABLE_FIELDS.find(f => f.id === id);
+        return field ? field.label : id;
+      });
+
+      const flatData = profiles.map(p => flattenStudentProfile(p));
+
+      // Map data to selected columns
+      const body = flatData.map(flatP => {
+        return selectedFieldIds.map(id => {
+          // Map internal IDs to the keys used in flattenStudentProfile if they differ
+          // Actually flattenStudentProfile uses readable keys like 'Student ID', 'Phone'.
+          // I need a mapping from IDs (e.g. 'student_no') to Flat Keys (e.g. 'Student ID').
+          // Let's create a quick map or update flattenStudentProfile to use IDs?
+          // The plan was to use readable keys in Excel.
+          // For PDF, we need to lookup values.
+
+          // Let's reverse lookup or align them.
+          // It's cleaner if flattenStudentProfile returns object with IDs as keys, 
+          // and we map to Labels for Excel/PDF headers. 
+          // But for "Excel export all fields", we want readable headers.
+
+          // Workaround: simple switch/map here or fuzzy match.
+          // Or I can just manually map the few fields I defined in ExportFieldSelector.
+
+          const fieldMap: Record<string, string> = {
+            'student_no': 'Student ID',
+            'first_name': 'First Name',
+            'last_name': 'Last Name',
+            'other_name': 'Other Name',
+            'gender': 'Gender',
+            'dob': 'Date of Birth',
+            'class_assigned': 'Class Assigned',
+            'admission_status': 'Admission Status',
+            'enrollment_date': 'Enrollment Date',
+            'phone': 'Phone',
+            'email': 'Email',
+            'address': 'Address',
+            'city': 'City',
+            'guardian_name': 'Guardian Name',
+            'guardian_phone': 'Guardian Phone',
+            'father_name': 'Father Name',
+            'mother_name': 'Mother Name',
+            'blood_group': 'Blood Group',
+            'allergies': 'Allergies',
+            'account_balance': 'Account Balance'
+          };
+
+          const flatKey = fieldMap[id];
+          return flatP[flatKey] || '';
+        });
+      });
+
+      autoTable(doc, {
+        head: [headers],
+        body: body,
+        styles: { fontSize: 8 },
+      });
+      doc.save(`students_export_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
+
+      toast({ title: "Export Complete", description: `Exported ${profiles.length} students to PDF.` });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({ variant: "destructive", title: "Export Failed", description: "Could not generate PDF file." });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+
   const handleImportStudents = async (csvFile: File) => {
     if (!currentUser) return;
 
@@ -174,15 +380,15 @@ export function StudentManagement() {
       const formData = new FormData();
       formData.append('csv_file', csvFile, csvFile.name);
       formData.append('user_id', currentUser.user_id || currentUser.id);
-      
+
       // Create JSON object with user_id
-      
+
 
       console.log('Student Upload Request:', {
         apiUrl,
         fileName: csvFile.name,
         fileSize: csvFile.size,
-        
+
 
       });
 
@@ -191,6 +397,7 @@ export function StudentManagement() {
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-API-KEY': apiKey,
+          'X-CSRF-TOKEN': csrfToken
           // Don't set Content-Type when using FormData - browser sets it automatically
         },
         body: formData,
@@ -206,7 +413,12 @@ export function StudentManagement() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Student Upload Error Response Body:', errorText);
-        const errorData = JSON.parse(errorText).catch(() => ({}));
+        let errorData: any = {};
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          // ignore
+        }
         throw new Error(errorData.message || `Upload failed: ${response.status} ${response.statusText}`);
       }
 
@@ -282,12 +494,12 @@ export function StudentManagement() {
       });
     }
   };
-  
+
   const handleBulkUpdateStatus = async (studentIds: string[], status: AdmissionStatus) => {
     if (!currentUser) return;
     let successCount = 0;
     const errors: { studentId: string; message: string }[] = [];
-    
+
     for (const id of studentIds) {
       const result = await updateStudentStatus(id, status, currentUser.email);
       if (result.success) {
@@ -296,16 +508,16 @@ export function StudentManagement() {
         errors.push({ studentId: id, message: result.message || 'Unknown error' });
       }
     }
-    
+
     await refreshStudents();
-    
+
     if (successCount > 0) {
       toast({
         title: 'Status Update Successful',
         description: `Updated status to ${status} for ${successCount} of ${studentIds.length} students.`,
       });
     }
-    
+
     if (errors.length > 0) {
       const errorDetails = errors.map(e => `${e.studentId}: ${e.message}`).join('\n');
       toast({
@@ -314,7 +526,7 @@ export function StudentManagement() {
         description: errorDetails.length > 100 ? `${errors.length} student(s) failed to update. Check console for details.` : errorDetails,
       });
     }
-    
+
     addAuditLog({
       user: currentUser.email,
       name: currentUser.name,
@@ -322,7 +534,7 @@ export function StudentManagement() {
       details: `Updated status to "${status}" for ${successCount} students. Failed: ${errors.length}.`,
     });
   }
-  
+
   const handleBulkDelete = async (studentIds: string[]) => {
     if (!currentUser || !currentUser.is_super_admin) return;
     let successCount = 0;
@@ -399,6 +611,8 @@ export function StudentManagement() {
         onImport={handleImportStudents}
         onBulkUpdateStatus={handleBulkUpdateStatus}
         onBulkDelete={handleBulkDelete}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         onRefresh={refreshStudents}
         pagination={pagination}
         setPagination={setPagination}

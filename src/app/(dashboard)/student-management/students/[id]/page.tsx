@@ -4,8 +4,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects, updateAssignmentScore, deleteAssignmentScore, deleteAllAssignmentScores, getAssignmentActivities, getClassAssignmentActivities } from '@/lib/store';
-import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData, AssignmentScore, Subject, AssignmentActivity } from '@/lib/types';
+import { getStudentProfileById, getClasses, getUsers, updateStudentProfile, addAuditLog, addAcademicRecord, addDisciplinaryRecord, addAttendanceRecord, addCommunicationLog, addUploadedDocument, updateHealthRecords, deleteUploadedDocument, getSchoolProfile, getSubjects, updateAssignmentScore, deleteAssignmentScore, deleteAllAssignmentScores, getAssignmentActivities, getClassAssignmentActivities, fetchStudentScoresFromApi, fetchStudentSummaryScoresFromApi, fetchStudentReportListFromApi, getAcademicYears, fetchClassActivitiesApi, fetchSubjectsFromApi, fetchClassesFromApi, getActiveAcademicSession } from '@/lib/store';
+import { StudentProfile, DisciplinaryRecord, AcademicRecord, StudentAttendanceRecord, CommunicationLog, UploadedDocument, Class, HealthRecords, TermPayment, SchoolProfileData, AssignmentScore, Subject, AssignmentActivity, StudentActivityScore, StudentSummaryScore, StudentSubjectReport } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -65,11 +65,11 @@ function DetailItem({ icon, label, value }: { icon: React.ElementType, label: st
     )
 }
 
-function RecordCard<T>({ title, description, icon, records, columns, renderRow, emptyMessage = "No records found.", addRecordButton, bulkDeleteButton }: { 
-    title: string, 
-    description: string, 
+function RecordCard<T>({ title, description, icon, records, columns, renderRow, emptyMessage = "No records found.", addRecordButton, bulkDeleteButton }: {
+    title: string,
+    description: string,
     icon: React.ElementType,
-    records?: T[], 
+    records?: T[],
     columns: (string | React.ReactNode)[],
     renderRow: (record: T, index: number) => React.ReactNode,
     emptyMessage?: string,
@@ -88,7 +88,7 @@ function RecordCard<T>({ title, description, icon, records, columns, renderRow, 
                             <CardDescription>{description}</CardDescription>
                         </div>
                     </div>
-                     {bulkDeleteButton && <div className="flex-shrink-0">{bulkDeleteButton}</div>}
+                    {bulkDeleteButton && <div className="flex-shrink-0">{bulkDeleteButton}</div>}
                 </div>
             </CardHeader>
             <CardContent>
@@ -123,7 +123,7 @@ export default function StudentProfilePage() {
     const [age, setAge] = useState<number | null>(null);
     const [isEditFormOpen, setIsEditFormOpen] = useState(false);
     const [schoolProfile, setSchoolProfile] = useState<SchoolProfileData | null>(null);
-    
+
     // Dialog states
     const [isAcademicFormOpen, setIsAcademicFormOpen] = useState(false);
     const [isDisciplinaryFormOpen, setIsDisciplinaryFormOpen] = useState(false);
@@ -135,51 +135,95 @@ export default function StudentProfilePage() {
     const [editingScore, setEditingScore] = useState<AssignmentScore | null>(null);
     const [newScoreValue, setNewScoreValue] = useState<number | string>('');
     const [selectedScores, setSelectedScores] = useState<Record<string, boolean>>({});
+    const [activeTab, setActiveTab] = useState('academic');
+    const [academicSubTab, setAcademicSubTab] = useState('activity');
+    const [academicLoading, setAcademicLoading] = useState(false);
+    const [activityReportData, setActivityReportData] = useState<StudentActivityScore[]>([]);
+    const [summaryReportData, setSummaryReportData] = useState<StudentSummaryScore[]>([]);
+    const [subjectReportData, setSubjectReportData] = useState<StudentSubjectReport[]>([]);
+    const [activitySearch, setActivitySearch] = useState('');
+    const [summarySearch, setSummarySearch] = useState('');
 
-    
+
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
     const idCardRef = useRef<HTMLDivElement>(null);
     const isAdminOrHead = currentUser?.role === 'Admin' || currentUser?.role === 'Headmaster';
 
+    const fetchAcademicReports = async (studentNo: string, classId: string, subTab: string = academicSubTab) => {
+        if (!studentNo) return;
+
+        setAcademicLoading(true);
+        try {
+            const session = getActiveAcademicSession();
+            const activeYear = session?.year || "2025/2026"; // Fallback for dev if session is empty
+            const activeTerm = session?.term || "Term 1";
+
+            if (subTab === 'activity') {
+                const data = await fetchStudentScoresFromApi(studentNo, activeYear, activeTerm);
+                setActivityReportData(data);
+            } else if (subTab === 'summary') {
+                const data = await fetchStudentSummaryScoresFromApi(studentNo, activeYear, activeTerm);
+                setSummaryReportData(data);
+            } else if (subTab === 'subject') {
+                const data = await fetchStudentReportListFromApi(studentNo);
+                setSubjectReportData(data);
+            }
+        } catch (error) {
+            console.error("Error fetching academic reports:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to load report data.'
+            });
+        } finally {
+            setAcademicLoading(false);
+        }
+    };
+
     const fetchProfile = async () => {
         if (studentId) {
             const studentProfile = await getStudentProfileById(studentId);
             setProfile(studentProfile || null);
-            const allClasses = getClasses();
+
+            const [allClasses, allSubjects] = await Promise.all([
+                fetchClassesFromApi(),
+                fetchSubjectsFromApi()
+            ]);
+
             setClasses(allClasses);
-            setSubjects(getSubjects());
+            setSubjects(allSubjects);
             setSchoolProfile(getSchoolProfile());
-            
+
             if (studentProfile) {
-                const classActivities = getClassAssignmentActivities().filter(ca => ca.class_id === studentProfile.admissionDetails.class_assigned);
-                const activityIds = classActivities.map(ca => ca.activity_id);
-                setActivities(getAssignmentActivities().filter(a => activityIds.includes(a.id)));
+                const classId = studentProfile.admissionDetails.class_assigned;
+                const studentClass = allClasses.find(c => c.class_id === classId);
+                setClassName(studentClass?.name || 'N/A');
+
+                // If academic tab is active by default, fetch scores
+                if (activeTab === 'academic' && classId) {
+                    fetchAcademicReports(studentProfile.student.student_no, classId);
+                }
+
+                try {
+                    if (studentProfile.student.dob) {
+                        setAge(differenceInYears(new Date(), new Date(studentProfile.student.dob)));
+                    } else {
+                        setAge(null);
+                    }
+                } catch (e) {
+                    setAge(null);
+                }
             }
 
             setSelectedScores({});
-
-            if(studentProfile) {
-                const studentClass = allClasses.find(c => c.id === studentProfile.admissionDetails.class_assigned);
-                setClassName(studentClass?.name || 'N/A');
-                try {
-                  if (studentProfile.student.dob) {
-                    setAge(differenceInYears(new Date(), new Date(studentProfile.student.dob)));
-                  } else {
-                    setAge(null);
-                  }
-                } catch(e) {
-                  setAge(null);
-                  console.error("Invalid date of birth for student");
-                }
-            }
         }
     }
 
     useEffect(() => {
         fetchProfile();
     }, [studentId]);
-    
+
     const handleDownload = (dataUrl: string, fileName: string) => {
         const link = document.createElement("a");
         link.href = dataUrl;
@@ -214,13 +258,13 @@ export default function StudentProfilePage() {
 
     const handleUpdateProfile = async (values: Partial<StudentProfile>) => {
         if (!currentUser || !profile) return;
-        
+
         try {
             const updatedProfile = await updateStudentProfile(profile.student.student_no, values, currentUser.id);
             if (updatedProfile) {
                 setProfile(updatedProfile);
                 fetchProfile(); // re-fetch to ensure all derived state is updated
-                
+
                 toast({
                     title: 'Profile Updated',
                     description: "The student's profile has been successfully updated.",
@@ -242,7 +286,7 @@ export default function StudentProfilePage() {
             });
         }
     };
-    
+
     const handleUpdateHealthRecords = (values: HealthRecords) => {
         if (!currentUser || !profile) return;
         const updatedProfile = updateHealthRecords(profile.student.student_no, values, currentUser.id);
@@ -272,9 +316,9 @@ export default function StudentProfilePage() {
         closeDialog: () => void
     ) => {
         if (!currentUser || !profile) return;
-        
+
         const updatedProfile = addFunction(profile.student.student_no, record, currentUser.id);
-        
+
         if (updatedProfile) {
             setProfile(updatedProfile);
             addAuditLog({ user: currentUser.email, name: currentUser.name, action: logAction, details: logDetails });
@@ -282,7 +326,7 @@ export default function StudentProfilePage() {
             closeDialog();
         }
     };
-    
+
     const handleDeleteDocument = (documentId: string) => {
         if (!currentUser || !profile) return;
 
@@ -318,7 +362,7 @@ export default function StudentProfilePage() {
         }
 
         const updatedProfile = updateAssignmentScore(profile.student.student_no, editingScore.subject_id, editingScore.assignment_name, scoreValue, currentUser.id);
-        
+
         if (updatedProfile) {
             fetchProfile();
             addAuditLog({
@@ -337,7 +381,7 @@ export default function StudentProfilePage() {
         if (!currentUser || !profile) return;
 
         const updatedProfile = deleteAssignmentScore(profile.student.student_no, score.subject_id, score.assignment_name, currentUser.id);
-        
+
         if (updatedProfile) {
             fetchProfile();
             addAuditLog({
@@ -349,10 +393,10 @@ export default function StudentProfilePage() {
             toast({ title: 'Score Deleted', description: 'The assignment score has been removed.' });
         }
     };
-    
+
     const handleBulkDeleteScores = () => {
         if (!currentUser || !profile) return;
-        
+
         const scoresToDelete = Object.keys(selectedScores).filter(key => selectedScores[key]);
         if (scoresToDelete.length === 0) {
             toast({ variant: 'destructive', title: 'No Scores Selected', description: 'Please select scores to delete.' });
@@ -366,8 +410,8 @@ export default function StudentProfilePage() {
                 updatedProfile = deleteAssignmentScore(updatedProfile.student.student_no, subjectId, assignmentName, currentUser.id);
             }
         });
-        
-        if(updatedProfile) {
+
+        if (updatedProfile) {
             fetchProfile();
             addAuditLog({
                 user: currentUser.email,
@@ -395,12 +439,12 @@ export default function StudentProfilePage() {
     const initials = `${student.first_name[0]}${student.last_name[0]}`;
     const users = getUsers();
     const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown User';
-    
+
     const currentTermPayment = financialDetails?.payment_history.slice(-1)[0];
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
-    
+
     const scoresSelectedCount = Object.values(selectedScores).filter(Boolean).length;
-    
+
     const groupedScores = subjects.map(subject => {
         const subjectScores = (assignmentScores || []).filter(s => s.subject_id === subject.id);
         const activitiesData = activities.map(activity => {
@@ -410,7 +454,7 @@ export default function StudentProfilePage() {
             const maxScorePerActivity = 100;
             const weight = activity.weight;
             const weightedScore = numTaken > 0 ? (totalScore / (numTaken * maxScorePerActivity)) * weight : 0;
-            
+
             return {
                 ...activity,
                 scores: activityScores,
@@ -432,7 +476,7 @@ export default function StudentProfilePage() {
                     {isAdminOrHead && (
                         <>
                             <Button variant="outline" size="sm" asChild>
-                                <Link href="/student-management/students"><ArrowLeft className="mr-2 h-4 w-4"/>Back to List</Link>
+                                <Link href="/student-management/students"><ArrowLeft className="mr-2 h-4 w-4" />Back to List</Link>
                             </Button>
                             <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
                                 <DialogTrigger asChild>
@@ -506,7 +550,12 @@ export default function StudentProfilePage() {
                     </Card>
                 </div>
 
-                <Tabs defaultValue="academic">
+                <Tabs defaultValue="academic" onValueChange={(value) => {
+                    setActiveTab(value);
+                    if (value === 'academic' && profile) {
+                        fetchAcademicReports(profile.student.student_no, profile.admissionDetails.class_assigned);
+                    }
+                }}>
                     <TabsList className="grid w-full grid-cols-7">
                         <TabsTrigger value="contact">Contact & Guardian</TabsTrigger>
                         <TabsTrigger value="academic">Academic</TabsTrigger>
@@ -541,50 +590,193 @@ export default function StudentProfilePage() {
                         </Card>
                     </TabsContent>
                     <TabsContent value="academic" className="space-y-6">
-                        <Card>
-                             <CardHeader>
-                                <CardTitle>Academic Performance</CardTitle>
-                                <CardDescription>Detailed breakdown of Continuous Assessment (SBA) and Exam scores.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {groupedScores.length > 0 ? (
-                                    <Accordion type="single" collapsible className="w-full">
-                                        {groupedScores.map(({ subject, activities }) => (
-                                            <AccordionItem value={subject.id} key={subject.id}>
-                                                <AccordionTrigger className="text-lg font-semibold">{subject.name}</AccordionTrigger>
-                                                <AccordionContent className="pl-2">
-                                                    <div className="space-y-4">
-                                                        {activities.map(activity => (
-                                                            <div key={activity.id} className="p-4 border rounded-md bg-muted/50">
-                                                                <div className="flex justify-between items-start">
-                                                                    <div>
-                                                                        <h4 className="font-semibold text-md">{activity.name}</h4>
-                                                                        <p className="text-sm text-muted-foreground">
-                                                                            Taken: {activity.numTaken} of {activity.expected_per_term} | Weight: {activity.weight}%
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="text-right">
-                                                                        <p className="font-bold text-lg">{(activity.weightedScore).toFixed(1)} / {activity.weight}</p>
-                                                                        <p className="text-xs text-muted-foreground">Raw Score: {activity.totalScore}</p>
-                                                                    </div>
-                                                                </div>
-                                                                {activity.scores.length > 0 && (
-                                                                     <div className="mt-2 text-xs text-muted-foreground">
-                                                                         Scores: {activity.scores.map(s => `${s.assignment_name.replace(activity.name, '').trim()}: ${s.score}`).join(', ')}
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                        <Tabs defaultValue="activity" onValueChange={(val) => {
+                            setAcademicSubTab(val);
+                            if (profile) fetchAcademicReports(profile.student.student_no, profile.admissionDetails.class_assigned, val);
+                        }}>
+                            <TabsList className="bg-muted/50 p-1">
+                                <TabsTrigger value="activity">Activity Report</TabsTrigger>
+                                <TabsTrigger value="summary">Summary Report</TabsTrigger>
+                                <TabsTrigger value="subject">Subject Report</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="activity" className="space-y-4 pt-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Activity className="h-5 w-5 text-primary" />
+                                            Activity Report
+                                        </CardTitle>
+                                        <CardDescription>All activities and scores obtained by the student.</CardDescription>
+                                        <div className="relative mt-4">
+                                            <Activity className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Search by activity or subject..."
+                                                className="pl-9"
+                                                value={activitySearch}
+                                                onChange={(e) => setActivitySearch(e.target.value)}
+                                            />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {academicLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                                                <p className="text-muted-foreground animate-pulse">Loading activity scores...</p>
+                                            </div>
+                                        ) : activityReportData.length > 0 ? (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Activity</TableHead>
+                                                        <TableHead>Subject</TableHead>
+                                                        <TableHead>Score</TableHead>
+                                                        <TableHead>Term</TableHead>
+                                                        <TableHead>Academic Year</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {activityReportData
+                                                        .filter(item =>
+                                                            item.activity_name?.toLowerCase().includes(activitySearch.toLowerCase()) ||
+                                                            item.subject_name?.toLowerCase().includes(activitySearch.toLowerCase())
+                                                        )
+                                                        .map((item) => (
+                                                            <TableRow key={item.id}>
+                                                                <TableCell className="font-medium">{item.activity_name}</TableCell>
+                                                                <TableCell>{item.subject_name}</TableCell>
+                                                                <TableCell>
+                                                                    <Badge variant="secondary">{item.score}</Badge>
+                                                                </TableCell>
+                                                                <TableCell>{item.term}</TableCell>
+                                                                <TableCell>{item.academic_year}</TableCell>
+                                                            </TableRow>
                                                         ))}
-                                                    </div>
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                        ))}
-                                    </Accordion>
-                                ) : (
-                                    <p className="text-muted-foreground text-center py-8">No assignment scores have been recorded for any subject yet.</p>
-                                )}
-                            </CardContent>
-                        </Card>
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <p className="text-center py-8 text-muted-foreground">No activity scores found.</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="summary" className="space-y-4 pt-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <FileText className="h-5 w-5 text-primary" />
+                                            Summary Report
+                                        </CardTitle>
+                                        <CardDescription>Summarized performance report per assessment category.</CardDescription>
+                                        <div className="relative mt-4">
+                                            <FileText className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Search by category or subject..."
+                                                className="pl-9"
+                                                value={summarySearch}
+                                                onChange={(e) => setSummarySearch(e.target.value)}
+                                            />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {academicLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                                                <p className="text-muted-foreground animate-pulse">Loading summary scores...</p>
+                                            </div>
+                                        ) : summaryReportData.length > 0 ? (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Assessment Category</TableHead>
+                                                        <TableHead>Subject</TableHead>
+                                                        <TableHead>Total Score</TableHead>
+                                                        <TableHead>Percentage Score</TableHead>
+                                                        <TableHead>Term</TableHead>
+                                                        <TableHead>Academic Year</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {summaryReportData
+                                                        .filter(item =>
+                                                            item.assignment_activity_name?.toLowerCase().includes(summarySearch.toLowerCase()) ||
+                                                            item.subject_name?.toLowerCase().includes(summarySearch.toLowerCase())
+                                                        )
+                                                        .map((item) => (
+                                                            <TableRow key={item.id}>
+                                                                <TableCell className="font-medium">{item.assignment_activity_name}</TableCell>
+                                                                <TableCell>{item.subject_name}</TableCell>
+                                                                <TableCell>
+                                                                    <Badge className="bg-primary/10 text-primary hover:bg-primary/20">{item.total_score}</Badge>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200">{item.percentage}%</Badge>
+                                                                </TableCell>
+                                                                <TableCell>{item.term}</TableCell>
+                                                                <TableCell>{item.academic_year}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <p className="text-center py-8 text-muted-foreground">No summary scores found.</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="subject" className="space-y-4 pt-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <BookCopy className="h-5 w-5 text-primary" />
+                                            Subject Analysis
+                                        </CardTitle>
+                                        <CardDescription>Detailed breakdown of scores grouped by subject.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {academicLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                                                <p className="text-muted-foreground animate-pulse">Loading academic scores...</p>
+                                            </div>
+                                        ) : subjectReportData.length > 0 ? (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Subject Name</TableHead>
+                                                        <TableHead>SBA SCORE 50%</TableHead>
+                                                        <TableHead>EXAM SCORE 50%</TableHead>
+                                                        <TableHead>TOTAL SCORE 100%</TableHead>
+                                                        <TableHead>Position</TableHead>
+                                                        <TableHead>Grade</TableHead>
+                                                        <TableHead>Remarks</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {subjectReportData.map((report) => (
+                                                        <TableRow key={report.id}>
+                                                            <TableCell className="font-medium">{report.subject_name}</TableCell>
+                                                            <TableCell>{report['sba_50%']}</TableCell>
+                                                            <TableCell>{report['exam_50%']}</TableCell>
+                                                            <TableCell className="font-bold">{report['total_score_100%']}</TableCell>
+                                                            <TableCell>{report.subject_position || 'N/A'}</TableCell>
+                                                            <TableCell>
+                                                                <Badge variant="outline">{report.grade}</Badge>
+                                                            </TableCell>
+                                                            <TableCell>{report.remarks}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <p className="text-center py-8 text-muted-foreground">No subject report found for this session.</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
                     </TabsContent>
                     <TabsContent value="financials">
                         <Card>
@@ -626,7 +818,7 @@ export default function StudentProfilePage() {
                                                 </CardContent>
                                             </Card>
                                         </div>
-                                        
+
                                         <Card className="bg-muted/50">
                                             <CardContent className="p-4 flex items-center justify-between">
                                                 <p className="font-medium">Total Account Balance</p>
@@ -670,7 +862,7 @@ export default function StudentProfilePage() {
                     <TabsContent value="health" asChild>
                         <Card>
                             <CardHeader className="flex flex-row justify-between items-start">
-                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-4">
                                     <HeartPulse className="h-6 w-6 text-primary" />
                                     <div>
                                         <CardTitle>Health Records</CardTitle>
@@ -678,18 +870,18 @@ export default function StudentProfilePage() {
                                     </div>
                                 </div>
                                 {currentUser?.role === 'Admin' && (
-                                <Dialog open={isHealthFormOpen} onOpenChange={setIsHealthFormOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Health Records</Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader><DialogTitle>Edit Health Records</DialogTitle></DialogHeader>
-                                        <HealthRecordsForm 
-                                            defaultValues={healthRecords}
-                                            onSubmit={handleUpdateHealthRecords}
-                                        />
-                                    </DialogContent>
-                                </Dialog>
+                                    <Dialog open={isHealthFormOpen} onOpenChange={setIsHealthFormOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit Health Records</Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader><DialogTitle>Edit Health Records</DialogTitle></DialogHeader>
+                                            <HealthRecordsForm
+                                                defaultValues={healthRecords}
+                                                onSubmit={handleUpdateHealthRecords}
+                                            />
+                                        </DialogContent>
+                                    </Dialog>
                                 )}
                             </CardHeader>
                             <CardContent className="space-y-6">
@@ -769,7 +961,7 @@ export default function StudentProfilePage() {
                                     <Dialog open={isAttendanceFormOpen} onOpenChange={setIsAttendanceFormOpen}>
                                         <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button></DialogTrigger>
                                         <DialogContent><DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
-                                            <AttendanceRecordForm onSubmit={values => handleAddRecord(addAttendanceRecord, {...values, student_id: studentId}, "Add Attendance Record", `Logged attendance for ${format(new Date(values.date), 'yyyy-MM-dd')}`, "Record Added", "Attendance record added successfully.", () => setIsAttendanceFormOpen(false))} />
+                                            <AttendanceRecordForm onSubmit={values => handleAddRecord(addAttendanceRecord, { ...values, student_id: studentId }, "Add Attendance Record", `Logged attendance for ${format(new Date(values.date), 'yyyy-MM-dd')}`, "Record Added", "Attendance record added successfully.", () => setIsAttendanceFormOpen(false))} />
                                         </DialogContent>
                                     </Dialog>
                                 }

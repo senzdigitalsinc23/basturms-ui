@@ -13,12 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { MultiSelectPopover } from './multi-select-popover';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -68,12 +68,17 @@ export function SubjectManagement() {
     const fetchAllSubjects = async () => {
         try {
             const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+            const csrfToken = localStorage.getItem('csrf_token') || '';
+
+
             const subjectsRes = await fetch('/api/academic/subjects/list', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-API-KEY': apiKey,
+                    'X-CSRF-TOKEN': csrfToken,
                 },
             });
 
@@ -107,9 +112,68 @@ export function SubjectManagement() {
                 }));
             }
 
-            const dormant = allSubjectsData.filter(sub => sub.status == 'dormant');
+        } catch (err: any) {
+            console.error('Failed to fetch all subjects:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: err.message || 'Failed to load inactive subjects.'
+            });
+        }
+    };
 
-            
+    // Fetch all subjects including inactive ones
+    const fetchDormantSubjects = async () => {
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+            const csrfToken = localStorage.getItem('csrf_token') || '';
+
+
+            const subjectsRes = await fetch('/api/academic/subjects/list', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    'X-API-KEY': apiKey,
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    status: 'dormant',
+                }),
+            });
+
+            if (!subjectsRes.ok) {
+                throw new Error(`Failed to fetch all subjects: ${subjectsRes.statusText}`);
+            }
+
+            const subjectsResponse = await subjectsRes.json();
+
+            let dormantSubjectsData: Subject[] = [];
+            if (Array.isArray(subjectsResponse.data)) {
+                dormantSubjectsData = subjectsResponse.data.map((item: any) => ({
+                    id: item.id || item.subject_id,
+                    code: item.code || item.subject_code || item.subject_id || '',
+                    name: item.name || item.subject_name,
+                    level: item.level || 'Primary',
+                    category: item.category || 'Core',
+                    description: item.description || '',
+                    status: item.status, // Ensure is_active is captured
+                }));
+            } else if (subjectsResponse.data && Array.isArray(subjectsResponse.data.subjects)) {
+                dormantSubjectsData = subjectsResponse.data.subjects.map((item: any) => ({
+                    id: item.id || item.subject_id,
+                    code: item.code || item.subject_code || item.subject_id || '',
+                    name: item.name || item.subject_name,
+                    level: item.level || 'Primary',
+                    category: item.category || 'Core',
+                    description: item.description || '',
+                    status: item.status,
+                }));
+            }
+
+            const dormant = dormantSubjectsData.filter(sub => sub.status == 'dormant');
+
             setDormantSubjects(dormant); // Set dormant subjects for the modal
             setShowDormantDialog(true); // Open the dormant subjects modal
         } catch (err: any) {
@@ -183,7 +247,7 @@ export function SubjectManagement() {
             const subjectsResponse = await subjectsRes.json();
 
             let subjectsData: Subject[] = [];
-            if (Array.isArray(subjectsResponse.data) ) {
+            if (Array.isArray(subjectsResponse.data)) {
                 subjectsData = subjectsResponse.data.map((item: any) => {
                     const mappedSubject = {
                         id: item.id || item.subject_id,
@@ -256,7 +320,7 @@ export function SubjectManagement() {
             }
 
             setClasses(classesData);
-            
+
         } catch (err: any) {
             console.error('Failed to fetch subjects:', err);
             toast({
@@ -293,6 +357,8 @@ export function SubjectManagement() {
     useEffect(() => {
         fetchData();
     }, []);
+
+
 
     // Search functionality
     useEffect(() => {
@@ -334,12 +400,16 @@ export function SubjectManagement() {
 
         try {
             const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+            const csrfToken = localStorage.getItem('csrf_token') || '';
+
             const res = await fetch('/api/academic/subjects/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-API-KEY': apiKey,
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     subject_code: newSubjectCode.trim(),
@@ -360,7 +430,7 @@ export function SubjectManagement() {
             // Also save to local storage for consistency
             addSubject(newSubjectName);
 
-            if(user) {
+            if (user) {
                 // You might want to add audit logging here if needed
             }
 
@@ -389,11 +459,11 @@ export function SubjectManagement() {
         const newAssignmentsForCurrentSubject = classIds.map(class_id => ({ class_id, subject_id: subjectId }));
 
         saveClassSubjects([...otherSubjectAssignments, ...newAssignmentsForCurrentSubject]);
-        
+
         fetchData(); // Refetch to show changes
         toast({ title: 'Assignments Updated', description: 'Subject assignments have been saved.' });
     }
-    
+
     const handleBulkAssign = () => {
         if (selectedSubjects.length === 0 || selectedClasses.length === 0) {
             toast({
@@ -430,7 +500,7 @@ export function SubjectManagement() {
                 }
             });
         });
-        
+
         // Combine existing assignments with new ones, ensuring no duplicates overall
         const combinedAssignments = [...currentAssignments, ...newAssignments];
         const uniqueAssignments = Array.from(new Set(combinedAssignments.map(a => JSON.stringify(a)))).map(s => JSON.parse(s));
@@ -442,7 +512,7 @@ export function SubjectManagement() {
             title: 'Bulk Assign Successful',
             description: `${selectedSubjects.length} subject(s) assigned to ${selectedClasses.length} class(es).`
         });
-        
+
         // Reset selections
         setSelectedSubjects([]);
         setSelectedClasses([]);
@@ -451,12 +521,16 @@ export function SubjectManagement() {
     const handleDeleteSubject = async (subjectId: string) => {
         try {
             const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+            const csrfToken = localStorage.getItem('csrf_token') || '';
+
             const res = await fetch('/api/academic/subjects/delete', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-API-KEY': apiKey,
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     subject_id: subjectId,
@@ -469,11 +543,11 @@ export function SubjectManagement() {
             }
 
             const response = await res.json();
-            
+
             // Also remove from local storage for consistency
             storeDeleteSubject(subjectId);
 
-            if(user) {
+            if (user) {
                 // You might want to add audit logging here if needed
             }
 
@@ -496,12 +570,16 @@ export function SubjectManagement() {
 
         try {
             const token = localStorage.getItem('campusconnect_token');
+            const csrfToken = localStorage.getItem('csrf_token') || '';
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
             const res = await fetch('/api/academic/subjects/delete', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-API-KEY': apiKey,
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     subject_id: subjectsToDelete,
@@ -514,7 +592,7 @@ export function SubjectManagement() {
             }
 
             const response = await res.json();
-            
+
 
             // Also remove from local storage for consistency
             subjectsToDelete.forEach(subjectId => storeDeleteSubject(subjectId));
@@ -566,12 +644,16 @@ export function SubjectManagement() {
 
         try {
             const token = localStorage.getItem('campusconnect_token');
+            const csrfToken = localStorage.getItem('csrf_token') || '';
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
             const res = await fetch('/api/academic/subjects/update', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-API-KEY': apiKey,
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     id: editingSubject.id,
@@ -590,7 +672,7 @@ export function SubjectManagement() {
             }
 
             const response = await res.json();
-            
+
             fetchData();
             setEditingSubject(null);
             setEditCode('');
@@ -612,27 +694,30 @@ export function SubjectManagement() {
     const handleActivateDormantSubject = async (id: number, subject_id: string, subjectName: string, description: string, level: string, category: string) => {
         try {
             const token = localStorage.getItem('campusconnect_token');
+            const csrfToken = localStorage.getItem('csrf_token') || '';
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
 
             const res = await fetch('/api/academic/subjects/update', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
-                    'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-API-KEY': apiKey,
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
-                    id: id, subject_code: subject_id, 
-                    subject_name: subjectName, description: description, 
+                    id: id, subject_code: subject_id,
+                    subject_name: subjectName, description: description,
                     level: level, category: category, status: 'active'
                 }),
             });
 
             const response = await res.json();
-            
+
             fetchData();
             setShowDormantDialog(false);
             setSearchTerm('');
-            toast({ title: 'Subject Activated', description: `${ subjectName } has been reactivated.` });
+            toast({ title: 'Subject Activated', description: `${subjectName} has been reactivated.` });
         } catch (err: any) {
             console.error('Failed to activate subject:', err);
             toast({
@@ -645,49 +730,51 @@ export function SubjectManagement() {
 
     return (
         <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Bulk Assign Subjects to Classes</CardTitle>
-                    <CardDescription>Select multiple subjects and assign them to multiple classes at once.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col md:flex-row gap-4 items-center">
-                    <div className="flex-1 w-full">
-                        <p className="text-sm font-medium mb-2">Subjects to Assign</p>
-                        <MultiSelectPopover
-                            title="Subjects"
-                            options={(subjects || []).map(s => ({ value: s.id, label: `${s.code} - ${s.name} (${s.level})` }))}
-                            selectedValues={selectedSubjects}
-                            onChange={setSelectedSubjects}
-                        />
-                    </div>
-                    <div className="flex-1 w-full">
-                        <p className="text-sm font-medium mb-2">
-                            Assign to Classes
-                            {selectedSubjects.length > 0 && (
-                                <span className="text-xs text-muted-foreground ml-2">
-                                    (filtered by subject levels)
-                                </span>
-                            )}
-                        </p>
-                        <MultiSelectPopover
-                            title="Classes"
-                            options={(getAvailableClassesForBulkAssignment() || []).map(c => ({ value: c.id, label: c.name }))}
-                            selectedValues={selectedClasses}
-                            onChange={setSelectedClasses}
-                        />
-                        {selectedSubjects.length > 0 && getAvailableClassesForBulkAssignment().length === 0 && (
-                            <p className="text-xs text-amber-600 mt-1">
-                                No classes available for the selected subjects' levels
+            {false && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Bulk Assign Subjects to Classes</CardTitle>
+                        <CardDescription>Select multiple subjects and assign them to multiple classes at once.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col md:flex-row gap-4 items-center">
+                        <div className="flex-1 w-full">
+                            <p className="text-sm font-medium mb-2">Subjects to Assign</p>
+                            <MultiSelectPopover
+                                title="Subjects"
+                                options={(subjects || []).map(s => ({ value: s.id, label: `${s.code} - ${s.name} (${s.level})` }))}
+                                selectedValues={selectedSubjects}
+                                onChange={setSelectedSubjects}
+                            />
+                        </div>
+                        <div className="flex-1 w-full">
+                            <p className="text-sm font-medium mb-2">
+                                Assign to Classes
+                                {selectedSubjects.length > 0 && (
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                        (filtered by subject levels)
+                                    </span>
+                                )}
                             </p>
-                        )}
-                    </div>
-                </CardContent>
-                <CardFooter className="justify-end">
-                    <Button onClick={handleBulkAssign}>Assign Selected</Button>
-                </CardFooter>
-            </Card>
+                            <MultiSelectPopover
+                                title="Classes"
+                                options={(getAvailableClassesForBulkAssignment() || []).map(c => ({ value: c.id, label: c.name }))}
+                                selectedValues={selectedClasses}
+                                onChange={setSelectedClasses}
+                            />
+                            {selectedSubjects.length > 0 && getAvailableClassesForBulkAssignment().length === 0 && (
+                                <p className="text-xs text-amber-600 mt-1">
+                                    No classes available for the selected subjects' levels
+                                </p>
+                            )}
+                        </div>
+                    </CardContent>
+                    <CardFooter className="justify-end">
+                        <Button onClick={handleBulkAssign}>Assign Selected</Button>
+                    </CardFooter>
+                </Card>
+            )}
 
-            <Separator />
+            {false && <Separator />}
 
             {/* Search and Bulk Actions */}
             <div className="flex items-center justify-between gap-4">
@@ -766,7 +853,7 @@ export function SubjectManagement() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={fetchAllSubjects} // This will now open the modal
+                            onClick={fetchDormantSubjects} // This will now open the modal
                         >
                             Show Dormant Subjects
                         </Button>
@@ -811,7 +898,7 @@ export function SubjectManagement() {
                             <TableHead>Subject Name</TableHead>
                             <TableHead>Level</TableHead>
                             <TableHead>Category</TableHead>
-                            <TableHead>Assigned to Classes</TableHead>
+                            {false && <TableHead>Assigned to Classes</TableHead>}
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -819,78 +906,79 @@ export function SubjectManagement() {
                         {(filteredSubjects || []).map(subject => {
                             const isInactive = showInactiveSubjects && !(subjects || []).some(s => s.id === subject.id);
                             return (
-                            <TableRow key={subject.id}>
-                                <TableCell>
-                                    <Checkbox
-                                        checked={subjectSelection[subject.id] || false}
-                                        onCheckedChange={(checked) =>
-                                            setSubjectSelection(prev => ({
-                                                ...prev,
-                                                [subject.id]: !!checked
-                                            }))
-                                        }
-                                    />
-                                </TableCell>
-                                <TableCell className="font-mono text-sm font-medium">{subject.code}</TableCell>
-                                <TableCell className="font-medium">
-                                    {subject.name}
-                                    {isInactive && (
-                                        <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            Inactive
+                                <TableRow key={subject.id}>
+                                    <TableCell>
+                                        <Checkbox
+                                            checked={subjectSelection[subject.id] || false}
+                                            onCheckedChange={(checked) =>
+                                                setSubjectSelection(prev => ({
+                                                    ...prev,
+                                                    [subject.id]: !!checked
+                                                }))
+                                            }
+                                        />
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm font-medium">{subject.code}</TableCell>
+                                    <TableCell className="font-medium">
+                                        {subject.name}
+                                        {isInactive && (
+                                            <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                Inactive
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {subject.level}
                                         </span>
-                                    )}
-                                </TableCell>
-                                <TableCell>
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {subject.level}
-                                    </span>
-                                </TableCell>
-                                <TableCell>
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                        subject.category === 'Core'
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${subject.category === 'Core'
                                             ? 'bg-green-100 text-green-800'
                                             : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                        {subject.category}
-                                    </span>
-                                </TableCell>
-                                <TableCell>
-                                    <MultiSelectPopover
-                                        title="Classes"
-                                        options={(getClassesForLevel(subject.level) || []).map(c => ({ value: c.id, label: c.name }))}
-                                        selectedValues={subject.assigned_classes || []}
-                                        onChange={(values) => handleAssignmentChange(subject.id, values)}
-                                    />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleEditSubject(subject)}
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>This will permanently delete the subject "{subject.name}" and all its assignments.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteSubject(subject.id)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
+                                            }`}>
+                                            {subject.category}
+                                        </span>
+                                    </TableCell>
+                                    {false && (
+                                        <TableCell>
+                                            <MultiSelectPopover
+                                                title="Classes"
+                                                options={(getClassesForLevel(subject.level) || []).map(c => ({ value: c.id, label: c.name }))}
+                                                selectedValues={subject.assigned_classes || []}
+                                                onChange={(values) => handleAssignmentChange(subject.id, values)}
+                                            />
+                                        </TableCell>
+                                    )}
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleEditSubject(subject)}
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>This will permanently delete the subject "{subject.name}" and all its assignments.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteSubject(subject.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
                             );
                         })}
                         {filteredSubjects.length === 0 && !searchTerm && (

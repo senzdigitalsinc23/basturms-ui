@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getSubjects, saveClassSubjects, addAuditLog, fetchClassesFromApi, fetchSubjectsFromApi, fetchClassSubjectAssignmentsFromApi } from '@/lib/store';
-import { Class, Subject, ClassSubject, ClassSubjectAssignment } from '@/lib/types';
+import { getClasses, getSubjects, saveClassSubjects, addAuditLog, fetchClassesFromApi, fetchSubjectsFromApi, fetchClassSubjectAssignmentsFromApi, fetchClassActivitiesApi } from '@/lib/store';
+import { Class, Subject, ClassSubject, ClassSubjectAssignment, AssignmentActivity } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Trash2, Edit } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const formSchema = z.object({
@@ -46,6 +47,12 @@ export function ClassManagement() {
     const [dormantClassRowSelection, setDormantClassRowSelection] = useState<Record<string, boolean>>({});
     const [isAssignedSubjectsModalOpen, setIsAssignedSubjectsModalOpen] = useState(false);
     const [currentClassAssignments, setCurrentClassAssignments] = useState<ClassSubjectAssignment[]>([]);
+    const [isClassActivitiesModalOpen, setIsClassActivitiesModalOpen] = useState(false);
+    const [currentClassActivities, setCurrentClassActivities] = useState<AssignmentActivity[]>([]);
+    const [isAssignSubjectsModalOpen, setIsAssignSubjectsModalOpen] = useState(false);
+    const [availableSubjectsForAssignment, setAvailableSubjectsForAssignment] = useState<Subject[]>([]);
+    const [selectedClassForAssignment, setSelectedClassForAssignment] = useState<Class | null>(null);
+    const [subjectsToAssignSelection, setSubjectsToAssignSelection] = useState<Record<string, boolean>>({});
     const { user } = useAuth();
     const { toast } = useToast();
     const [assignedSubjectRowSelection, setAssignedSubjectRowSelection] = useState<Record<string, boolean>>({});
@@ -58,6 +65,8 @@ export function ClassManagement() {
         },
     });
 
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
     const editForm = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -67,14 +76,18 @@ export function ClassManagement() {
         },
     });
 
+
     const fetchData = async () => {
         const fetchedClasses = await fetchClassesFromApi();
         const fetchedSubjects = await fetchSubjectsFromApi();
-        const fetchedClassSubjectAssignments = await fetchClassSubjectAssignmentsFromApi();
+        const fetchedAssignments = await fetchClassSubjectAssignmentsFromApi(true);
+
+
+        //console.log('fetchsubjects: ', fetchedSubjects);
         setClasses(fetchedClasses);
         setSubjects(fetchedSubjects);
-        setClassSubjectAssignments(fetchedClassSubjectAssignments);
-        // setClassSubjects(addClassSubject());
+        setClassSubjectAssignments(fetchedAssignments);
+
     };
 
     useEffect(() => {
@@ -82,7 +95,7 @@ export function ClassManagement() {
     }, []);
 
     useEffect(() => {
-        
+
         if (selectedClass) {
             const subjectsForClass = classSubjectAssignments
                 .filter(cs => cs.class_id === selectedClass)
@@ -95,15 +108,15 @@ export function ClassManagement() {
     }, [selectedClass, classSubjectAssignments]);
 
     const availableSubjects = subjects.filter(subject => {
-        
+
         const assignedToClass = classSubjectAssignments.some(cs => cs.subject_id === subject.id && cs.class_id === selectedClass);
 
-        
-        return assignedToClass || selectedClass === undefined; 
+
+        return assignedToClass || selectedClass === undefined;
     })
 
-    
-    
+
+
 
     const handleSave = () => {
         if (!selectedClass || !user) return;
@@ -113,7 +126,7 @@ export function ClassManagement() {
 
         // Add the new assignments for the selected class
         const newAssignmentsForClass = selectedSubjects.map(subject_id => ({ class_id: selectedClass, subject_id }));
-        
+
         const newClassSubjects = [...otherClassAssignments, ...newAssignmentsForClass];
         saveClassSubjects(newClassSubjects);
         fetchData(); // Refetch all data
@@ -122,7 +135,7 @@ export function ClassManagement() {
             title: 'Assignments Saved',
             description: `Subject assignments for ${classes.find(c => c.id === selectedClass)?.name} have been updated.`
         });
-        
+
         addAuditLog({
             user: user.email,
             name: user.name,
@@ -140,6 +153,7 @@ export function ClassManagement() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ class_name: values.name, class_id: values.class_id }),
             });
@@ -172,6 +186,7 @@ export function ClassManagement() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ status: "inactive" }),
             });
@@ -182,7 +197,7 @@ export function ClassManagement() {
             }
 
             const response = await res.json();
-            
+
             if (response.success && Array.isArray(response.data)) {
                 setDormantClasses(response.data);
             } else {
@@ -210,13 +225,14 @@ export function ClassManagement() {
         if (!editingClass || !user) return;
         try {
             const token = localStorage.getItem('campusconnect_token');
-            
+
             const res = await fetch(`/api/academic/classes/update`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ id: editingClass.id, class_name: values.name, class_id: values.class_id }),
             });
@@ -256,18 +272,19 @@ export function ClassManagement() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ class_ids: [classId] }),
             });
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                
+
                 throw new Error(errorData.message || `Failed to delete class: ${res.statusText}`);
             }
 
             const response = await res.json();
-            
+
             toast({ title: 'Class Deleted', description: `Class has been deleted.` });
             setIsEditClassOpen(false);
             fetchData(); // Refresh data after deletion
@@ -290,7 +307,8 @@ export function ClassManagement() {
     const handleBulkDeleteClasses = async () => {
         const classIdsToDelete = Object.keys(rowSelection).filter(id => rowSelection[id]);
 
-        
+
+
         if (classIdsToDelete.length === 0) return;
 
         try {
@@ -301,6 +319,7 @@ export function ClassManagement() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ class_ids: classIdsToDelete }),
             });
@@ -311,7 +330,9 @@ export function ClassManagement() {
             }
 
             const response = await res.json();
-            
+
+            //console.log('response', response);
+
             toast({ title: 'Classes Deleted', description: `Selected classes have been deleted.` });
             setRowSelection({}); // Clear selection after bulk delete
             fetchData(); // Refresh data after bulk deletion
@@ -333,8 +354,8 @@ export function ClassManagement() {
 
     const isAllSelected = classes.length > 0 && Object.keys(rowSelection).length === classes.length;
 
-    const handleActivateClass = async (id: string,  classId: string, className: string) => {
-        
+    const handleActivateClass = async (id: string, classId: string, className: string) => {
+
         try {
             const token = localStorage.getItem('campusconnect_token');
             const res = await fetch('/api/academic/classes/update', {
@@ -343,13 +364,14 @@ export function ClassManagement() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ id: id, class_id: classId, class_name: className, status: "active" }),
             });
 
             const response = await res.json();
-            console.log(response);
-            
+            //console.log(response);
+
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
@@ -382,6 +404,7 @@ export function ClassManagement() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({ id: classIdsToActivate }),
             });
@@ -393,8 +416,8 @@ export function ClassManagement() {
 
             const response = await res.json();
 
-            console.log(response);
-            
+            //console.log(response);
+
             toast({ title: 'Classes Activated', description: `Selected dormant classes have been activated.` });
             setIsViewDormantClassesOpen(false);
             setDormantClassRowSelection({}); // Clear selection after bulk activation
@@ -417,10 +440,21 @@ export function ClassManagement() {
 
     const handleViewAssignedSubjects = async (cls: Class) => {
         // Fetch assignments specifically for the selected class
-        const assignments = await fetchClassSubjectAssignmentsFromApi(true, cls.class_id);
+
+        // Fetch assignments specifically for the selected class
+        const assignments = await fetchClassSubjectAssignmentsFromApi(true, cls.id);
+
         setCurrentClassAssignments(assignments.filter(assignment => assignment.is_active));
         setIsAssignedSubjectsModalOpen(true);
     };
+
+    const handleViewClassActivities = async (cls: Class) => {
+        const activities = await fetchClassActivitiesApi(cls.id);
+        setCurrentClassActivities(activities);
+        setIsClassActivitiesModalOpen(true);
+        setSelectedClassForAssignment(cls); // Reusing this for the modal title context
+    };
+
 
     const handleUnassignSubject = async (assignmentId: string) => {
         if (!user) {
@@ -429,6 +463,12 @@ export function ClassManagement() {
         }
 
         try {
+            // Find the assignment to get class_id and subject_id
+            const assignment = currentClassAssignments.find(assignment => assignment.id === assignmentId);
+            if (!assignment) {
+                throw new Error('Assignment not found');
+            }
+
             // Optimistically update the UI
             setClassSubjectAssignments(prev => prev.filter(assignment => assignment.id !== assignmentId));
             setCurrentClassAssignments(prev => prev.filter(assignment => assignment.id !== assignmentId));
@@ -436,14 +476,19 @@ export function ClassManagement() {
             const token = localStorage.getItem('campusconnect_token');
             const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
 
-            const response = await fetch(`/api/academic/class-subjects/unassign/${assignmentId}`, {
-                method: 'DELETE',
+            const response = await fetch('/api/academic/class-subjects/bulk-unassign', {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                     'X-API-KEY': apiKey,
                     'X-User-ID': user.id,
+                    'X-CSRF-TOKEN': csrfToken
                 },
+                body: JSON.stringify({
+                    class_id: assignment.class_id,
+                    subject_ids: [assignment.subject_id]
+                })
             });
 
             if (!response.ok) {
@@ -453,7 +498,7 @@ export function ClassManagement() {
             toast({ title: "Success", description: "Subject unassigned successfully." });
             await addAuditLog({ user: user.email, name: user.name, action: 'Unassign Subject', details: `Unassigned subject from class (Assignment ID: ${assignmentId})` });
         } catch (error) {
-            console.error("Error unassigning subject:", error);
+            //console.error("Error unassigning subject:", error);
             toast({ title: "Error", description: "Failed to unassign subject.", variant: "destructive" });
             // Revert optimistic update if API call fails
             fetchData();
@@ -466,14 +511,32 @@ export function ClassManagement() {
             return;
         }
 
-        const selectedAssignmentIds = Object.keys(assignedSubjectRowSelection).filter(id => assignedSubjectRowSelection[id]);
 
+        const selectedAssignmentIds = Object.keys(assignedSubjectRowSelection).filter(subject_id => assignedSubjectRowSelection[subject_id]);
+        //console.log("Selected Assignment IDs: ", assignedSubjectRowSelection);
         if (selectedAssignmentIds.length === 0) {
             toast({ title: "Info", description: "No subjects selected for unassignment." });
             return;
         }
 
         try {
+            // Get the selected assignments to extract class_id and subject_ids
+            const selectedAssignments = currentClassAssignments.filter(assignment => selectedAssignmentIds.includes(assignment.subject_id));
+
+            if (selectedAssignments.length === 0) {
+                toast({ title: "Error", description: "Selected assignments not found.", variant: "destructive" });
+                return;
+            }
+
+            // Extract class_id (should be the same for all assignments in this modal)
+            const class_id = selectedAssignments[0].class_id;
+            // Extract subject_ids from selected assignments
+            const subject_ids = selectedAssignments.map(assignment => assignment.subject_id);
+
+            //console.log("Selected Assignments: ", selectedAssignments);
+            //console.log("Class ID: ", class_id);
+            //console.log("Subject IDs: ", subject_ids);
+
             // Optimistically update the UI
             setClassSubjectAssignments(prev => prev.filter(assignment => !selectedAssignmentIds.includes(assignment.id)));
             setCurrentClassAssignments(prev => prev.filter(assignment => !selectedAssignmentIds.includes(assignment.id)));
@@ -489,21 +552,176 @@ export function ClassManagement() {
                     'Authorization': `Bearer ${token}`,
                     'X-API-KEY': apiKey,
                     'X-User-ID': user.id,
+                    'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({ assignment_ids: selectedAssignmentIds })
+                body: JSON.stringify({ class_id, subject_ids })
             });
+
+
+            const responseJson = await response.json();
+
+            //console.log("Response: ", responseJson);
 
             if (!response.ok) {
                 throw new Error('Failed to bulk unassign subjects');
             }
 
             toast({ title: "Success", description: "Selected subjects unassigned successfully." });
-            await addAuditLog({ user: user.email, name: user.name, action: 'Bulk Unassign Subjects', details: `Bulk unassigned subjects from class (Assignment IDs: ${selectedAssignmentIds.join(', ')})` });
+            await addAuditLog({ user: user.email, name: user.name, action: 'Bulk Unassign Subjects', details: `Bulk unassigned subjects from class (Class ID: ${class_id}, Subject IDs: ${subject_ids.join(', ')})` });
         } catch (error) {
             console.error("Error bulk unassigning subjects:", error);
             toast({ title: "Error", description: "Failed to bulk unassign subjects.", variant: "destructive" });
             // Revert optimistic update if API call fails
             fetchData();
+        }
+    };
+
+    const handleOpenAssignSubjects = async (cls: Class) => {
+        setSelectedClassForAssignment(cls);
+
+        // Fetch all active subjects
+        const allSubjects = await fetchSubjectsFromApi(true);
+
+        // Get currently assigned subjects for this class
+        const currentAssignments = await fetchClassSubjectAssignmentsFromApi(true, cls.id);
+        const assignedSubjectIds = currentAssignments
+            .filter(assignment => assignment.is_active)
+            .map(assignment => assignment.subject_id);
+
+        // Helper to determine class level
+        const getClassLevel = (name: string): string => {
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('jhs') || lowerName.includes('junior high')) return 'JHS';
+            if (lowerName.includes('kindergarten') || lowerName.includes('kg')) return 'KG';
+            if (lowerName.includes('nursery') || lowerName.includes('creche')) return 'Creche';
+            return 'Primary'; // Default to Primary
+        };
+
+        const classLevel = getClassLevel(cls.name);
+
+        // Filter to show only active unassigned subjects that match the class level
+        const unassignedSubjects = allSubjects.filter(subject =>
+            !assignedSubjectIds.includes(subject.id) &&
+            subject.is_active &&
+            (subject.level === classLevel || !subject.level)
+        );
+
+        setAvailableSubjectsForAssignment(unassignedSubjects);
+        setSubjectsToAssignSelection({});
+        setIsAssignSubjectsModalOpen(true);
+    };
+
+    const handleAssignSubjects = async () => {
+        if (!user || !selectedClassForAssignment) {
+            toast({ title: "Error", description: "Missing required information.", variant: "destructive" });
+            return;
+        }
+
+        const selectedSubjectIds = Object.keys(subjectsToAssignSelection).filter(id => subjectsToAssignSelection[id]);
+
+        if (selectedSubjectIds.length === 0) {
+            toast({ title: "Info", description: "No subjects selected for assignment." });
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+            const payload = {
+                class_id: [selectedClassForAssignment.id],
+                subject_id: selectedSubjectIds
+            };
+
+            //console.log('Assigning subjects - Payload:', payload);
+
+            const response = await fetch('/api/academic/class-subjects/assign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': apiKey,
+                    'X-User-ID': user.id,
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const responseJson = await response.json();
+            //console.log("Assign Response: ", responseJson);
+
+            if (!response.ok) {
+                throw new Error(responseJson.message || 'Failed to assign subjects');
+            }
+
+            toast({ title: "Success", description: `Successfully assigned ${selectedSubjectIds.length} subject(s) to ${selectedClassForAssignment.name}.` });
+            await addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Assign Subjects to Class',
+                details: `Assigned ${selectedSubjectIds.length} subjects to class ${selectedClassForAssignment.name} (ID: ${selectedClassForAssignment.id})`
+            });
+
+            // Close modal and refresh data
+            setIsAssignSubjectsModalOpen(false);
+            setSubjectsToAssignSelection({});
+            fetchData();
+        } catch (error: any) {
+            console.error("Error assigning subjects:", error);
+            toast({ title: "Error", description: error.message || "Failed to assign subjects.", variant: "destructive" });
+        }
+    };
+
+    const handleAssignSingleSubject = async (subjectId: string) => {
+        if (!user || !selectedClassForAssignment) {
+            toast({ title: "Error", description: "Missing required information.", variant: "destructive" });
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('campusconnect_token');
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+            const payload = {
+                class_id: [selectedClassForAssignment.id],
+                subject_id: [subjectId]
+            };
+
+            //console.log('Assigning single subject - Payload:', payload);
+
+            const response = await fetch('/api/academic/class-subjects/assign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-API-KEY': apiKey,
+                    'X-User-ID': user.id,
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const responseJson = await response.json();
+            //console.log("Assign Single Subject Response: ", responseJson);
+
+            if (!response.ok) {
+                throw new Error(responseJson.message || 'Failed to assign subject');
+            }
+
+            const subjectName = availableSubjectsForAssignment.find(s => s.id === subjectId)?.name || 'Subject';
+            toast({ title: "Success", description: `Successfully assigned ${subjectName} to ${selectedClassForAssignment.name}.` });
+            await addAuditLog({
+                user: user.email,
+                name: user.name,
+                action: 'Assign Subject to Class',
+                details: `Assigned ${subjectName} to class ${selectedClassForAssignment.name} (ID: ${selectedClassForAssignment.id})`
+            });
+
+            // Refresh the available subjects list
+            await handleOpenAssignSubjects(selectedClassForAssignment);
+        } catch (error: any) {
+            console.error("Error assigning subject:", error);
+            toast({ title: "Error", description: error.message || "Failed to assign subject.", variant: "destructive" });
         }
     };
 
@@ -536,7 +754,7 @@ export function ClassManagement() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         )}
-                         {user?.role === 'Admin' || user?.is_super_admin || user?.role === 'I.T Manager' ? (
+                        {user?.role === 'Admin' || user?.is_super_admin || user?.role === 'I.T Manager' ? (
                             <Button variant="outline" size="sm" onClick={fetchDormantClasses}>
                                 View Dormant Classes
                             </Button>
@@ -599,31 +817,62 @@ export function ClassManagement() {
                                     />
                                 </TableHead>
                                 <TableHead>Class Name</TableHead>
-                                <TableHead className="w-[50px]">Active</TableHead>
-                                <TableHead className="min-w-[150px]">Assigned Subjects</TableHead>
+                                {/* <TableHead className="min-w-[150px]">Assigned Subjects</TableHead> */}
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {classes.map((cls) => {
+
+                                {/* console.log("Current class assignment: ", classSubjectAssignments) */ }
+                                // console.log(`Debug: Checking class: ${cls.name} (id: ${cls.id}, class_id: ${cls.class_id})`);
+                                // if (classSubjectAssignments.length > 0) {
+                                //    console.log(`Debug: Sample assignment class_id: ${classSubjectAssignments[0].class_id}`);
+                                // }
+
                                 const assignedSubjects = classSubjectAssignments.filter(
-                                    (assignment) => assignment.class_id === cls.class_id && assignment.is_active
+                                    (assignment) => (assignment.class_id === cls.id || assignment.class_id === cls.class_id) && assignment.is_active
                                 ).map(assignment => assignment.subject_name);
+
                                 return (
-                                    <TableRow key={cls.class_id} data-state={rowSelection[cls.class_id as string] && "selected"}>
+                                    <TableRow key={cls.id} data-state={rowSelection[cls.id] && "selected"}>
                                         <TableCell>
                                             <Checkbox
-                                                checked={rowSelection[cls.class_id as string] || false}
+                                                checked={rowSelection[cls.id] || false}
                                                 onCheckedChange={checked => setRowSelection(prev => ({
                                                     ...prev,
-                                                    [cls.class_id as string]: !!checked
+                                                    [cls.id]: !!checked
                                                 }))}
                                                 aria-label="Select row"
                                             />
                                         </TableCell>
-                                        <TableCell className="font-medium">{cls.name}</TableCell>
-                                        <TableCell>{cls.is_active ? "Yes" : "No"}</TableCell>
-                                        <TableCell>
+                                        <TableCell className="font-medium">
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger className="cursor-help text-left w-full hover:underline decoration-dotted underline-offset-4">
+                                                        {cls.name}
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="right" className="max-w-[300px]">
+
+                                                        {assignedSubjects.length > 0 ? (
+                                                            <div className="space-y-2">
+                                                                <p className="font-semibold border-b pb-1">Assigned Subjects:</p>
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {assignedSubjects.map(subjectName => (
+                                                                        <Badge key={subjectName} variant="secondary" className="text-xs bg-secondary/50 border-secondary-foreground/20">
+                                                                            {subjectName}
+                                                                        </Badge>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-muted-foreground italic">No subjects assigned</p>
+                                                        )}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </TableCell>
+                                        {/* <TableCell>
                                             {assignedSubjects.length > 0 ? (
                                                 <div className="flex flex-wrap gap-1">
                                                     {assignedSubjects.map(subjectName => (
@@ -633,7 +882,7 @@ export function ClassManagement() {
                                             ) : (
                                                 <span className="text-muted-foreground">No subjects assigned</span>
                                             )}
-                                        </TableCell>
+                                        </TableCell> */}
                                         <TableCell className="text-right">
                                             <Button
                                                 variant="ghost"
@@ -646,9 +895,25 @@ export function ClassManagement() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
+                                                onClick={() => handleOpenAssignSubjects(cls)}
+                                                className="mr-2"
+                                            >
+                                                Assign Subjects
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
                                                 onClick={() => handleViewAssignedSubjects(cls)}
+                                                className="mr-2"
                                             >
                                                 View Assigned Subjects
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleViewClassActivities(cls)}
+                                            >
+                                                View Activities
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -657,9 +922,9 @@ export function ClassManagement() {
                         </TableBody>
                     </Table>
                 </div>
-                
+
             </CardContent>
-            
+
             <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -783,10 +1048,13 @@ export function ClassManagement() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
+
+
                         {currentClassAssignments.length > 0 ? (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead className="w-[50px]">Select</TableHead>
                                         <TableHead>Subject Name</TableHead>
                                         <TableHead>Academic Year</TableHead>
                                         <TableHead>Semester</TableHead>
@@ -831,11 +1099,176 @@ export function ClassManagement() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsAssignedSubjectsModalOpen(false)}>Close</Button>
-                        {currentClassAssignments.length > 0 && (
+                        {false && currentClassAssignments.length > 0 && (
                             <Button variant="destructive" onClick={handleBulkUnassignSubjects}>
-                                Unassign Selected ({Object.keys(assignedSubjectRowSelection).filter(id => assignedSubjectRowSelection[id]).length})
+                                Unassign Selected ({Object.keys(assignedSubjectRowSelection).filter(subject_id => assignedSubjectRowSelection[subject_id]).length})
                             </Button>
                         )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Assign Subjects Modal */}
+            <Dialog open={isAssignSubjectsModalOpen} onOpenChange={setIsAssignSubjectsModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Assign Subjects to {selectedClassForAssignment?.name}</DialogTitle>
+                        <DialogDescription>
+                            Select subjects to assign to this class. Only unassigned subjects are shown.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4 overflow-y-auto">
+                        {availableSubjectsForAssignment.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[50px]">
+                                            <Checkbox
+                                                checked={
+                                                    availableSubjectsForAssignment.length > 0 &&
+                                                    Object.keys(subjectsToAssignSelection).length === availableSubjectsForAssignment.length &&
+                                                    Object.values(subjectsToAssignSelection).every(v => v)
+                                                }
+                                                onCheckedChange={checked => {
+                                                    const newSelection: Record<string, boolean> = {};
+                                                    if (checked) {
+                                                        availableSubjectsForAssignment.forEach(subject => {
+                                                            newSelection[subject.id] = true;
+                                                        });
+                                                    }
+                                                    setSubjectsToAssignSelection(newSelection);
+                                                }}
+                                            />
+                                        </TableHead>
+                                        <TableHead>Subject Name</TableHead>
+                                        <TableHead>Subject Code</TableHead>
+                                        <TableHead>Level</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {availableSubjectsForAssignment.map((subject) => (
+                                        //console.log(subject),
+                                        <TableRow key={subject.id}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={subjectsToAssignSelection[subject.id] || false}
+                                                    onCheckedChange={checked => setSubjectsToAssignSelection(prev => ({
+                                                        ...prev,
+                                                        [subject.id]: !!checked
+                                                    }))}
+                                                />
+                                            </TableCell>
+                                            <TableCell>{subject.name}</TableCell>
+                                            <TableCell>{subject.code || 'N/A'}</TableCell>
+                                            <TableCell>{subject.level || 'N/A'}</TableCell>
+                                            <TableCell>{subject.category || 'N/A'}</TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                        >
+                                                            Assign
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Confirm Assignment</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to assign "{subject.name}" to {selectedClassForAssignment?.name}?
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleAssignSingleSubject(subject.id)}>
+                                                                Confirm
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <p className="text-center text-muted-foreground py-4">
+                                All subjects have been assigned to this class.
+                            </p>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAssignSubjectsModalOpen(false)}>Close</Button>
+                        {availableSubjectsForAssignment.length > 0 && Object.keys(subjectsToAssignSelection).filter(id => subjectsToAssignSelection[id]).length > 0 && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button>
+                                        Assign Selected ({Object.keys(subjectsToAssignSelection).filter(id => subjectsToAssignSelection[id]).length})
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirm Bulk Assignment</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to assign {Object.keys(subjectsToAssignSelection).filter(id => subjectsToAssignSelection[id]).length} subject(s) to {selectedClassForAssignment?.name}?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleAssignSubjects}>
+                                            Confirm
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* View Class Activities Modal */}
+            <Dialog open={isClassActivitiesModalOpen} onOpenChange={setIsClassActivitiesModalOpen}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Activities for {selectedClassForAssignment?.name}</DialogTitle>
+                        <DialogDescription>
+                            List of activities assigned to this class.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        {currentClassActivities.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Activity Name</TableHead>
+                                        <TableHead>Expected Per Term</TableHead>
+                                        <TableHead>Weight</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {currentClassActivities.map((activity) => (
+                                        <TableRow key={activity.id}>
+                                            <TableCell>{activity.act_name || activity.name}</TableCell>
+                                            <TableCell>{activity.expected_per_term}</TableCell>
+                                            <TableCell>{activity.weight}%</TableCell>
+                                            <TableCell>
+                                                <Badge variant={activity.is_active ? "default" : "secondary"}>
+                                                    {activity.is_active ? "Active" : "Inactive"}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <p className="text-center text-muted-foreground py-4">No activities found for this class.</p>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsClassActivitiesModalOpen(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -23,12 +23,21 @@ export function MultiSelectPopover({ title, options, selectedValues, onChange }:
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selectedValues.length > 0 ? (
-                            selectedValues.map(value => {
-                                const option = options.find(o => o.value === value);
-                                return <Badge variant="secondary" key={value}>{option?.label || value}</Badge>;
-                            }).slice(0, 3)
-                        ) : `Select ${title}...`}
-                        {selectedValues.length > 3 && <Badge variant="outline">+{selectedValues.length - 3} more</Badge>}
+                            <>
+                                {Array.from(new Set(selectedValues.filter(v => v !== null && v !== undefined))).slice(0, 3).map(value => {
+                                    const stringValue = String(value);
+                                    const option = options.find(o => String(o.class_id) === stringValue);
+                                    return <Badge variant="secondary" key={stringValue}>{option?.label || stringValue}</Badge>;
+                                })}
+                                {selectedValues.length > 3 && (
+                                    <Badge variant="outline" key="more-badge">
+                                        +{selectedValues.length - 3} more
+                                    </Badge>
+                                )}
+                            </>
+                        ) : (
+                            <span key="select-placeholder">Select {title}...</span>
+                        )}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -39,15 +48,16 @@ export function MultiSelectPopover({ title, options, selectedValues, onChange }:
                     <CommandList>
                         <CommandEmpty>No results found.</CommandEmpty>
                         <CommandGroup>
-                            {options.map(option => {
-                                const isSelected = selectedValues.includes(option.value);
+                            {[...new Map(options.filter(o => o?.value).map(o => [o.value, o])).values()].map(option => {
+                                const optionValue = String(option.class_id);
+                                const isSelected = selectedValues.some(v => String(v) === optionValue);
                                 return (
                                     <CommandItem
-                                        key={option.value}
+                                        key={optionValue}
                                         onSelect={() => {
                                             const newSelection = isSelected
-                                                ? selectedValues.filter(v => v !== option.value)
-                                                : [...selectedValues, option.value];
+                                                ? selectedValues.filter(v => String(v) !== optionValue)
+                                                : [...selectedValues, optionValue];
                                             onChange(newSelection);
                                         }}
                                     >

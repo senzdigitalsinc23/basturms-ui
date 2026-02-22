@@ -1,8 +1,8 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport, getStaffAppointmentHistory, getStaff, getUserById, getRolePermissions } from '@/lib/store';
-import { Class, StudentProfile, AcademicYear, Term, User, Permission } from '@/lib/types';
+import { getClasses, getStudentProfiles, getAcademicYears, calculateStudentReport, StudentReport, saveStudentReport, getStudentReport, getStaffAppointmentHistory, getStaff, getUserById, getRolePermissions, fetchStudentReportListFromApi, fetchAcademicYearsFromApi, fetchClassesFromApi, getSchoolProfile, fetchClassRankings } from '@/lib/store';
+import { Class, StudentProfile, AcademicYear, Term, User, Permission, StudentSubjectReport } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,7 +30,7 @@ type ReportEditorProps = {
 function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open, onOpenChange }: ReportEditorProps) {
     const { user } = useAuth();
     const { toast } = useToast();
-    
+
     const [report, setReport] = useState(initialReport);
 
     useEffect(() => {
@@ -52,7 +52,7 @@ function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open,
     const isTeacher = user?.role === 'Teacher';
     const isAdmin = user?.role === 'Admin' || user?.role === 'Headmaster';
     const isFinalized = status === 'Final';
-    
+
     const handleSave = () => {
         if (!report || !user || isFinalized) return;
 
@@ -66,15 +66,15 @@ function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open,
         updatedReport.conduct = (document.getElementById('conduct') as HTMLTextAreaElement)?.value || conduct;
         updatedReport.talentAndInterest = (document.getElementById('talent') as HTMLTextAreaElement)?.value || talentAndInterest;
         updatedReport.classTeacherRemarks = (document.getElementById('teacher-remarks') as HTMLTextAreaElement)?.value || classTeacherRemarks;
-        if(isAdmin) {
-          updatedReport.headTeacherRemarks = (document.getElementById('head-remarks') as HTMLTextAreaElement)?.value || headTeacherRemarks;
+        if (isAdmin) {
+            updatedReport.headTeacherRemarks = (document.getElementById('head-remarks') as HTMLTextAreaElement)?.value || headTeacherRemarks;
         }
 
         const appendTeacherSig = (document.getElementById('teacher-signature') as HTMLInputElement)?.checked;
         if (appendTeacherSig) {
             if (!classTeacherUser?.signature) {
-                 toast({ variant: "destructive", title: "Signature Missing", description: "Class teacher's signature not found on system. Cannot sign report." });
-                 return;
+                toast({ variant: "destructive", title: "Signature Missing", description: "Class teacher's signature not found on system. Cannot sign report." });
+                return;
             }
             updatedReport.classTeacherSignature = classTeacherUser.signature;
         }
@@ -91,12 +91,12 @@ function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open,
             }
             updatedReport.headTeacherSignature = headTeacherUser.signature;
         }
-        
+
         updatedReport.status = updatedReport.headTeacherSignature ? 'Final' : (updatedReport.classTeacherSignature ? 'Provisional' : report.status);
-        
+
         onSave(updatedReport);
     }
-    
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl">
@@ -105,9 +105,9 @@ function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open,
                     <DialogDescription>Add remarks and other details to finalize the report. {isFinalized && <span className="font-bold text-destructive">This report is finalized and cannot be edited.</span>}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto p-2">
-                     <div className="p-4 border rounded-md">
+                    <div className="p-4 border rounded-md">
                         <h4 className="font-semibold mb-2">Conduct & Attitude</h4>
-                         <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label htmlFor="conduct">Conduct</Label>
                                 <Textarea id="conduct" defaultValue={conduct} disabled={isFinalized || (!isAdmin && !isTeacher)} />
@@ -122,19 +122,19 @@ function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open,
                     <div className="p-4 border rounded-md">
                         <h4 className="font-semibold mb-2">Class Teacher's Remarks & Signature</h4>
                         <Textarea id="teacher-remarks" defaultValue={classTeacherRemarks} disabled={isFinalized || (!isAdmin && !isTeacher)} />
-                         <div className="flex items-center space-x-2 mt-2">
-                           <Checkbox id="teacher-signature" defaultChecked={!!classTeacherSignature} disabled={isFinalized || (!isAdmin && !isTeacher)} />
-                           <Label htmlFor="teacher-signature">Append Class Teacher's Signature</Label>
+                        <div className="flex items-center space-x-2 mt-2">
+                            <Checkbox id="teacher-signature" defaultChecked={!!classTeacherSignature} disabled={isFinalized || (!isAdmin && !isTeacher)} />
+                            <Label htmlFor="teacher-signature">Append Class Teacher's Signature</Label>
                         </div>
                     </div>
 
                     {isAdmin && (
                         <div className="p-4 border rounded-md bg-muted/50">
                             <h4 className="font-semibold mb-2">Head Teacher's Remarks & Signature</h4>
-                            <Textarea id="head-remarks" defaultValue={headTeacherRemarks} disabled={isFinalized}/>
-                           <div className="flex items-center space-x-2 mt-2">
-                               <Checkbox id="head-signature" defaultChecked={!!headTeacherSignature} disabled={isFinalized || !classTeacherSignature}/>
-                               <Label htmlFor="head-signature" className={cn(!classTeacherSignature && "text-muted-foreground")}>Append Head Teacher's Signature & Finalize</Label>
+                            <Textarea id="head-remarks" defaultValue={headTeacherRemarks} disabled={isFinalized} />
+                            <div className="flex items-center space-x-2 mt-2">
+                                <Checkbox id="head-signature" defaultChecked={!!headTeacherSignature} disabled={isFinalized || !classTeacherSignature} />
+                                <Label htmlFor="head-signature" className={cn(!classTeacherSignature && "text-muted-foreground")}>Append Head Teacher's Signature & Finalize</Label>
                             </div>
                             {!classTeacherSignature && <p className="text-xs text-destructive mt-1">Class Teacher must sign first.</p>}
                         </div>
@@ -160,7 +160,7 @@ function ReportEditor({ report: initialReport, onSave, onRemoveSignatures, open,
                             </AlertDialogContent>
                         </AlertDialog>
                     )}
-                     <Button onClick={handleSave} disabled={isFinalized}>Save Report</Button>
+                    <Button onClick={handleSave} disabled={isFinalized}>Save Report</Button>
                 </div>
             </DialogContent>
         </Dialog>
@@ -185,46 +185,84 @@ export function ReportCardGenerator() {
     const [generateForDefaulters, setGenerateForDefaulters] = useState(false);
     const [hasDefaulterPerm, setHasDefaulterPerm] = useState(false);
 
+    const [availableTerms, setAvailableTerms] = useState<{ value: string; label: string }[]>([]);
+
     useEffect(() => {
-        const classes = getClasses();
-        setAllClasses(classes);
-        if (user?.role === 'Admin' || user?.role === 'Headmaster') {
-            setTeacherClasses(classes);
-        } else if (user?.role === 'Teacher') {
-            const staffList = getStaff();
-            const currentTeacher = staffList.find(s => s.user_id === user.id);
-            if (currentTeacher) {
-                const appointments = getStaffAppointmentHistory();
-                const latestAppointment = appointments
-                    .filter(a => a.staff_id === currentTeacher.staff_id)
-                    .sort((a,b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
-                if (latestAppointment?.class_assigned) {
-                    const assignedClasses = classes.filter(c => latestAppointment.class_assigned?.includes(c.id));
-                    setTeacherClasses(assignedClasses);
+        const initData = async () => {
+            setIsLoading(true);
+            try {
+                const [classes, years] = await Promise.all([
+                    fetchClassesFromApi(),
+                    fetchAcademicYearsFromApi()
+                ]);
+
+                setAllClasses(classes);
+                setAcademicYears(years);
+
+                // Populate teacher classes
+                if (user?.role === 'Admin' || user?.role === 'Headmaster') {
+                    setTeacherClasses(classes);
+                } else if (user?.role === 'Teacher') {
+                    const staffList = getStaff();
+                    const currentTeacher = staffList.find(s => s.user_id === user?.id);
+                    if (currentTeacher) {
+                        const appointments = getStaffAppointmentHistory();
+                        const latestAppointment = appointments
+                            .filter(a => a.staff_id === currentTeacher.staff_id)
+                            .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0];
+                        if (latestAppointment?.class_assigned) {
+                            const assignedClasses = classes.filter(c => latestAppointment.class_assigned?.includes(c.id));
+                            setTeacherClasses(assignedClasses);
+                        }
+                    }
                 }
-            }
-        }
-        
-        const years = getAcademicYears();
-        setAcademicYears(years);
 
-        const activeYear = years.find(y => y.status === 'Active');
-        if (activeYear) {
-            const currentActiveTerm = activeYear.terms.find(t => t.status === 'Active');
-            if (currentActiveTerm) {
-                const termValue = `${currentActiveTerm.name} ${activeYear.year}`;
-                setActiveTerm({ value: termValue, label: `${currentActiveTerm.name} (${activeYear.year})` });
-                setSelectedTerm(termValue);
-            }
-        }
-        
-        // Check permissions
-        if(user) {
-            const allPerms = getRolePermissions();
-            const userPerms = allPerms[user.role] || [];
-            setHasDefaulterPerm(userPerms.includes('financials:billing'));
-        }
+                // Generate terms list and find active one
+                const terms: { value: string; label: string }[] = [];
+                let defaultTermValue: string | undefined;
 
+                years.forEach((year, yIdx) => {
+                    const yearLabel = year.year || 'Unknown Year';
+                    (year.terms || []).forEach((term, tIdx) => {
+                        const termName = term.name || 'Unnamed Term';
+                        const termValue = `${termName} ${yearLabel}`;
+                        terms.push({
+                            value: termValue,
+                            label: `${termName} (${yearLabel})`
+                        });
+
+                        if (year.status === 'Active' && term.status === 'Active') {
+                            defaultTermValue = termValue;
+                            setActiveTerm({ value: termValue, label: `${termName} (${yearLabel})` });
+                        }
+                    });
+                });
+
+                setAvailableTerms(terms);
+                if (defaultTermValue) {
+                    setSelectedTerm(defaultTermValue);
+                } else if (terms.length > 0) {
+                    // Fallback to most recent term if no active one found
+                    setSelectedTerm(terms[0].value);
+                }
+
+                // Check permissions
+                if (user) {
+                    const allPerms = getRolePermissions();
+                    const userPerms = allPerms[user.role] || [];
+                    setHasDefaulterPerm(userPerms.includes('financials:billing'));
+                }
+            } catch (error) {
+                console.error("Error initializing report generator:", error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to load classes or terms.' });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (user) {
+            initData();
+        }
     }, [user]);
 
     const handleGenerateReports = async () => {
@@ -232,51 +270,136 @@ export function ReportCardGenerator() {
             toast({ variant: 'destructive', title: 'Selection Required', description: 'Please select both a class and a term.' });
             return;
         }
-        if (selectedTerm !== activeTerm?.value) {
-            toast({ variant: 'destructive', title: 'Term Not Active', description: 'Report cards can only be generated for the current active term.' });
-            return;
-        }
+        // Removed restriction for active term to allow viewing/printing previous reports
 
         setIsLoading(true);
-        const result = await getStudentProfiles(1, 10000); // Fetch all students
-        const allStudentsInClass = result.students.filter(p => p && p.admissionDetails?.class_assigned === selectedClass);
-        const skippedStudents: string[] = [];
+        try {
+            // Parse academic year and term from selectedTerm
+            // selectedTerm is e.g. "1st Term 2023/2024"
+            const termParts = selectedTerm.split(' ');
+            const yearParam = termParts[termParts.length - 1];
+            const termParam = termParts.slice(0, termParts.length - 1).join(' ');
 
-        const reports = allStudentsInClass
-            .map(student => {
-                if (!student || !student.student?.student_no) return null; // Add defensive check
-                const isFeeDefaulter = (student.financialDetails?.account_balance || 0) < 0;
-                if (isFeeDefaulter && !generateForDefaulters) {
-                    skippedStudents.push(`${student.student.first_name} ${student.student.last_name}`);
-                    return null;
+            const [profilesResult, apiReports, classRankings] = await Promise.all([
+                getStudentProfiles(1, 10000, '', undefined, user?.id, selectedClass),
+                fetchStudentReportListFromApi(undefined, yearParam, termParam, selectedClass),
+                fetchClassRankings(selectedClass, yearParam, termParam)
+            ]);
+
+            const allStudentsInClass = profilesResult.students.filter(p => {
+                const match = p && String(p.admissionDetails?.class_assigned) === String(selectedClass);
+                return match;
+            });
+
+            const skippedStudents: string[] = [];
+
+            // Group API reports by student_no
+            const reportsByStudent: Record<string, StudentSubjectReport[]> = {};
+            apiReports.forEach(r => {
+                const key = r.student_no;
+                if (!reportsByStudent[key]) reportsByStudent[key] = [];
+                reportsByStudent[key].push(r);
+            });
+
+            const reports: StudentReport[] = [];
+
+            Object.entries(reportsByStudent).forEach(([studentNo, studentApiItems]) => {
+                // filter by selectedTerm again just in case, though API should have done it
+                const filteredItems = studentApiItems.filter(r => {
+                    const apiTermYear = `${r.term} ${r.academic_year}`.trim().toLowerCase();
+                    const selectedTermLower = selectedTerm.trim().toLowerCase();
+                    return apiTermYear === selectedTermLower;
+                });
+
+                if (filteredItems.length === 0) return;
+
+                const firstItem = filteredItems[0];
+                let studentProfile = profilesResult.students.find(p => p && String(p.student?.student_no) === String(studentNo));
+
+                // Minimal profile fallback if not found in profilesResult
+                if (!studentProfile) {
+                    studentProfile = {
+                        student: {
+                            student_no: studentNo,
+                            first_name: firstItem.first_name || 'N/A',
+                            last_name: firstItem.last_name || 'N/A',
+                            other_name: firstItem.other_name || '',
+                            dob: '',
+                            gender: 'N/A',
+                            created_at: new Date().toISOString(),
+                            created_by: 'system',
+                            updated_at: new Date().toISOString(),
+                            updated_by: 'system'
+                        },
+                        admissionDetails: {
+                            student_no: studentNo,
+                            admission_no: 'N/A',
+                            enrollment_date: '',
+                            class_assigned: String(firstItem.class_id),
+                            admission_status: 'Admitted'
+                        }
+                    } as any;
                 }
 
-                const existingReport = getStudentReport(student.student.student_no, selectedTerm);
-                if (existingReport) return existingReport;
-                
-                return calculateStudentReport(student.student.student_no, selectedTerm, allStudentsInClass);
-            })
-            .filter((report): report is StudentReport => report !== null);
-        
-        if (skippedStudents.length > 0) {
-            toast({
-                variant: 'destructive',
-                title: 'Students Skipped',
-                description: `Reports for the following students were not generated due to outstanding fees: ${skippedStudents.join(', ')}`
-            });
-        }
+                const isFeeDefaulter = (studentProfile?.financialDetails?.account_balance || 0) < 0;
+                if (isFeeDefaulter && !generateForDefaulters) {
+                    skippedStudents.push(`${studentProfile?.student.first_name} ${studentProfile?.student.last_name}`);
+                    return;
+                }
 
-        setStudentReports(reports);
-        setSelectedReports({});
-        setIsLoading(false);
+                const studentRank = Array.isArray(classRankings) ? classRankings.find(r => String(r.student_no) === String(studentNo)) : null;
+
+                const mappedReport: StudentReport = {
+                    student: studentProfile as any,
+                    term: firstItem.term,
+                    year: firstItem.academic_year,
+                    nextTermBegins: null,
+                    subjects: filteredItems.map(item => ({
+                        subjectName: item.subject_name,
+                        sbaScore: parseFloat(item['sba_50%'] || '0'),
+                        examScore: parseFloat(item['exam_50%'] || '0'),
+                        totalScore: Math.round(parseFloat(item['total_score_100%'] || '0')),
+                        grade: item.grade || 'N/A',
+                        position: item.subject_position || 0,
+                        remarks: item.remarks || 'N/A'
+                    })),
+                    attendance: { daysAttended: 0, totalDays: 0 },
+                    conduct: 'N/A',
+                    talentAndInterest: 'N/A',
+                    classTeacherRemarks: 'N/A',
+                    headTeacherRemarks: 'N/A',
+                    schoolProfile: getSchoolProfile(),
+                    className: firstItem.class_name,
+                    status: 'Provisional',
+                    class_position: studentRank?.class_position
+                };
+                reports.push(mappedReport);
+            });
+
+            if (skippedStudents.length > 0) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Students Skipped',
+                    description: `Reports for the following students were not generated due to outstanding fees: ${skippedStudents.join(', ')}`
+                });
+            }
+
+            setStudentReports(reports);
+            setSelectedReports({});
+        } catch (error) {
+            console.error("Error generating reports:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate reports.' });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSaveAndCloseEditor = (updatedReport: StudentReport) => {
         saveStudentReport(updatedReport);
-        setStudentReports(prevReports => 
+        setStudentReports(prevReports =>
             prevReports.map(r => r.student.student.student_no === updatedReport.student.student.student_no ? updatedReport : r)
         );
-        toast({ title: 'Report Updated', description: `Report for ${updatedReport.student.student.first_name} has been saved.`});
+        toast({ title: 'Report Updated', description: `Report for ${updatedReport.student.student.first_name} has been saved.` });
         setIsEditorOpen(false);
         setEditingReport(null);
     };
@@ -294,7 +417,7 @@ export function ReportCardGenerator() {
 
     const handleBulkSign = () => {
         if (!user) return;
-        
+
         const currentUserSignature = getUserById(user.id)?.signature;
 
         if (!currentUserSignature) {
@@ -302,15 +425,15 @@ export function ReportCardGenerator() {
             setIsBulkSignAlertOpen(false);
             return;
         }
-        
+
         let signedCount = 0;
         const updatedReports = studentReports.map(report => {
             if (user.role === 'Admin' || user.role === 'Headmaster') {
-                 if (report.classTeacherSignature) {
+                if (report.classTeacherSignature) {
                     signedCount++;
                     return { ...report, headTeacherSignature: currentUserSignature, status: 'Final' as const };
-                 }
-                 return report;
+                }
+                return report;
             }
             if (user.role === 'Teacher') {
                 signedCount++;
@@ -324,7 +447,7 @@ export function ReportCardGenerator() {
         toast({ title: "Bulk Sign Successful", description: `${signedCount} reports have been signed.` });
         setIsBulkSignAlertOpen(false);
     };
-    
+
     const handleBulkRemoveSignatures = () => {
         const updatedReports = studentReports.map(report => ({
             ...report,
@@ -332,7 +455,7 @@ export function ReportCardGenerator() {
             headTeacherSignature: null,
             status: 'Provisional' as const
         }));
-         updatedReports.forEach(saveStudentReport);
+        updatedReports.forEach(saveStudentReport);
         setStudentReports(updatedReports);
         toast({ title: "All Signatures Removed", description: `Signatures have been removed from all ${studentReports.length} reports.` });
     }
@@ -346,7 +469,7 @@ export function ReportCardGenerator() {
 
         setIsLoading(true);
         const pdf = new jsPDF('p', 'mm', 'a4');
-        
+
         for (let i = 0; i < reportIdsToPrint.length; i++) {
             const reportId = reportIdsToPrint[i];
             const cardElement = document.getElementById(`report-card-${reportId}`);
@@ -358,24 +481,24 @@ export function ReportCardGenerator() {
                 const ratio = canvas.width / canvas.height;
                 const width = pdfWidth - 20;
                 const height = width / ratio;
-                
+
                 if (i > 0) {
                     pdf.addPage();
                 }
                 pdf.addImage(imgData, 'PNG', 10, 10, width, height < pdfHeight - 20 ? height : pdfHeight - 20);
             }
         }
-        
+
         pdf.save('selected_report_cards.pdf');
         setIsLoading(false);
     };
 
     const handleSelectReport = (studentId: string, checked: boolean) => {
-        setSelectedReports(prev => ({...prev, [studentId]: checked}));
+        setSelectedReports(prev => ({ ...prev, [studentId]: checked }));
     }
-    
+
     const handleSelectAll = (checked: boolean) => {
-        if(checked) {
+        if (checked) {
             const newSelection = studentReports.reduce((acc, report) => {
                 acc[report.student.student.student_no] = true;
                 return acc;
@@ -385,7 +508,7 @@ export function ReportCardGenerator() {
             setSelectedReports({});
         }
     }
-    
+
     const isAllSelected = studentReports.length > 0 && Object.values(selectedReports).every(v => v) && Object.keys(selectedReports).length === studentReports.length;
 
     const handleEditClick = (report: StudentReport) => {
@@ -400,7 +523,7 @@ export function ReportCardGenerator() {
         setEditingReport(report);
         setIsEditorOpen(true);
     };
-    
+
     return (
         <div className="space-y-6">
             <Card>
@@ -417,16 +540,15 @@ export function ReportCardGenerator() {
                             {teacherClasses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled={!activeTerm}>
+                    <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                         <SelectTrigger className="w-full sm:w-[200px]">
                             <SelectValue placeholder="Select Term" />
                         </SelectTrigger>
                         <SelectContent>
-                            {activeTerm ? (
-                                <SelectItem value={activeTerm.value}>{activeTerm.label}</SelectItem>
-                            ) : (
-                                <SelectItem value="disabled" disabled>No active term</SelectItem>
-                            )}
+                            {availableTerms.map((term, idx) => (
+                                <SelectItem key={`${term.value}-${idx}`} value={term.value}>{term.label}</SelectItem>
+                            ))}
+                            {availableTerms.length === 0 && <SelectItem value="none" disabled>No terms found</SelectItem>}
                         </SelectContent>
                     </Select>
                     <Button onClick={handleGenerateReports} disabled={isLoading || !selectedTerm}>
@@ -438,8 +560,8 @@ export function ReportCardGenerator() {
                         <Label htmlFor="generate-for-defaulters" className={!hasDefaulterPerm ? 'text-muted-foreground' : ''}>Generate for defaulters</Label>
                     </div>
                     {studentReports.length > 0 && (
-                         <div className="flex-1 flex justify-end gap-2">
-                             <AlertDialog open={isBulkSignAlertOpen} onOpenChange={setIsBulkSignAlertOpen}>
+                        <div className="flex-1 flex justify-end gap-2">
+                            <AlertDialog open={isBulkSignAlertOpen} onOpenChange={setIsBulkSignAlertOpen}>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="outline"><FileSignature className="mr-2 h-4 w-4" /> Sign All</Button>
                                 </AlertDialogTrigger>
@@ -457,7 +579,7 @@ export function ReportCardGenerator() {
                             {(user?.role === 'Admin' || user?.role === 'Headmaster') && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4"/> Remove All Signatures</Button>
+                                        <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Remove All Signatures</Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
                                         <AlertDialogHeader>
@@ -475,17 +597,17 @@ export function ReportCardGenerator() {
                                 <Printer className="mr-2 h-4 w-4" />
                                 Print Selected ({Object.values(selectedReports).filter(Boolean).length})
                             </Button>
-                         </div>
+                        </div>
                     )}
                 </CardContent>
             </Card>
 
             {studentReports.length > 0 && (
                 <div>
-                     <div className="flex items-center space-x-2 py-4">
-                        <Checkbox 
-                            id="select-all-reports" 
-                            checked={isAllSelected} 
+                    <div className="flex items-center space-x-2 py-4">
+                        <Checkbox
+                            id="select-all-reports"
+                            checked={isAllSelected}
                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
                         />
                         <Label htmlFor="select-all-reports">Select All ({studentReports.length})</Label>
@@ -494,13 +616,13 @@ export function ReportCardGenerator() {
                         {studentReports.map(report => (
                             <div key={report.student.student.student_no} className="relative group">
                                 <div className="absolute top-2 left-2 z-20 flex items-center space-x-2">
-                                     <Checkbox 
-                                        checked={!!selectedReports[report.student.student.student_no]} 
+                                    <Checkbox
+                                        checked={!!selectedReports[report.student.student.student_no]}
                                         onCheckedChange={(checked) => handleSelectReport(report.student.student.student_no, !!checked)}
                                         className="bg-white"
                                     />
                                     <Button variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleEditClick(report)}>
-                                        <Pencil className="mr-2 h-4 w-4"/> Edit
+                                        <Pencil className="mr-2 h-4 w-4" /> Edit
                                     </Button>
                                 </div>
                                 <div id={`report-card-${report.student.student.student_no}`}>
@@ -511,13 +633,13 @@ export function ReportCardGenerator() {
                     </div>
                 </div>
             )}
-            
-            <ReportEditor 
-                report={editingReport} 
-                onSave={handleSaveAndCloseEditor} 
+
+            <ReportEditor
+                report={editingReport}
+                onSave={handleSaveAndCloseEditor}
                 onRemoveSignatures={handleRemoveSignatures}
-                open={isEditorOpen} 
-                onOpenChange={setIsEditorOpen} 
+                open={isEditorOpen}
+                onOpenChange={setIsEditorOpen}
             />
         </div>
     );

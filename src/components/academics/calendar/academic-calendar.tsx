@@ -2,10 +2,10 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getAcademicYears, getCalendarEvents, addCalendarEvent, CalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/store';
+import { getAcademicYears, fetchAcademicYearsFromApi, getCalendarEvents, fetchCalendarEventsFromApi, addCalendarEventToApi, updateCalendarEventInApi, deleteCalendarEventFromApi, CalendarEvent } from '@/lib/store';
 import { AcademicYear, Term, CalendarEventCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { startOfMonth, format, isSameDay, isSameMonth } from 'date-fns';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, PlusCircle, Dot, Edit, Trash2, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Edit, Trash2, Bell } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -50,13 +50,13 @@ function EventForm({ onSave, selectedDate, existingEvent, activeTerm }: { onSave
             setCategory('School Event');
         }
     }, [selectedDate, existingEvent]);
-    
+
     const handleSave = () => {
         if (title && date) {
             onSave({ title, date: date.toISOString(), category }, existingEvent?.id);
         }
     };
-    
+
     const isDateInActiveTerm = date && activeTerm && date >= new Date(activeTerm.startDate) && date <= new Date(activeTerm.endDate);
 
 
@@ -110,30 +110,37 @@ export function AcademicCalendar() {
 
     const { toast } = useToast();
     const { user } = useAuth();
-    
-    const fetchData = useCallback(() => {
-        const years = getAcademicYears();
+
+    const refreshEvents = useCallback(async () => {
+        const events = await fetchCalendarEventsFromApi(true);
+   
+        setEvents(events);
+    }, []);
+
+    const initCalendar = useCallback(async () => {
+        const years = await fetchAcademicYearsFromApi(true);
+
         setAcademicYears(years);
         const activeYear = years.find(y => y.status === 'Active') || years[0];
         if (activeYear) {
             const currentActiveTerm = activeYear.terms.find(t => t.status === 'Active') || null;
             setActiveTerm(currentActiveTerm);
-            
+
             if (!selectedYear) {
-                 setSelectedYear(activeYear);
+                setSelectedYear(activeYear);
                 if (currentActiveTerm) {
                     setCurrentMonth(startOfMonth(new Date(currentActiveTerm.startDate)));
                 } else if (activeYear.terms.length > 0) {
-                     setCurrentMonth(startOfMonth(new Date(activeYear.terms[0].startDate)));
+                    setCurrentMonth(startOfMonth(new Date(activeYear.terms[0].startDate)));
                 }
             }
         }
-        setEvents(getCalendarEvents());
-    }, [selectedYear]);
+        await refreshEvents();
+    }, [selectedYear, refreshEvents]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        initCalendar();
+    }, [initCalendar]);
 
     const { yearDateRange, termColorMap } = useMemo(() => {
         if (!selectedYear?.terms?.length) {
@@ -143,7 +150,7 @@ export function AcademicCalendar() {
         const dates = selectedYear.terms.flatMap(term => [new Date(term.startDate), new Date(term.endDate)]);
         const from = dates.reduce((a, b) => (a < b ? a : b));
         const to = dates.reduce((a, b) => (a > b ? a : b));
-        
+
         const termColors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
         const colorMap = new Map(selectedYear.terms.map((term, index) => [term.name, termColors[index % termColors.length]]));
 
@@ -154,7 +161,7 @@ export function AcademicCalendar() {
         if (selectedYear) {
             const newModifiers: Modifier = {};
             const newModifierStyles: Record<string, React.CSSProperties> = {};
-            
+
             selectedYear.terms.forEach((term) => {
                 const termKey = `term-${term.name.replace(/\s/g, '-')}`;
                 newModifiers[termKey] = {
@@ -166,15 +173,17 @@ export function AcademicCalendar() {
                     backgroundColor: termColorMap.get(term.name),
                 };
             });
-            
+
             events.forEach(event => {
                 const eventDate = new Date(event.date);
                 if (isSameMonth(eventDate, currentMonth)) {
                     const eventKey = `event-${event.id}`;
                     newModifiers[eventKey] = eventDate;
                     newModifierStyles[eventKey] = {
-                        textDecoration: 'underline',
-                        textDecorationColor: eventCategoryColors[event.category],
+                        backgroundColor: eventCategoryColors[event.category],
+                        color: 'white',
+                        fontWeight: 'bold',
+                        borderRadius: '100%',
                     };
                 }
             });
@@ -192,25 +201,45 @@ export function AcademicCalendar() {
         }
     };
 
-    const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>, id?: string) => {
+    const handleSaveEvent = async (eventData: Omit<CalendarEvent, 'id'>, id?: string) => {
         if (!user || user.role !== 'Admin') return;
+
+        let success = false;
         if (id) { // Editing existing event
-            updateCalendarEvent(id, eventData, user.id);
-            toast({ title: "Event Updated", description: `"${eventData.title}" has been updated.` });
+            const updated = await updateCalendarEventInApi(id, eventData, user.id);
+
+            if (updated) {
+                toast({ title: "Event Updated", description: `"${eventData.title}" has been updated.` });
+                success = true;
+            } else {
+                toast({ variant: 'destructive', title: "Error", description: "Failed to update event." });
+            }
         } else { // Adding new event
-            addCalendarEvent(eventData, user.id);
-            toast({ title: "Event Added", description: `"${eventData.title}" has been added to the calendar.` });
+            const created = await addCalendarEventToApi(eventData, user.id);
+            if (created) {
+                toast({ title: "Event Added", description: `"${eventData.title}" has been added to the calendar.` });
+                success = true;
+            } else {
+                toast({ variant: 'destructive', title: "Error", description: "Failed to add event." });
+            }
         }
-        fetchData();
-        setIsEventFormOpen(false);
-        setEditingEvent(null);
+
+        if (success) {
+            await refreshEvents();
+            setIsEventFormOpen(false);
+            setEditingEvent(null);
+        }
     };
 
-    const handleDeleteEvent = (eventId: string) => {
+    const handleDeleteEvent = async (eventId: string) => {
         if (!user || user.role !== 'Admin') return;
-        deleteCalendarEvent(eventId, user.id);
-        fetchData();
-        toast({ title: "Event Deleted", description: "The event has been removed from the calendar." });
+        const success = await deleteCalendarEventFromApi(eventId, user.id);
+        if (success) {
+            await refreshEvents();
+            toast({ title: "Event Deleted", description: "The event has been removed from the calendar." });
+        } else {
+            toast({ variant: 'destructive', title: "Error", description: "Failed to delete event." });
+        }
     }
 
     const handleDayClick = (day: Date, modifiers: { disabled?: boolean }) => {
@@ -223,7 +252,7 @@ export function AcademicCalendar() {
             toast({ variant: 'destructive', title: 'Date Out of Range', description: 'Events can only be added to the active term.' });
         }
     };
-    
+
     const handleEditClick = (event: CalendarEvent) => {
         if (user?.role !== 'Admin') return;
         setEditingEvent(event);
@@ -233,14 +262,13 @@ export function AcademicCalendar() {
 
     const DayContentWithEvents = useCallback((props: DayProps) => {
         const dailyEvents = events.filter(event => isSameDay(new Date(event.date), props.date));
-        
+
         if (dailyEvents.length > 0) {
             return (
                 <Tooltip>
                     <TooltipTrigger asChild className="w-full h-full flex items-center justify-center relative">
-                         <div>
+                        <div>
                             <span>{format(props.date, 'd')}</span>
-                            <Dot className="absolute bottom-0 text-primary h-6 w-6 -mb-2" />
                         </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -262,9 +290,9 @@ export function AcademicCalendar() {
     const monthlyEvents = useMemo(() => {
         return events
             .filter(event => isSameMonth(new Date(event.date), currentMonth))
-            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [events, currentMonth]);
-    
+
     if (!selectedYear) {
         return <div>Loading academic calendar...</div>;
     }
@@ -289,7 +317,7 @@ export function AcademicCalendar() {
                             </SelectContent>
                         </Select>
                         {user?.role === 'Admin' && (
-                            <Button size="sm" onClick={() => { setSelectedDateForNewEvent(new Date()); setEditingEvent(null); setIsEventFormOpen(true); }}><PlusCircle className="mr-2"/> Add Event</Button>
+                            <Button size="sm" onClick={() => { setSelectedDateForNewEvent(new Date()); setEditingEvent(null); setIsEventFormOpen(true); }}><PlusCircle className="mr-2" /> Add Event</Button>
                         )}
                     </div>
                 </div>
@@ -307,6 +335,15 @@ export function AcademicCalendar() {
                             toMonth={yearDateRange?.to}
                             disabled={!yearDateRange || { before: yearDateRange.from, after: yearDateRange.to }}
                             className="p-0"
+                            classNames={{
+                                caption_label: "text-xl font-bold text-foreground block",
+                                head_cell: "w-12 text-muted-foreground font-normal text-lg",
+                                cell: "h-12 w-12 text-center text-lg p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                day: cn(
+                                    buttonVariants({ variant: "ghost" }),
+                                    "h-12 w-12 p-0 font-normal aria-selected:opacity-100 text-lg hover:bg-slate-200"
+                                ),
+                            }}
                             onDayClick={handleDayClick}
                             components={{
                                 DayContent: DayContentWithEvents,
@@ -330,7 +367,7 @@ export function AcademicCalendar() {
                 </div>
                 <div className="lg:col-span-2">
                     <h3 className="text-lg font-semibold mb-4">Events in {format(currentMonth, 'MMMM yyyy')}</h3>
-                     <ScrollArea className="h-96">
+                    <ScrollArea className="h-96">
                         <div className="space-y-4 pr-4">
                             {monthlyEvents.length > 0 ? monthlyEvents.map(event => (
                                 <div key={event.id} className="flex items-start gap-3 group">
@@ -338,7 +375,7 @@ export function AcademicCalendar() {
                                         <div className="font-bold text-lg">{format(new Date(event.date), 'dd')}</div>
                                         <div className="text-xs text-muted-foreground -mt-1">{format(new Date(event.date), 'MMM')}</div>
                                     </div>
-                                    <div className="flex-1 border-l-2 pl-3" style={{borderColor: eventCategoryColors[event.category]}}>
+                                    <div className="flex-1 border-l-2 pl-3" style={{ borderColor: eventCategoryColors[event.category] }}>
                                         <p className="font-medium">{event.title}</p>
                                         <p className="text-sm text-muted-foreground">{event.category}</p>
                                     </div>
@@ -374,8 +411,8 @@ export function AcademicCalendar() {
                     </ScrollArea>
                     <Card className="mt-4 bg-amber-50 border-amber-200">
                         <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2">
-                           <Bell className="h-5 w-5 text-amber-600" />
-                           <CardTitle className="text-base text-amber-800">Upcoming Reminders</CardTitle>
+                            <Bell className="h-5 w-5 text-amber-600" />
+                            <CardTitle className="text-base text-amber-800">Upcoming Reminders</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-amber-700">Alert: 'End of Term Exams' with Admin User is scheduled in 10 minutes.</p>

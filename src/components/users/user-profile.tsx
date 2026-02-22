@@ -9,7 +9,7 @@ import { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { UserForm } from './user-form';
 import { useAuth } from '@/hooks/use-auth';
-import { updateUser as storeUpdateUser, addAuditLog, changePassword, resetPassword, getStaff } from '@/lib/store';
+import { updateUser as storeUpdateUser, addAuditLog, changePassword, resetPassword, getStaff, changePasswordViaApi } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { ResetPasswordForm } from './reset-password-form';
 import { Input } from '../ui/input';
@@ -38,27 +38,28 @@ export function UserProfile({ user: initialUser }: { user: User }) {
       details: `User ${currentUser.name} updated profile for ${user.name}.`,
     });
     toast({
-        title: 'Profile Updated',
-        description: 'The user profile has been successfully updated.',
+      title: 'Profile Updated',
+      description: 'The user profile has been successfully updated.',
     });
     setIsEditOpen(false);
   };
-  
-  const handlePasswordChange = (values: {currentPassword?: string, newPassword: string}): boolean => {
+
+  const handlePasswordChange = async (values: { currentPassword?: string, newPassword: string, confirmPassword: string }): Promise<boolean> => {
     if (!currentUser) return false;
 
-    let success = false;
-    // If user is changing their own password
-    if (currentUser.id === user.id && values.currentPassword) {
-        success = changePassword(user.id, values.currentPassword, values.newPassword);
-    } 
-    // If an admin is resetting a password
-    else if (currentUser.role === 'Admin' && currentUser.id !== user.id) {
-        success = resetPassword(user.id, values.newPassword);
-    }
-    
-    if (success) {
-        toast({ title: 'Password Updated', description: 'Your password has been changed successfully.' });
+    try {
+      // Use the API endpoint to change password
+      const result = await changePasswordViaApi(
+        currentUser.user_id || currentUser.id,
+        values.newPassword,
+        values.confirmPassword
+      );
+
+      if (result.success) {
+        toast({
+          title: 'Password Updated',
+          description: result.message || 'Your password has been changed successfully.'
+        });
         addAuditLog({
           user: currentUser.email,
           name: currentUser.name,
@@ -67,9 +68,22 @@ export function UserProfile({ user: initialUser }: { user: User }) {
         });
         setIsPasswordOpen(false);
         return true;
-    } else {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to update password. Please check your current password and try again.' });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: result.message || 'Failed to update password. Please try again.'
+        });
         return false;
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'An unexpected error occurred while changing password.'
+      });
+      return false;
     }
   }
 
@@ -109,36 +123,36 @@ export function UserProfile({ user: initialUser }: { user: User }) {
           </div>
           <div className="flex flex-col gap-2">
             {isAdmin && (
-                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                                <Pencil className="mr-2 h-4 w-4" /> Edit Profile
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Edit Profile</DialogTitle>
-                            <DialogDescription>Update personal information.</DialogDescription>
-                        </DialogHeader>
-                        <UserForm isEditMode defaultValues={user} onSubmit={handleUpdate} staffList={getStaff()} />
-                    </DialogContent>
-                </Dialog>
+              <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Pencil className="mr-2 h-4 w-4" /> Edit Profile
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Profile</DialogTitle>
+                    <DialogDescription>Update personal information.</DialogDescription>
+                  </DialogHeader>
+                  <UserForm isEditMode defaultValues={user} onSubmit={handleUpdate} staffList={getStaff()} />
+                </DialogContent>
+              </Dialog>
             )}
-             {isOwner && (
-                 <Dialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="secondary" size="sm">
-                            <KeyRound className="mr-2 h-4 w-4" /> Change Password
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Change Password</DialogTitle>
-                            <DialogDescription>Update your account password.</DialogDescription>
-                        </DialogHeader>
-                        <ResetPasswordForm onSubmit={handlePasswordChange} />
-                    </DialogContent>
-                </Dialog>
+            {isOwner && (
+              <Dialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="secondary" size="sm">
+                    <KeyRound className="mr-2 h-4 w-4" /> Change Password
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change Password</DialogTitle>
+                    <DialogDescription>Update your account password.</DialogDescription>
+                  </DialogHeader>
+                  <ResetPasswordForm onSubmit={handlePasswordChange} />
+                </DialogContent>
+              </Dialog>
             )}
           </div>
         </div>
@@ -153,12 +167,12 @@ export function UserProfile({ user: initialUser }: { user: User }) {
             <p className="font-medium text-muted-foreground">Username</p>
             <p className="font-semibold">{user.username}</p>
           </div>
-           <div>
+          <div>
             <p className="font-medium text-muted-foreground">Account Status</p>
             <div>
-                <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>
-                    {user.status}
-                </Badge>
+              <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>
+                {user.status}
+              </Badge>
             </div>
           </div>
           <div>
@@ -166,23 +180,23 @@ export function UserProfile({ user: initialUser }: { user: User }) {
             <p className="font-semibold">{user.is_super_admin ? 'Yes' : 'No'}</p>
           </div>
         </div>
-        
+
         {isOwner && (
-            <div>
-                <p className="font-medium text-muted-foreground">My Signature</p>
-                <div className="mt-2 flex items-center gap-4 p-4 border rounded-md">
-                    {user.signature ? (
-                        <img src={user.signature} alt="User signature" className="h-16 w-auto bg-gray-100 p-2 rounded-md" />
-                    ) : (
-                        <div className="h-16 flex items-center justify-center text-muted-foreground text-sm">No signature uploaded.</div>
-                    )}
-                    <Button variant="outline" size="sm" onClick={handleSignatureUploadClick}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        {user.signature ? 'Change Signature' : 'Upload Signature'}
-                    </Button>
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/png" onChange={handleFileChange} />
-                </div>
+          <div>
+            <p className="font-medium text-muted-foreground">My Signature</p>
+            <div className="mt-2 flex items-center gap-4 p-4 border rounded-md">
+              {user.signature ? (
+                <img src={user.signature} alt="User signature" className="h-16 w-auto bg-gray-100 p-2 rounded-md" />
+              ) : (
+                <div className="h-16 flex items-center justify-center text-muted-foreground text-sm">No signature uploaded.</div>
+              )}
+              <Button variant="outline" size="sm" onClick={handleSignatureUploadClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                {user.signature ? 'Change Signature' : 'Upload Signature'}
+              </Button>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/png" onChange={handleFileChange} />
             </div>
+          </div>
         )}
 
       </CardContent>

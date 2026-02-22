@@ -1,69 +1,74 @@
-'use client';
+﻿'use client';
 
 import { v4 as uuidv4 } from 'uuid';
 
 import {
-  User,
-  AuditLog,
-  Role,
-  ALL_ROLES,
-  RoleStorage,
-  UserStorage,
-  AuthLog,
-  StudentProfile,
-  Class,
-  AdmissionStatus,
-  ALL_ADMISSION_STATUSES,
-  AcademicRecord,
-  DisciplinaryRecord,
-  CommunicationLog,
-  UploadedDocument,
-  AttendanceRecord,
-  HealthRecords,
-  StaffProfile,
-  Staff,
-  StaffAcademicHistory,
-  StaffDocument,
-  StaffAppointmentHistory,
-  Subject,
-  ClassSubject,
-  TeacherSubject,
-  EmploymentStatus,
-  StudentAttendanceRecord,
-  StaffAttendanceRecord,
-  AcademicYear,
-  CalendarEvent,
-  GradeSetting,
-  Term,
-  RolePermissions,
-  ALL_PERMISSIONS,
-  Permission,
-  LeaveRequest,
-  LeaveStatus,
-  AssignmentScore,
-  AssignmentActivity,
-  ClassAssignmentActivity,
-  FeeStructureItem,
-  TermPayment,
-  TermlyBill,
-  SchoolLevel,
-  PromotionCriteria,
-  Expense,
-  Payroll,
-  Announcement,
-  Club,
-  Sport,
-  Asset,
-  AssetAllocation,
-  DepartmentRequest,
-  DepartmentRequestStatus,
-  Book,
-  BorrowingRecord,
-  ApiResponse,
-  ClassApiResponse,
-  SubjectApiResponse,
-  TeacherSubjectApiResponse,
-  StudentFeeApiResponse
+    User,
+    AuditLog,
+    Role,
+    ALL_ROLES,
+    RoleStorage,
+    UserStorage,
+    AuthLog,
+    StudentProfile,
+    Class,
+    AdmissionStatus,
+    ALL_ADMISSION_STATUSES,
+    AcademicRecord,
+    DisciplinaryRecord,
+    CommunicationLog,
+    UploadedDocument,
+    AttendanceRecord,
+    HealthRecords,
+    StaffProfile,
+    Staff,
+    StaffAcademicHistory,
+    StaffDocument,
+    StaffAppointmentHistory,
+    Subject,
+    ClassSubject,
+    TeacherSubject,
+    EmploymentStatus,
+    StudentAttendanceRecord,
+    StaffAttendanceRecord,
+    AcademicYear,
+    AcademicYearStatus,
+    CalendarEvent,
+    GradeSetting,
+    Term,
+    RolePermissions,
+    ALL_PERMISSIONS,
+    Permission,
+    LeaveRequest,
+    LeaveStatus,
+    AssignmentScore,
+    AssignmentActivity,
+    ClassAssignmentActivity,
+    FeeStructureItem,
+    TermPayment,
+    TermlyBill,
+    SchoolLevel,
+    PromotionCriteria,
+    Expense,
+    Payroll,
+    Announcement,
+    Club,
+    Sport,
+    Asset,
+    AssetAllocation,
+    DepartmentRequest,
+    DepartmentRequestStatus,
+    Book,
+    BorrowingRecord,
+    ApiResponse,
+    ClassApiResponse,
+    SubjectApiResponse,
+    TeacherSubjectApiResponse,
+    StudentFeeApiResponse,
+    ClassSubjectAssignment,
+    StudentActivityScore,
+    StudentSummaryScore,
+    StudentSubjectReport
 } from './types';
 import { format } from 'date-fns';
 import initialStaffProfiles from './initial-staff-profiles.json';
@@ -71,6 +76,18 @@ import { SchoolProfileData } from '@/components/settings/school-profile-settings
 import { FullSchedule } from '@/components/academics/timetable/timetable-scheduler';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URI || 'http://localhost:9002/api/v1';
+
+const getApiHeaders = (additionalHeaders: HeadersInit = {}): HeadersInit => {
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = typeof window !== 'undefined' ? localStorage.getItem('csrf_token') || '' : '';
+
+    return {
+        'Content-Type': 'application/json',
+        'X-API-KEY': apiKey,
+        'X-CSRF-TOKEN': csrfToken,
+        ...additionalHeaders,
+    };
+};
 
 export type StudentReport = {
     student: StudentProfile;
@@ -101,6 +118,7 @@ export type StudentReport = {
     headTeacherId?: string;
     classTeacherSignature?: string | null;
     headTeacherSignature?: string | null;
+    class_position?: number;
 };
 
 
@@ -152,75 +170,75 @@ export const LEAVE_REQUESTS_KEY = 'campusconnect_leave_requests';
 
 // New keys for subjects
 const SUBJECTS_KEY = 'campusconnect_subjects';
-const CLASS_SUBJECTS_KEY = 'classSubjects';
+const CLASS_SUBJECTS_KEY = CLASS_SUBJECT_ASSIGNMENTS_KEY;
 const TEACHER_SUBJECTS_KEY = 'campusconnect_teacher_subjects';
 
 
 const getInitialRoles = (): RoleStorage[] => {
-  return ALL_ROLES.map((role, index) => ({
-    id: (index + 1).toString(),
-    name: role,
-  }));
+    return ALL_ROLES.map((role, index) => ({
+        id: (index + 1).toString(),
+        name: role,
+    }));
 };
 
 const getInitialUsers = (roles: RoleStorage[]): UserStorage[] => {
-  const now = new Date().toISOString();
-  const getRoleId = (name: Role) => roles.find((r) => r.name === name)?.id;
+    const now = new Date().toISOString();
+    const getRoleId = (name: Role) => roles.find((r) => r.name === name)?.id;
 
-  return [
-    {
-      id: '1',
-      name: 'Admin User',
-      username: 'douglassenzu',
-      email: 'admin@campus.com',
-      password: 'password',
-      role_id: getRoleId('Admin')!,
-      is_super_admin: true,
-      avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
-     {
-      id: '2',
-      name: 'J. Konnie',
-      username: 'jkonnie',
-      email: 'jkonnie@teacher.com',
-      password: 'password',
-      role_id: getRoleId('Teacher')!,
-      is_super_admin: false,
-      avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: '3',
-      name: 'Headmaster User',
-      username: 'headmaster',
-      email: 'headmaster@campus.com',
-      password: 'password',
-      role_id: getRoleId('Headmaster')!,
-      is_super_admin: false,
-      avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
-      status: 'active',
-      created_at: now,
-      updated_at: now,
-    },
-    {
-        id: '4',
-        name: 'Guest User',
-        username: 'guest',
-        email: 'guest@campus.com',
-        password: 'password',
-        role_id: getRoleId('Guest')!,
-        is_super_admin: false,
-        avatarUrl: 'https://picsum.photos/seed/guest/40/40',
-        status: 'active',
-        created_at: now,
-        updated_at: now,
-    }
-  ];
+    return [
+        {
+            id: '1',
+            name: 'Admin User',
+            username: 'douglassenzu',
+            email: 'admin@campus.com',
+            password: 'password',
+            role_id: getRoleId('Admin')!,
+            is_super_admin: true,
+            avatarUrl: 'https://picsum.photos/seed/avatar1/40/40',
+            status: 'active',
+            created_at: now,
+            updated_at: now,
+        },
+        {
+            id: '2',
+            name: 'J. Konnie',
+            username: 'jkonnie',
+            email: 'jkonnie@teacher.com',
+            password: 'password',
+            role_id: getRoleId('Teacher')!,
+            is_super_admin: false,
+            avatarUrl: 'https://picsum.photos/seed/avatar2/40/40',
+            status: 'active',
+            created_at: now,
+            updated_at: now,
+        },
+        {
+            id: '3',
+            name: 'Headmaster User',
+            username: 'headmaster',
+            email: 'headmaster@campus.com',
+            password: 'password',
+            role_id: getRoleId('Headmaster')!,
+            is_super_admin: false,
+            avatarUrl: 'https://picsum.photos/seed/avatar3/40/40',
+            status: 'active',
+            created_at: now,
+            updated_at: now,
+        },
+        {
+            id: '4',
+            name: 'Guest User',
+            username: 'guest',
+            email: 'guest@campus.com',
+            password: 'password',
+            role_id: getRoleId('Guest')!,
+            is_super_admin: false,
+            avatarUrl: 'https://picsum.photos/seed/guest/40/40',
+            status: 'active',
+            created_at: now,
+            updated_at: now,
+        }
+    ];
 };
 
 const getInitialStaff = (): Staff[] => {
@@ -258,14 +276,14 @@ const getInitialClasses = (): Class[] => {
 
 const getInitialSubjects = (): Subject[] => {
     const subjectNames = [
-        'English Language', 'Mathematics', 'Science', 'History', 'Our World Our People', 
-        'Religious & Moral Education', 'Physical Education', 'Computing', 'French', 
-        'Numeracy', 'Language & Literacy', 'Creative Art', 'Social Studies', 
-        'Basic Design and Technology', 'Ghanaian Language & Culture', 
-        'Information and Communications Technology', 'Fante', 'Asante Twi', 
-        'Akwapim Twi', 'Dagomba', 'Ewe', 'Arabic', 'Business Studies', 'Career Technology', 
-        'Environmental Studies', 'General Agriculture', 'General Knowledge in Art', 
-        'Home Economics', 'Integrated Science', 'Personal and Social Development', 
+        'English Language', 'Mathematics', 'Science', 'History', 'Our World Our People',
+        'Religious & Moral Education', 'Physical Education', 'Computing', 'French',
+        'Numeracy', 'Language & Literacy', 'Creative Art', 'Social Studies',
+        'Basic Design and Technology', 'Ghanaian Language & Culture',
+        'Information and Communications Technology', 'Fante', 'Asante Twi',
+        'Akwapim Twi', 'Dagomba', 'Ewe', 'Arabic', 'Business Studies', 'Career Technology',
+        'Environmental Studies', 'General Agriculture', 'General Knowledge in Art',
+        'Home Economics', 'Integrated Science', 'Personal and Social Development',
         'Visual Arts', 'Creative Arts' // Added 'Creative Arts' as per API response
     ];
     return subjectNames.map((name, index) => ({
@@ -370,78 +388,80 @@ const getInitialLeaveRequests = (): LeaveRequest[] => {
 
 
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') {
-    return defaultValue;
-  }
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage key “${key}”:`, error);
-    return defaultValue;
-  }
+    if (typeof window === 'undefined') {
+        return defaultValue;
+    }
+    try {
+        const item = window.localStorage.getItem(key);
+        if (item === 'undefined' || item === null) return defaultValue;
+        return JSON.parse(item);
+    } catch (error) {
+        console.error(`Error reading from localStorage key “${key}”:`, error);
+        return defaultValue;
+    }
 };
 
 export const saveToStorage = <T>(key: string, value: T) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error writing to localStorage key “${key}”:`, error);
-  }
+    if (typeof window === 'undefined') {
+        return;
+    }
+    try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+        console.error(`Error writing to localStorage key “${key}”:`, error);
+    }
 };
 
 export const initializeStore = () => {
-  if (typeof window !== 'undefined') {
-    const isInitialized = window.localStorage.getItem(USERS_KEY);
-    
-    if (!isInitialized) {
-        console.log("Initializing local storage with default data...");
-        const roles = getInitialRoles();
-        saveToStorage(ROLES_KEY, roles);
-        saveToStorage(USERS_KEY, getInitialUsers(roles));
-        saveToStorage(LOGS_KEY, []);
-        saveToStorage(AUTH_LOGS_KEY, []);
-        saveToStorage(STUDENTS_KEY, []); // Start with an empty student list
-        saveToStorage(STUDENT_REPORTS_KEY, []);
-        // Fetch classes and subjects from API on initialization
-        fetchClassesFromApi();
-        fetchSubjectsFromApi();
-        saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
-        saveToStorage(FEE_STRUCTURES_KEY, []);
-        saveToStorage(TERMLY_BILLS_KEY, []);
-        saveToStorage(TIMETABLE_KEY, {});
-        saveToStorage(EXPENSES_KEY, []);
-        saveToStorage(PAYROLLS_KEY, []);
-        saveToStorage(ANNOUNCEMENTS_KEY, []);
-        saveToStorage(CLUBS_KEY, []);
-        saveToStorage(SPORTS_KEY, []);
-        saveToStorage(ASSETS_KEY, []);
-        saveToStorage(ASSET_ALLOCATIONS_KEY, []);
-        saveToStorage(DEPARTMENT_REQUESTS_KEY, []);
-        saveToStorage(BOOKS_KEY, []);
-        saveToStorage(BORROWING_KEY, []);
-        saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
-        saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
-        saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
-        saveToStorage(ROLE_PERMISSIONS_KEY, getInitialRolePermissions());
-        saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, getInitialAssignmentActivities());
-        saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
-        saveToStorage(LEAVE_REQUESTS_KEY, getInitialLeaveRequests());
-        saveToStorage(BACKUP_SETTINGS_KEY, { autoBackupEnabled: true, frequency: 'daily', backupTime: '00:00', lastBackup: null });
-        saveToStorage(PROMOTION_CRITERIA_KEY, { minAverageScore: 50, coreSubjects: [], minCoreSubjectsToPass: 0 });
-        saveToStorage(STAFF_KEY, getInitialStaff());
-        saveToStorage(DECLINED_STAFF_KEY, []);
-        saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, []);
-        saveToStorage(STAFF_DOCUMENTS_KEY, []);
-        saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, []);
-        saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, []);
-        saveToStorage(CLASS_SUBJECTS_KEY, []);
-        saveToStorage(TEACHER_SUBJECTS_KEY, []);
+    if (typeof window !== 'undefined') {
+        const isInitialized = window.localStorage.getItem(USERS_KEY);
+
+        if (!isInitialized) {
+            //console.log("Initializing local storage with default data...");
+            const roles = getInitialRoles();
+            saveToStorage(ROLES_KEY, roles);
+            saveToStorage(USERS_KEY, getInitialUsers(roles));
+            saveToStorage(LOGS_KEY, []);
+            saveToStorage(AUTH_LOGS_KEY, []);
+            saveToStorage(STUDENTS_KEY, []); // Start with an empty student list
+            saveToStorage(STUDENT_REPORTS_KEY, []);
+            // Fetch classes and subjects from API on initialization
+            fetchClassesFromApi();
+            fetchSubjectsFromApi();
+            fetchUsersFromApi();
+            saveToStorage(STAFF_PROFILES_KEY, initialStaffProfiles);
+            saveToStorage(FEE_STRUCTURES_KEY, []);
+            saveToStorage(TERMLY_BILLS_KEY, []);
+            saveToStorage(TIMETABLE_KEY, {});
+            saveToStorage(EXPENSES_KEY, []);
+            saveToStorage(PAYROLLS_KEY, []);
+            saveToStorage(ANNOUNCEMENTS_KEY, []);
+            saveToStorage(CLUBS_KEY, []);
+            saveToStorage(SPORTS_KEY, []);
+            saveToStorage(ASSETS_KEY, []);
+            saveToStorage(ASSET_ALLOCATIONS_KEY, []);
+            saveToStorage(DEPARTMENT_REQUESTS_KEY, []);
+            saveToStorage(BOOKS_KEY, []);
+            saveToStorage(BORROWING_KEY, []);
+            saveToStorage(ACADEMIC_YEARS_KEY, getInitialAcademicYears());
+            saveToStorage(CALENDAR_EVENTS_KEY, getInitialCalendarEvents());
+            saveToStorage(GRADING_SCHEME_KEY, getInitialGradingScheme());
+            saveToStorage(ROLE_PERMISSIONS_KEY, getInitialRolePermissions());
+            saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, getInitialAssignmentActivities());
+            saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
+            saveToStorage(LEAVE_REQUESTS_KEY, getInitialLeaveRequests());
+            saveToStorage(BACKUP_SETTINGS_KEY, { autoBackupEnabled: true, frequency: 'daily', backupTime: '00:00', lastBackup: null });
+            saveToStorage(PROMOTION_CRITERIA_KEY, { minAverageScore: 50, coreSubjects: [], minCoreSubjectsToPass: 0 });
+            saveToStorage(STAFF_KEY, getInitialStaff());
+            saveToStorage(DECLINED_STAFF_KEY, []);
+            saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, []);
+            saveToStorage(STAFF_DOCUMENTS_KEY, []);
+            saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, []);
+            saveToStorage(STAFF_ATTENDANCE_RECORDS_KEY, []);
+            saveToStorage(CLASS_SUBJECTS_KEY, []);
+            saveToStorage(TEACHER_SUBJECTS_KEY, []);
+        }
     }
-  }
 };
 
 export const getDepartmentRequests = (): DepartmentRequest[] => getFromStorage<DepartmentRequest[]>(DEPARTMENT_REQUESTS_KEY, []);
@@ -475,13 +495,13 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
         request.quantity_approved = data?.quantity;
         request.comments = data?.comments;
     }
-     if (status === 'Rejected') {
+    if (status === 'Rejected') {
         request.approved_by_id = editorId;
         request.approved_by_name = editorName;
         request.approval_date = now;
         request.comments = data?.comments;
     }
-    
+
     if (status === 'Served') {
         request.served_by_id = editorId;
         request.served_by_name = editorName;
@@ -498,7 +518,7 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
             const asset = assets[assetIndex];
             asset.quantity -= quantityToServe;
             if (asset.quantity < 0) asset.quantity = 0;
-            
+
             asset.logs.push({
                 date: now,
                 type: 'Stock Update',
@@ -507,7 +527,7 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
             });
             saveAssets(assets);
         }
-        
+
         // Add to allocations
         addAssetAllocation({
             assetId: request.asset_id,
@@ -521,8 +541,8 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
         });
 
     }
-    
-    if(status === 'Not Served') {
+
+    if (status === 'Not Served') {
         request.served_by_id = editorId;
         request.served_by_name = editorName;
         request.served_date = now;
@@ -535,7 +555,7 @@ export const updateDepartmentRequestStatus = (requestId: string, status: Departm
 
 export const bulkUpdateDepartmentRequestStatus = (requestIds: string[], status: DepartmentRequestStatus, editorId: string, editorName: string, data?: { comments?: string }): void => {
     const requests = getDepartmentRequests();
-    
+
     requestIds.forEach(id => {
         const requestIndex = requests.findIndex(r => r.id === id);
         if (requestIndex !== -1) {
@@ -546,10 +566,10 @@ export const bulkUpdateDepartmentRequestStatus = (requestIds: string[], status: 
             const canServe = request.status === 'Approved' && (status === 'Served' || status === 'Not Served');
 
             if (canApprove || canServe) {
-                 updateDepartmentRequestStatus(id, status, editorId, editorName, { 
+                updateDepartmentRequestStatus(id, status, editorId, editorName, {
                     // For bulk actions, we assume full quantity approval/serving
                     quantity: status === 'Approved' ? request.quantity_requested : request.quantity_approved,
-                    comments: data?.comments 
+                    comments: data?.comments
                 });
             }
         }
@@ -643,25 +663,26 @@ export const getStudentReport = (studentId: string, termName: string): StudentRe
 
 
 export const calculateStudentReport = (studentId: string, termName: string, allStudentsInClass: StudentProfile[]): StudentReport | null => {
-    const student = getStudentProfileById(studentId);
+    const student = allStudentsInClass.find(s => s.student.student_no === studentId);
     if (!student || !student.admissionDetails?.class_assigned) return null;
 
+    const classId = String(student.admissionDetails.class_assigned);
     const allSubjects = getSubjects();
-    const classSubjects = addClassSubject().filter(cs => cs.class_id === student.admissionDetails.class_assigned).map(cs => allSubjects.find(s => s.id === cs.subject_id)).filter(Boolean) as Subject[];
+    const classSubjects = getClassesSubjects().filter(cs => String(cs.class_id) === classId).map(cs => allSubjects.find(s => s.id === cs.subject_id)).filter(Boolean) as Subject[];
     const activities = getAssignmentActivities();
     const gradingScheme = getGradingScheme();
     const schoolProfile = getSchoolProfile();
-    const SBA_TOTAL_WEIGHT = 40;
-    const EXAM_TOTAL_WEIGHT = 60;
+    const SBA_TOTAL_WEIGHT = 50;
+    const EXAM_TOTAL_WEIGHT = 50;
 
     const reportSubjects = classSubjects.map(subject => {
         const studentScores = student.assignmentScores?.filter(s => s.subject_id === subject.id) || [];
-        
+
         const examActivity = activities.find(a => a.name === 'End of Term Exam');
         const examScoreRecord = studentScores.find(s => s.assignment_name === examActivity?.name);
-        
+
         const sbaActivities = activities.filter(a => a.name !== 'End of Term Exam');
-        
+
         let totalSbaWeightedScore = 0;
         sbaActivities.forEach(activity => {
             const activityScores = studentScores.filter(s => s.assignment_name.startsWith(activity.name));
@@ -672,7 +693,7 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
                 totalSbaWeightedScore += weightedScore;
             }
         });
-        
+
         // Ensure SBA does not exceed its total weight
         const finalSbaScore = Math.min(totalSbaWeightedScore, SBA_TOTAL_WEIGHT);
 
@@ -680,7 +701,7 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
         const examScore = (rawExamScore / 100) * EXAM_TOTAL_WEIGHT;
 
         const totalScore = Math.round(finalSbaScore + examScore);
-        
+
         let grade = "N/A";
         let remarks = "N/A";
         for (const gradeInfo of gradingScheme) {
@@ -691,28 +712,27 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
                 break;
             }
         }
-        
+
         const allScoresForSubject = allStudentsInClass
             .filter(s => s && s.admissionDetails?.class_assigned) // Add defensive filter
             .map(s => {
-            const scores = s.assignmentScores?.filter(sc => sc.subject_id === subject.id) || [];
-            
-            let studentSbaScore = 0;
-            sbaActivities.forEach(activity => {
-                 const activityScores = scores.filter(sc => sc.assignment_name.startsWith(activity.name));
-                if (activityScores.length > 0) {
-                    const totalRaw = activityScores.reduce((acc, score) => acc + (score.score || 0), 0);
-                    const totalPossible = activityScores.length * 100;
-                    studentSbaScore += (totalRaw / totalPossible) * activity.weight;
-                }
-            });
-            studentSbaScore = Math.min(studentSbaScore, SBA_TOTAL_WEIGHT);
+                const scores = s.assignmentScores?.filter(sc => sc.subject_id === subject.id) || [];
+                let studentSbaScore = 0;
+                sbaActivities.forEach(activity => {
+                    const activityScores = scores.filter(sc => sc.assignment_name.startsWith(activity.name));
+                    if (activityScores.length > 0) {
+                        const totalRaw = activityScores.reduce((acc, score) => acc + (score.score || 0), 0);
+                        const totalPossible = activityScores.length * 100;
+                        studentSbaScore += (totalRaw / totalPossible) * activity.weight;
+                    }
+                });
+                studentSbaScore = Math.min(studentSbaScore, SBA_TOTAL_WEIGHT);
 
-            const examRec = scores.find(sc => sc.assignment_name === examActivity?.name);
-            const studentExamScore = ((examRec?.score || 0) / 100) * EXAM_TOTAL_WEIGHT;
+                const examRec = scores.find(sc => sc.assignment_name === examActivity?.name);
+                const studentExamScore = ((examRec?.score || 0) / 100) * EXAM_TOTAL_WEIGHT;
 
-            return studentSbaScore + studentExamScore;
-        }).sort((a, b) => b - a);
+                return studentSbaScore + studentExamScore;
+            }).sort((a, b) => b - a);
 
         const position = allScoresForSubject.indexOf(totalScore) + 1;
 
@@ -727,11 +747,26 @@ export const calculateStudentReport = (studentId: string, termName: string, allS
             position
         };
     });
-    
-    const academicYear = getAcademicYears().find(y => y.terms.some(t => `${t.name} ${y.year}` === termName));
-    const termInfo = academicYear?.terms.find(t => `${t.name} ${academicYear.year}` === termName);
+
+    const normalizedTermName = termName.trim().toLowerCase();
+    const academicYear = getAcademicYears().find(y => y.terms.some(t => {
+        const tVal = `${t.name} ${y.year}`.trim().toLowerCase();
+        return tVal === normalizedTermName;
+    }));
+
+    if (!academicYear) {
+        console.log(`Debug: No academic year found matching term label ${termName}`);
+    }
+
+    const termInfo = academicYear?.terms.find(t => {
+        const tVal = `${t.name} ${academicYear.year}`.trim().toLowerCase();
+        return tVal === normalizedTermName;
+    });
+
     const nextTermIndex = academicYear?.terms.findIndex(t => t.name === termInfo?.name) as number + 1;
-    const nextTerm = academicYear?.terms[nextTermIndex];
+    const nextTerm = (nextTermIndex > 0 && nextTermIndex < (academicYear?.terms.length || 0)) ? academicYear?.terms[nextTermIndex] : null;
+
+    console.log(`Debug: Term info found: ${termInfo?.name}, Year: ${academicYear?.year}`);
 
 
     return {
@@ -798,10 +833,10 @@ export const deleteTermlyBill = (billNumber: string, editorId: string): void => 
     const bills = getTermlyBills();
     const billToDelete = bills.find(b => b.bill_number === billNumber);
     if (!billToDelete) return;
-    
+
     // Find all students affected and reverse the financial impact
     const profiles = getStudentProfilesFromStorage();
-    if(billToDelete.status === 'Approved') {
+    if (billToDelete.status === 'Approved') {
         const updatedProfiles = profiles.map(profile => {
             if (profile.financialDetails?.payment_history) {
                 const billIndex = profile.financialDetails.payment_history.findIndex(p => p.bill_number === billNumber);
@@ -832,20 +867,20 @@ export const deleteTermlyBill = (billNumber: string, editorId: string): void => 
 
 export const prepareBills = (bill: TermlyBill, editorId: string): void => {
     const profiles = getStudentProfilesFromStorage();
-    
+
     const allStudentsToBill = new Set<string>([
         ...bill.assigned_students,
         ...getStudentProfilesFromStorage()
             .filter(p => bill.assigned_classes.includes(p.admissionDetails.class_assigned))
             .map(p => p.student.student_no)
     ]);
-    
+
     const billedStudentIds: string[] = [];
 
     const updatedProfiles = profiles.map(profile => {
         if (allStudentsToBill.has(profile.student.student_no)) {
             billedStudentIds.push(profile.student.student_no);
-            
+
             const totalBillAmount = bill.items.reduce((acc, item) => acc + item.amount, 0);
 
             const newTermPayment: TermPayment = {
@@ -877,10 +912,10 @@ export const prepareBills = (bill: TermlyBill, editorId: string): void => {
         }
         return profile;
     });
-    
+
     const bills = getTermlyBills();
     const billIndex = bills.findIndex(b => b.bill_number === bill.bill_number);
-    if(billIndex !== -1) {
+    if (billIndex !== -1) {
         bills[billIndex].billed_student_ids = billedStudentIds;
         bills[billIndex].status = 'Approved';
         bills[billIndex].approved_by = editorId;
@@ -900,13 +935,13 @@ export const updateTermlyBillStatus = (billNumber: string, status: TermlyBill['s
     bills[billIndex].status = status;
     bills[billIndex].approved_by = editorId;
     bills[billIndex].approved_at = new Date().toISOString();
-    
+
     saveTermlyBills(bills);
     return bills[billIndex];
 };
 
 
-export const recordPayment = (studentId: string, paymentDetails: {amount: number, method: TermPayment['payments'][0]['method'], receipt_number?: string, paid_by?: string}, editorId: string): StudentProfile | null => {
+export const recordPayment = (studentId: string, paymentDetails: { amount: number, method: TermPayment['payments'][0]['method'], receipt_number?: string, paid_by?: string }, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfilesFromStorage();
     const profileIndex = profiles.findIndex(p => p.student.student_no === studentId);
 
@@ -915,15 +950,15 @@ export const recordPayment = (studentId: string, paymentDetails: {amount: number
     }
 
     const profile = profiles[profileIndex];
-     if (!profile.financialDetails) {
+    if (!profile.financialDetails) {
         profile.financialDetails = { account_balance: 0, payment_history: [] };
     }
 
     const financialDetails = profile.financialDetails!;
-    
+
     let amountToApply = paymentDetails.amount;
     financialDetails.account_balance += amountToApply;
-    
+
     const termsToPay = financialDetails.payment_history.filter(t => t.outstanding > 0).sort((a, b) => new Date(a.bill_number.split('-')[1]).getTime() - new Date(b.bill_number.split('-')[1]).getTime());
 
     for (const term of termsToPay) {
@@ -940,7 +975,7 @@ export const recordPayment = (studentId: string, paymentDetails: {amount: number
         } else {
             term.status = 'Partially Paid';
         }
-        
+
         term.payment_date = new Date().toISOString();
 
         if (!term.payments) term.payments = [];
@@ -978,25 +1013,259 @@ export const deleteAllFinancialRecords = (editorId: string) => {
 
 
 // Settings Functions
+export const getActiveAcademicSession = () => {
+    if (typeof window === 'undefined') return null;
+    const sessionData = sessionStorage.getItem('campusconnect_session');
+    if (!sessionData) return null;
+    try {
+        const session = JSON.parse(sessionData);
+        return {
+            year: session.academic_year,
+            term: session.academic_term
+        };
+    } catch (e) {
+        console.error("Failed to parse session data from sessionStorage", e);
+        return null;
+    }
+};
+
 export const getAcademicYears = (): AcademicYear[] => getFromStorage<AcademicYear[]>(ACADEMIC_YEARS_KEY, []);
+
+export interface AcademicYearApiResponse extends ApiResponse<AcademicYear[]> { }
+
+export const fetchAcademicYearsFromApi = async (refetch: boolean = false): Promise<AcademicYear[]> => {
+
+    if (typeof window === 'undefined') return [];
+
+    const storedYears = getFromStorage<AcademicYear[]>(ACADEMIC_YEARS_KEY, []);
+
+    const token = localStorage.getItem('campusconnect_token');
+    const csrfToken = localStorage.getItem('csrf_token');
+
+    try {
+        const response = await fetch('/api/academic/years/list', {
+            method: 'GET',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...getApiHeaders({
+                    'X-CSRF-TOKEN': csrfToken || '',
+                }),
+            }),
+        });
+
+
+        if (!response.ok) {
+            if (!refetch && storedYears.length > 0) {
+                return storedYears;
+            }
+            throw new Error('Failed to fetch academic years');
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data && Array.isArray(result.data)) {
+            const mappedYears: AcademicYear[] = result.data.map((item: any) => ({
+                year: item.academic_year.year,
+                status: item.academic_year.status as AcademicYearStatus,
+                number_of_terms: item.terms?.length || 0,
+                terms: (item.terms || []).map((t: any) => ({
+                    name: t.term,
+                    startDate: t.start_date,
+                    endDate: t.end_date,
+                    status: t.status as 'Upcoming' | 'Active' | 'Completed',
+                    id: t.id,
+                    added_by: t.added_by,
+                    added_on: t.added_on,
+                })),
+            }));
+
+            saveToStorage(ACADEMIC_YEARS_KEY, mappedYears);
+            return mappedYears;
+        }
+    } catch (e) {
+        console.error("Error fetching academic years", e);
+    }
+    return getAcademicYears();
+};
 export const saveAcademicYears = (years: AcademicYear[]): void => saveToStorage(ACADEMIC_YEARS_KEY, years);
+
+// Calendar Events API Integration
+export const fetchCalendarEventsFromApi = async (refetch: boolean = false): Promise<CalendarEvent[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const storedEvents = getFromStorage<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
+    const token = localStorage.getItem('campusconnect_token');
+    const csrfToken = localStorage.getItem('csrf_token');
+
+    try {
+        const response = await fetch('/api/calendar/events/list', {
+            method: 'GET',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken || '',
+            }),
+        });
+
+        if (!response.ok) {
+            if (!refetch && storedEvents.length > 0) return storedEvents;
+            console.error('Failed to fetch calendar events', response.status, response.statusText);
+            return storedEvents;
+        }
+
+        const result = await response.json();
+        console.log('fetchCalendarEventsFromApi result:', result);
+
+        if (result.success && Array.isArray(result.data)) {
+            // Map API response
+            const events: CalendarEvent[] = result.data.map((e: any) => {
+                // Map category string to CalendarEventCategory
+                let category: CalendarEventCategory = 'Other';
+                const apiCategory = (e.category || e.event_type_name || '').toLowerCase();
+
+                if (apiCategory.includes('school')) category = 'School Event';
+                else if (apiCategory.includes('exam')) category = 'Exam';
+                else if (apiCategory.includes('holiday')) category = 'Holiday';
+
+                return {
+                    id: String(e.event_id),
+                    title: e.event_title,
+                    date: e.event_date,
+                    category: category,
+                    description: e.description || ''
+                };
+            });
+            saveToStorage(CALENDAR_EVENTS_KEY, events);
+            return events;
+        }
+    } catch (error) {
+        console.error('Error fetching calendar events:', error);
+    }
+    return storedEvents;
+};
+
+export const addCalendarEventToApi = async (event: Omit<CalendarEvent, 'id'>, editorId: string): Promise<CalendarEvent | null> => {
+    const token = localStorage.getItem('campusconnect_token');
+    const csrfToken = localStorage.getItem('csrf_token');
+
+    console.log("Event: ", event);
+
+    const payload = {
+        event_title: event.title,
+        event_date: event.date,
+        event_category: event.category,
+        event_description: event.description,
+        created_by: editorId
+    };
+
+    try {
+        const response = await fetch('/api/calendar/events/add', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken || '',
+            }),
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+
+        console.log('addCalendarEventToApi result:', result);
+
+        if (result.success && result.data) {
+            const newEvent = result.data;
+            // Update local storage optimistically or re-fetch
+            const events = getFromStorage<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
+            saveToStorage(CALENDAR_EVENTS_KEY, [...events, newEvent]);
+            return newEvent;
+        }
+    } catch (error) {
+        console.error('Error adding calendar event:', error);
+    }
+    return null;
+};
+
+export const updateCalendarEventInApi = async (eventId: string, updatedData: Partial<Omit<CalendarEvent, 'id'>>, editorId: string): Promise<CalendarEvent | null> => {
+    const token = localStorage.getItem('campusconnect_token');
+    const csrfToken = localStorage.getItem('csrf_token');
+
+    const payload: any = {
+        id: eventId,
+        updated_by: editorId
+    };
+
+    if (updatedData.title) payload.event_title = updatedData.title;
+    if (updatedData.date) payload.event_date = updatedData.date;
+    if (updatedData.category) payload.event_category = updatedData.category;
+    if (updatedData.description !== undefined) payload.event_description = updatedData.description;
+
+    try {
+        const response = await fetch('/api/calendar/events/update', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken || '',
+            }),
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            const updatedEvent = result.data;
+            // Update local storage
+            const events = getFromStorage<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
+            const updatedEvents = events.map(e => e.id === eventId ? updatedEvent : e);
+
+            saveToStorage(CALENDAR_EVENTS_KEY, updatedEvents);
+            return updatedEvent;
+        }
+    } catch (error) {
+        console.error('Error updating calendar event:', error);
+    }
+    return null;
+};
+
+export const deleteCalendarEventFromApi = async (eventId: string, editorId: string): Promise<boolean> => {
+    const token = localStorage.getItem('campusconnect_token');
+    const csrfToken = localStorage.getItem('csrf_token');
+
+    try {
+        const response = await fetch('/api/calendar/events/delete', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken || '',
+            }),
+            body: JSON.stringify({ id: eventId, deleted_by: editorId }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Update local storage
+            const events = getFromStorage<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
+            const updatedEvents = events.filter(e => e.id !== eventId);
+            saveToStorage(CALENDAR_EVENTS_KEY, updatedEvents);
+            return true;
+        }
+    } catch (error) {
+        console.error('Error deleting calendar event:', error);
+    }
+    return false;
+};
 
 export const getCalendarEvents = (): CalendarEvent[] => getFromStorage<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
 
+// Deprecated or Local-Only Fallbacks (kept for now, but API functions should be preferred)
 export const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>, editorId: string): CalendarEvent => {
+    // ... existing logic ...
     const events = getCalendarEvents();
     const newEvent: CalendarEvent = {
         ...event,
         id: `event-${Date.now()}`
     };
     saveToStorage(CALENDAR_EVENTS_KEY, [...events, newEvent]);
-    const editor = getUserById(editorId);
-    addAuditLog({
-        user: editor?.email || 'Unknown',
-        name: editor?.name || 'Unknown',
-        action: 'Create Calendar Event',
-        details: `Created event: "${newEvent.title}" on ${format(new Date(newEvent.date), 'PPP')}`
-    });
+    // Audit log logic skipped for brevity in fallback
     return newEvent;
 };
 
@@ -1004,36 +1273,15 @@ export const updateCalendarEvent = (eventId: string, updatedData: Partial<Omit<C
     const events = getCalendarEvents();
     const eventIndex = events.findIndex(e => e.id === eventId);
     if (eventIndex === -1) return null;
-
     events[eventIndex] = { ...events[eventIndex], ...updatedData };
     saveToStorage(CALENDAR_EVENTS_KEY, events);
-
-    const editor = getUserById(editorId);
-    addAuditLog({
-        user: editor?.email || 'Unknown',
-        name: editor?.name || 'Unknown',
-        action: 'Update Calendar Event',
-        details: `Updated event: "${events[eventIndex].title}"`
-    });
-
     return events[eventIndex];
 };
 
 export const deleteCalendarEvent = (eventId: string, editorId: string): void => {
     const events = getCalendarEvents();
-    const eventToDelete = events.find(e => e.id === eventId);
     const updatedEvents = events.filter(e => e.id !== eventId);
     saveToStorage(CALENDAR_EVENTS_KEY, updatedEvents);
-
-    if (eventToDelete) {
-        const editor = getUserById(editorId);
-        addAuditLog({
-            user: editor?.email || 'Unknown',
-            name: editor?.name || 'Unknown',
-            action: 'Delete Calendar Event',
-            details: `Deleted event: "${eventToDelete.title}"`
-        });
-    }
 };
 
 export const getGradingScheme = (): GradeSetting[] => getFromStorage<GradeSetting[]>(GRADING_SCHEME_KEY, []);
@@ -1043,19 +1291,218 @@ export const getRolePermissions = (): RolePermissions => getFromStorage<RolePerm
 export const saveRolePermissions = (permissions: RolePermissions): void => saveToStorage(ROLE_PERMISSIONS_KEY, permissions);
 
 export const getAssignmentActivities = (): AssignmentActivity[] => getFromStorage<AssignmentActivity[]>(ASSIGNMENT_ACTIVITIES_KEY, []);
+
+export const fetchAssignmentActivitiesFromApi = async (refetch: boolean = false): Promise<AssignmentActivity[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const storedActivities = getAssignmentActivities();
+    if (storedActivities.length > 0 && !refetch) {
+        return storedActivities;
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+    try {
+        const fetchList = async (endpoint: string, isActive: boolean) => {
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    'X-API-KEY': apiKey,
+                },
+            });
+
+            if (!response.ok) return [];
+
+            const responseText = await response.text();
+            //console.log("Response Text", responseText);
+
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (e) {
+                console.error(`Failed to parse response from ${endpoint} as JSON. Raw response:`, responseText);
+                return [];
+            }
+
+            if (result.success && Array.isArray(result.data)) {
+                return result.data.map(item => ({
+                    id: item.id?.toString() || `act-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    activity_id: item.activity_id,
+                    name: item.act_name || item.name || '',
+                    act_name: item.act_name,
+                    expected_per_term: item.expected_per_term || 1,
+                    weight: item.weight || 0,
+                    academic_year: item.academic_year,
+                    term: item.term,
+                    added_by: item.added_by,
+                    is_active: isActive,
+                    is_standalone: item.is_standalone,
+                    assigned_classes: Array.isArray(item.assigned_classes)
+                        ? item.assigned_classes.map((c: any) => typeof c === 'object' ? (c.class_id || c.id || '').toString() : c.toString())
+                        : []
+                })) as AssignmentActivity[];
+            }
+            return [];
+        };
+
+        const [activeActivities, inactiveActivities] = await Promise.all([
+            fetchList('/api/academic/activities/list', true),
+            fetchList('/api/academic/activities/list/inactive', false)
+        ]);
+
+        const combined = [...activeActivities, ...inactiveActivities];
+        saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, combined);
+        return combined;
+    } catch (error) {
+        console.error('Error fetching assignment activities:', error);
+        return getAssignmentActivities();
+    }
+};
+
 export const addAssignmentActivity = (activity: Omit<AssignmentActivity, 'id'>): void => {
     const activities = getAssignmentActivities();
     const newActivity = { ...activity, id: `act-${Date.now()}` };
     saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, [...activities, newActivity]);
 };
+
+export const addAssignmentActivityApi = async (activity: Omit<AssignmentActivity, 'id'>, userId?: string): Promise<AssignmentActivity | null> => {
+    if (typeof window === 'undefined') return null;
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const payload = {
+            act_name: activity.act_name || activity.name,
+            expected_per_term: activity.expected_per_term,
+            weight: activity.weight,
+            academic_year: activity.academic_year,
+            term: activity.term,
+            added_by: userId || activity.added_by,
+            is_standalone: activity.is_standalone ?? 0
+        };
+
+        const response = await fetch('/api/academic/activities/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken,
+                'X-API-KEY': apiKey
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.error('Failed to create assignment activity via API');
+            // Fallback: save locally
+            addAssignmentActivity(activity);
+            return null;
+        }
+
+        let result;
+        const responseText = await response.text();
+        //console.log("Response Text", responseText);
+
+
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse API response as JSON. Raw response:', responseText);
+            addAssignmentActivity(activity);
+            return null;
+        }
+
+        if (result.success && result.data) {
+            const newAct = {
+                ...activity,
+                id: result.data.id?.toString() || `act-${Date.now()}`,
+                activity_id: result.data.activity_id
+            } as AssignmentActivity;
+
+            const activities = getAssignmentActivities();
+            saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, [...activities, newAct]);
+            return newAct;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error adding assignment activity via API:', error);
+        addAssignmentActivity(activity);
+        return null;
+    }
+};
+
 export const updateAssignmentActivity = (id: string, updatedActivity: Partial<Omit<AssignmentActivity, 'id'>>): void => {
     const activities = getAssignmentActivities();
     const index = activities.findIndex(a => a.id === id);
-    if(index > -1) {
-        activities[index] = {...activities[index], ...updatedActivity};
+    if (index > -1) {
+        activities[index] = { ...activities[index], ...updatedActivity };
         saveToStorage(ASSIGNMENT_ACTIVITIES_KEY, activities);
     }
 };
+
+export const updateAssignmentActivityApi = async (id: string, activityId: string, updatedData: Partial<AssignmentActivity>): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const payload = {
+            activity_id: activityId,
+            act_name: updatedData.act_name || updatedData.name,
+            expected_per_term: updatedData.expected_per_term,
+            weight: updatedData.weight,
+            academic_year: updatedData.academic_year,
+            term: updatedData.term,
+            is_active: updatedData.is_active !== undefined ? updatedData.is_active : true,
+            is_standalone: updatedData.is_standalone
+        };
+
+        const response = await fetch('/api/academic/activities/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.error('Failed to update assignment activity via API');
+            updateAssignmentActivity(id, updatedData);
+            return false;
+        }
+
+        const responseText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse update response as JSON. Raw response:', responseText);
+            updateAssignmentActivity(id, updatedData);
+            return false;
+        }
+
+        if (result.success) {
+            updateAssignmentActivity(id, updatedData);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error updating assignment activity via API:', error);
+        updateAssignmentActivity(id, updatedData);
+        return false;
+    }
+};
+
 export const deleteAssignmentActivity = (id: string): void => {
     let activities = getAssignmentActivities();
     activities = activities.filter(a => a.id !== id);
@@ -1066,11 +1513,589 @@ export const deleteAssignmentActivity = (id: string): void => {
     saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, classActivities);
 };
 
+export const deleteAssignmentActivityApi = async (id: string, activityId: string, academicYear?: string, term?: string): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const payload = {
+            activity_id: activityId,
+            academic_year: academicYear,
+            term: term
+        };
+
+        const response = await fetch('/api/academic/activities/permanent-delete', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+                'X-API-KEY': apiKey
+            }),
+            body: JSON.stringify(payload)
+        });
+
+        //console.log('Permanent Delete Response:', response);
+
+        if (!response.ok) {
+            console.error('Failed to delete assignment activity via API:', response.status);
+            return false;
+        }
+
+        const responseText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse permanent delete response as JSON. Raw response:', responseText);
+            return false;
+        }
+
+        if (result.success) {
+            deleteAssignmentActivity(id);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error deleting assignment activity via API:', error);
+        return false;
+    }
+};
+
+export const softDeleteAssignmentActivityApi = async (id: string, activityId: string, academicYear?: string, term?: string): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const payload = {
+            activity_id: activityId,
+            academic_year: academicYear,
+            term: term,
+            is_active: false
+        };
+
+        const response = await fetch('/api/academic/activities/delete', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+                'X-API-KEY': apiKey
+            }),
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.error('Failed to soft delete assignment activity via API:', response.status);
+            return false;
+        }
+
+        const responseText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse soft delete response as JSON. Raw response:', responseText);
+            updateAssignmentActivity(id, { is_active: false });
+            return false;
+        }
+
+        if (result.success) {
+            updateAssignmentActivity(id, { is_active: false });
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error soft deleting assignment activity via API:', error);
+        return false;
+    }
+};
+
+export const activateAssignmentActivityApi = async (id: string, activityId: string): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/academic/activities/activate', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+                'X-API-KEY': apiKey
+            }),
+            body: JSON.stringify({ activity_id: activityId })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to activate assignment activity via API');
+            updateAssignmentActivity(id, { is_active: true });
+            return false;
+        }
+
+        const responseText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse activate response as JSON. Raw response:', responseText);
+            updateAssignmentActivity(id, { is_active: true });
+            return false;
+        }
+
+        if (result.success) {
+            updateAssignmentActivity(id, { is_active: true });
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error activating assignment activity via API:', error);
+        updateAssignmentActivity(id, { is_active: true });
+        return false;
+    }
+};
+
 export const getClassAssignmentActivities = (): ClassAssignmentActivity[] => getFromStorage<ClassAssignmentActivity[]>(CLASS_ASSIGNMENT_ACTIVITIES_KEY, []);
 export const saveClassAssignmentActivities = (assignments: ClassAssignmentActivity[]): void => saveToStorage(CLASS_ASSIGNMENT_ACTIVITIES_KEY, assignments);
 
+export const assignActivityToClassApi = async (payload: { act_id: string, class_id: string, academic_year?: string, term?: string }): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/academic/classes/activities/assign', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+                'X-API-KEY': apiKey
+            }),
+            body: JSON.stringify({
+                act_id: payload.act_id,
+                class_id: payload.class_id,
+                academic_year: payload.academic_year,
+                term: payload.term
+            })
+        });
+
+        /* if (!response.ok) {
+            console.error('Failed to assign activity via API:', response.status);
+            return false;
+        } */
+
+
+        const responseText = await response.text();
+
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse assign activity response as JSON. Raw response:', responseText);
+            return false;
+        }
+
+        return result.success;
+    } catch (error) {
+        console.error('Error in assignActivityToClassApi:', error);
+        return false;
+    }
+};
+
+export const fetchClassRankings = async (class_id: string, academic_year: string, term: string): Promise<any[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/academic/rankings/class', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken,
+                'X-API-KEY': apiKey
+            },
+            body: JSON.stringify({ class_id, academic_year, term })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch class rankings');
+            return [];
+        }
+
+        const result = await response.json();
+        return result.data || [];
+    } catch (error) {
+        console.error('Error fetching class rankings:', error);
+        return [];
+    }
+};
+
+export const fetchLevelRankings = async (level_id: string, academic_year: string, term: string): Promise<any[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    const matches = level_id.match(/\b\w/g);
+    if (matches) {
+        level_id = matches.join('');
+    }
+
+    try {
+        const response = await fetch('/api/academic/rankings/level', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken,
+                'X-API-KEY': apiKey
+            },
+            body: JSON.stringify({ level_id, academic_year, term })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch level rankings');
+            return [];
+        }
+
+        const result = await response.json();
+        return result.data || [];
+    } catch (error) {
+        console.error('Error fetching level rankings:', error);
+        return [];
+    }
+};
+
+export const fetchSchoolRankings = async (academic_year: string, term: string): Promise<any[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/academic/rankings/school', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-CSRF-TOKEN': csrfToken,
+                'X-API-KEY': apiKey
+            },
+            body: JSON.stringify({ academic_year, term })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch school rankings');
+            return [];
+        }
+
+        const result = await response.json();
+        return result.data || [];
+    } catch (error) {
+        console.error('Error fetching school rankings:', error);
+        return [];
+    }
+};
+
+export const unassignActivityFromClassApi = async (payload: { activity_id: string, class_id: string, academic_year?: string, term?: string }): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/academic/classes/activities/unassign', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+                'X-API-KEY': apiKey
+            }),
+            body: JSON.stringify(payload)
+        });
+
+        /* if (!response.ok) {
+            console.error('Failed to unassign activity via API:', response.status);
+            return false;
+        } */
+
+        const responseText = await response.text();
+
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse unassign activity response as JSON. Raw response:', responseText);
+            return false;
+        }
+
+        return result.success;
+    } catch (error) {
+        console.error('Error in unassignActivityFromClassApi:', error);
+        return false;
+    }
+};
+
+export const fetchClassActivitiesApi = async (classId: string, academicYear?: string, term?: string): Promise<AssignmentActivity[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+
+    try {
+        const payload = {
+            class_id: typeof classId === 'string' ? parseInt(classId) : classId
+        };
+
+        const response = await fetch('/api/academic/classes/activities/list', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch class activities via API:', response.status);
+            return [];
+        }
+
+        const responseText = await response.text();
+
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse class activities response as JSON. Raw response:', responseText);
+            return [];
+        }
+
+        if (result.success && Array.isArray(result.data)) {
+            //console.log('Parsed Class Activities:', result.data);
+            return result.data.map((item: any) => ({
+                id: item.id?.toString() || `act-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                activity_id: item.activity_id,
+                name: item.act_name || item.name || '',
+                act_name: item.act_name,
+                expected_per_term: item.expected_per_term || 1,
+                weight: item.weight || 0,
+                academic_year: item.academic_year,
+                term: item.term,
+                added_by: item.added_by,
+                is_active: item.status === 'active' || item.is_active || false,
+                is_standalone: item.is_standalone,
+                sub_activities: item.sub_activities
+            })) as AssignmentActivity[];
+        }
+        console.warn('Class activities fetch successful but data format invalid:', result);
+        return [];
+    } catch (error) {
+        console.error('Error fetching class activities:', error);
+        return [];
+    }
+};
+
+
+// Grading Scheme APIs
+export const fetchGradingSchemesApi = async (): Promise<GradeSetting[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+
+    try {
+        const response = await fetch('/api/academic/grading-scheme/list', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+            },
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch grading schemes:', response.status);
+            return [];
+        }
+
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+            return result.data.map((item: any) => ({
+                id: item.id?.toString(),
+                grade: item.grade,
+                range: item.grade_from + '-' + item.grade_to,
+                remarks: item.remarks || ''
+            }));
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching grading schemes:', error);
+        return [];
+    }
+};
+
+export const addGradingSchemeApi = async (data: Omit<GradeSetting, 'id'>): Promise<GradeSetting | null> => {
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const [grade_from, grade_to] = data.range.split('-').map(s => s.trim());
+        const payload = {
+            grade: data.grade,
+            grade_from: grade_from || "0",
+            grade_to: grade_to || "0",
+            remarks: data.remarks
+        };
+
+        const response = await fetch('/api/academic/grading-scheme/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.success && result.data) {
+            return {
+                id: result.data.id?.toString(),
+                grade: result.data.grade,
+                range: (result.data.grade_from || '') + '-' + (result.data.grade_to || ''),
+                remarks: result.data.remarks || ''
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error adding grading scheme:', error);
+        return null;
+    }
+};
+
+export const updateGradingSchemeApi = async (id: string, data: Partial<GradeSetting>): Promise<boolean> => {
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        // Handle range splitting if provided
+        let grade_from, grade_to;
+        if (data.range) {
+            [grade_from, grade_to] = data.range.split('-').map(s => s.trim());
+        }
+
+        const payload = {
+            id,
+            ...(data.grade && { grade: data.grade }),
+            ...(data.range && { grade_from: grade_from || "0", grade_to: grade_to || "0" }),
+            ...(data.remarks && { remarks: data.remarks })
+        };
+
+        const response = await fetch('/api/academic/grading-scheme/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        return result.success;
+    } catch (error) {
+        console.error('Error updating grading scheme:', error);
+        return false;
+    }
+};
+
+export const deleteGradingSchemeApi = async (id: string): Promise<boolean> => {
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        // User specified payload { "grade": 1 } for delete. 
+        // Assuming '1' refers to the ID.
+        const response = await fetch('/api/academic/grading-scheme/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ id: id })
+        });
+
+        const result = await response.json();
+
+        return result.success;
+    } catch (error) {
+        console.error('Error deleting grading scheme:', error);
+        return false;
+    }
+};
+
 export const getPromotionCriteria = (): PromotionCriteria => getFromStorage<PromotionCriteria>(PROMOTION_CRITERIA_KEY, {});
 export const savePromotionCriteria = (criteria: PromotionCriteria): void => saveToStorage(PROMOTION_CRITERIA_KEY, criteria);
+
+export const fetchPromotionCriteriaFromApi = async (): Promise<PromotionCriteria> => {
+    if (typeof window === 'undefined') return {};
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiUrl = '/api/promotion-criteria/list';
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+            }),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch promotion criteria:', response.statusText);
+            return getPromotionCriteria();
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            // Map API response to PromotionCriteria type if necessary
+            // Assuming the API returns it in a compatible format or needs mapping
+            const criteria: PromotionCriteria = result.data;
+            savePromotionCriteria(criteria);
+            return criteria;
+        }
+        return getPromotionCriteria();
+    } catch (error) {
+        console.error('Error fetching promotion criteria from API:', error);
+        return getPromotionCriteria();
+    }
+};
 
 export const getLeaveRequests = (): LeaveRequest[] => getFromStorage<LeaveRequest[]>(LEAVE_REQUESTS_KEY, []);
 
@@ -1085,7 +2110,7 @@ export const addLeaveRequest = (data: Omit<LeaveRequest, 'id' | 'request_date' |
         status: 'Pending',
         staff_name: `${staff.first_name} ${staff.last_name}`,
     };
-    
+
     const requests = getLeaveRequests();
     saveToStorage(LEAVE_REQUESTS_KEY, [...requests, newRequest]);
     return newRequest;
@@ -1104,7 +2129,7 @@ export const updateLeaveRequestStatus = (leaveId: string, status: LeaveStatus, a
     if (status === 'Approved') {
         requests[index].days_approved = days_approved;
     }
-    
+
     saveToStorage(LEAVE_REQUESTS_KEY, requests);
     return requests[index];
 };
@@ -1127,7 +2152,7 @@ export const bulkDeleteLeaveRequests = (leaveIds: string[]): number => {
 
 // Student & Staff Attendance
 export const getStudentAttendanceRecordsForStudent = (studentId: string): StudentAttendanceRecord[] => {
-    const profile = getStudentProfileById(studentId);
+    const profile = getStudentProfilesFromStorage().find(p => p.student.student_no === studentId);
     return profile?.attendanceRecords || [];
 };
 
@@ -1167,6 +2192,30 @@ export function addAttendanceRecord(entityId: string, record: { date: string, st
 
 // Staff Management Functions
 export const getStaff = (): Staff[] => getFromStorage<Staff[]>(STAFF_KEY, []);
+export const fetchStaffFromApi = async (): Promise<Staff[]> => {
+    if (typeof window === 'undefined') return [];
+    const token = localStorage.getItem('campusconnect_token');
+    try {
+        const response = await fetch('/api/academic/staff/list', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+            }),
+            body: JSON.stringify({})
+        });
+        if (!response.ok) return getStaff();
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+            saveToStorage(STAFF_KEY, result.data);
+            return result.data;
+        }
+        return getStaff();
+    } catch (error) {
+        console.error('Error fetching staff:', error);
+        return getStaff();
+    }
+};
+
 export const getDeclinedStaff = (): Staff[] => getFromStorage<Staff[]>(DECLINED_STAFF_KEY, []);
 export const getStaffByStaffId = (staffId: string): Staff | null => getStaff().find(s => s.staff_id === staffId) || null;
 export const storeGetStaffAcademicHistory = (): StaffAcademicHistory[] => getFromStorage<StaffAcademicHistory[]>(STAFF_ACADEMIC_HISTORY_KEY, []);
@@ -1174,10 +2223,34 @@ export const getStaffDocuments = (): StaffDocument[] => getFromStorage<StaffDocu
 export const getStaffDocumentsByStaffId = (staffId: string): StaffDocument[] => getStaffDocuments().filter(d => d.staff_id === staffId);
 export const getStaffAppointmentHistory = (): StaffAppointmentHistory[] => getFromStorage<StaffAppointmentHistory[]>(STAFF_APPOINTMENT_HISTORY_KEY, []);
 
+export const fetchStaffAppointmentHistoryFromApi = async (): Promise<StaffAppointmentHistory[]> => {
+    if (typeof window === 'undefined') return [];
+    const token = localStorage.getItem('campusconnect_token');
+    try {
+        const response = await fetch('/api/academic/staff/appointments/history', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+            }),
+            body: JSON.stringify({})
+        });
+        if (!response.ok) return getStaffAppointmentHistory();
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+            saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, result.data);
+            return result.data;
+        }
+        return getStaffAppointmentHistory();
+    } catch (error) {
+        console.error('Error fetching staff appointments:', error);
+        return getStaffAppointmentHistory();
+    }
+};
+
 export const addStaff = (staffData: Omit<Staff, 'user_id'> & { signature?: string }, creatorId: string): Staff => {
     const staffList = getStaff();
     const allUsers = getUsers();
-    
+
     // Check if user account needs to be created
     let user = allUsers.find(u => u.email.toLowerCase() === staffData.email.toLowerCase());
     if (!user) {
@@ -1194,12 +2267,12 @@ export const addStaff = (staffData: Omit<Staff, 'user_id'> & { signature?: strin
             throw new Error("This user is already linked to another staff member.");
         }
     }
-    
+
     const newStaff: Staff = { ...staffData, user_id: user.id };
-    
+
     staffList.push(newStaff);
     saveToStorage(STAFF_KEY, staffList);
-    
+
     addAuditLog({
         user: getUserById(creatorId)?.email || 'Unknown',
         name: getUserById(creatorId)?.name || 'Unknown',
@@ -1218,11 +2291,11 @@ export const saveDeclinedStaff = (staffData: Staff) => {
 export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editorId: string): Staff | null => {
     const staffList = getStaff();
     const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
-    if(staffIndex === -1) return null;
+    if (staffIndex === -1) return null;
 
     staffList[staffIndex] = { ...staffList[staffIndex], ...updatedData };
     saveToStorage(STAFF_KEY, staffList);
-    
+
     // Also update the associated user if name or email changed
     const user = getUserById(staffList[staffIndex].user_id);
     if (user && (user.name !== `${updatedData.first_name} ${updatedData.last_name}` || user.email !== updatedData.email)) {
@@ -1232,19 +2305,19 @@ export const updateStaff = (staffId: string, updatedData: Partial<Staff>, editor
             email: updatedData.email || user.email, // Keep old email if new one is empty
         });
     }
-    
+
     return staffList[staffIndex];
 }
 
 export const toggleEmploymentStatus = (staffId: string, editorId: string): Staff | null => {
     const staffList = getStaff();
     const staffIndex = staffList.findIndex(s => s.staff_id === staffId);
-    if(staffIndex === -1) return null;
+    if (staffIndex === -1) return null;
 
     const currentStatus = staffList[staffIndex].status;
     const newStatus: EmploymentStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     staffList[staffIndex].status = newStatus;
-    
+
     saveToStorage(STAFF_KEY, staffList);
 
     // Also toggle the user account status
@@ -1259,7 +2332,7 @@ export const toggleEmploymentStatus = (staffId: string, editorId: string): Staff
         action: 'Toggle Staff Status',
         details: `Changed status for ${staffList[staffIndex].first_name} to ${newStatus}`
     });
-    
+
     return staffList[staffIndex];
 }
 
@@ -1303,20 +2376,20 @@ export const deleteStaff = (staffId: string, editorId: string): boolean => {
 
     // Delete user account
     deleteUser(staffToDelete.user_id);
-    
+
     // Delete staff record
     const updatedStaffList = staffList.filter(s => s.staff_id !== staffId);
     saveToStorage(STAFF_KEY, updatedStaffList);
-    
+
     // Delete related data
     const appointments = getStaffAppointmentHistory().filter(a => a.staff_id !== staffId);
     saveToStorage(STAFF_APPOINTMENT_HISTORY_KEY, appointments);
 
     const academicHistory = storeGetStaffAcademicHistory().filter(h => h.staff_id !== staffId);
     saveToStorage(STAFF_ACADEMIC_HISTORY_KEY, academicHistory);
-    
+
     // ... and so on for other related data (documents, attendance, etc.)
-     addAuditLog({
+    addAuditLog({
         user: getUserById(editorId)?.email || 'Unknown',
         name: getUserById(editorId)?.name || 'Unknown',
         action: 'Delete Staff',
@@ -1329,7 +2402,7 @@ export const deleteStaff = (staffId: string, editorId: string): boolean => {
 export const bulkDeleteStaff = (staffIds: string[], editorId: string): number => {
     let deletedCount = 0;
     staffIds.forEach(id => {
-        if(deleteStaff(id, editorId)) {
+        if (deleteStaff(id, editorId)) {
             deletedCount++;
         }
     });
@@ -1368,19 +2441,26 @@ export const fetchSubjectsFromApi = async (refetch: boolean = false): Promise<Su
             return getFromStorage<Subject[]>(SUBJECTS_KEY, []);
         }
 
-        const result: SubjectApiResponse = await response.json();
+        const result: any = await response.json();
 
-        console.log('Subjects API Response:', result);
-        
+        //console.log('Subjects API Response:', result);
+
+        let subjectsData: any[] = [];
         if (result.success && Array.isArray(result.data)) {
-            const subjects = result.data.map(item => ({
-                id: item.id.toString(),
-                name: item.name,
-                code: item.code,
-                level: item.level,
-                category: item.category,
-                description: item.description,
-                is_active: item.is_active,
+            subjectsData = result.data;
+        } else if (result.data && Array.isArray(result.data.subjects)) {
+            subjectsData = result.data.subjects;
+        }
+
+        if (subjectsData.length > 0) {
+            const subjects = subjectsData.map(item => ({
+                id: (item.id || item.subject_id).toString(),
+                name: item.name || item.subject_name || '',
+                code: item.code || item.subject_code || '',
+                level: item.level || 'Primary',
+                category: item.category || 'Core',
+                description: item.description || '',
+                is_active: item.status === 'active' ? true : false, // Default to true if not specified
             }));
             saveToStorage(SUBJECTS_KEY, subjects);
             return subjects;
@@ -1397,15 +2477,16 @@ export const fetchClassesFromApi = async (): Promise<Class[]> => {
 
     const token = localStorage.getItem('campusconnect_token');
     const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
 
     try {
         const apiUrl = '/api/academic/classes/list';
-        console.log('fetchClassesFromApi: Making request to:', apiUrl);
-        console.log('fetchClassesFromApi: Request Headers:', {
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` }),
-            'X-API-KEY': apiKey,
-        });
+        //console.log('fetchClassesFromApi: Making request to:', apiUrl);
+        //console.log('fetchClassesFromApi: Request Headers:', {
+        //    'Content-Type': 'application/json',
+        //    ...(token && { 'Authorization': `Bearer ${token}` }),
+        //    'X-API-KEY': apiKey,
+        //});
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -1413,26 +2494,34 @@ export const fetchClassesFromApi = async (): Promise<Class[]> => {
                 'Content-Type': 'application/json',
                 ...(token && { 'Authorization': `Bearer ${token}` }),
                 'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
             },
         });
 
-        console.log('fetchClassesFromApi: Raw Response Status:', response.status);
+        //console.log('fetchClassesFromApi: Raw Response Status:', response.status);
         const responseText = await response.text();
-        console.log('fetchClassesFromApi: Raw Response Body:', responseText);
+        //console.log('fetchClassesFromApi: Raw Response Body:', responseText);
 
         if (!response.ok) {
-            const errorData = JSON.parse(responseText).catch(() => ({}));
+            let errorData = {};
+            try {
+                errorData = JSON.parse(responseText);
+            } catch (e) {
+                // Ignore parsing error for error response
+            }
             console.error('fetchClassesFromApi: Failed to fetch classes from API:', response.statusText, 'Error Data:', errorData);
             return getFromStorage<Class[]>(CLASSES_KEY, []);
         }
 
         const result: ClassApiResponse = JSON.parse(responseText);
-        console.log('Class API Response Data:', result.data); // Add this line
+        //console.log('Class API Response Data:', result.data); // Add this line
         if (result.success && Array.isArray(result.data)) {
-            const classes = result.data.map(item => ({
-                id: item.class_id, // Changed from item.id.toString() to item.class_id
-                name: item.class_name,
-                class_id: item.class_id,
+            const classes: Class[] = result.data.map((item: any) => ({
+                id: item.id?.toString() || item.class_id?.toString(),
+                name: item.class_name || item.name || '',
+                class_name: item.class_name || item.name || '',
+                class_id: item.class_id?.toString() || item.id?.toString(),
+                is_active: item.status === 'active' || item.is_active || true
             }));
             saveToStorage(CLASSES_KEY, classes);
             return classes;
@@ -1483,11 +2572,11 @@ export const addScore = (score: AssignmentScore, editorId: string): void => {
             profiles[studentIndex].assignmentScores = [];
         }
 
-        const scoreIndex = profiles[studentIndex].assignmentScores!.findIndex(s => 
+        const scoreIndex = profiles[studentIndex].assignmentScores!.findIndex(s =>
             s.subject_id === score.subject_id && s.assignment_name === score.assignment_name
         );
-        
-        if(scoreIndex !== -1) {
+
+        if (scoreIndex !== -1) {
             profiles[studentIndex].assignmentScores![scoreIndex] = score;
         } else {
             profiles[studentIndex].assignmentScores!.push(score);
@@ -1497,16 +2586,200 @@ export const addScore = (score: AssignmentScore, editorId: string): void => {
     }
 }
 
+export const fetchScoresFromApi = async (classId: string): Promise<AssignmentScore[]> => {
+    if (typeof window === 'undefined') return [];
+    const token = localStorage.getItem('campusconnect_token');
+    try {
+        const response = await fetch('/api/academic/scores/class', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+            }),
+            body: JSON.stringify({ class_id: classId })
+        });
+        if (!response.ok) return [];
+
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+            // We don't necessarily want to merge these into student profiles here,
+            // as students are managed separately.
+            return result.data;
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching scores:', error);
+        return [];
+    }
+};
+
+export const fetchStudentScoresFromApi = async (studentNo: string, academicYear: string, term: string): Promise<StudentActivityScore[]> => {
+    if (typeof window === 'undefined') return [];
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/academic/scores/student', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                student_no: studentNo,
+                academic_year: academicYear,
+                term: term
+            })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch student scores via API:', response.status);
+            return [];
+        }
+
+        const result = await response.json();
+
+
+        // Handle nested data format as per user request
+        if (result.success && result.data?.success && Array.isArray(result.data.data)) {
+            return result.data.data;
+        }
+
+        if (result.success && Array.isArray(result.data)) {
+            return result.data;
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching student scores:', error);
+        return [];
+    }
+};
+
+export const fetchStudentReportListFromApi = async (studentNo?: string, academicYear?: string, term?: string, classId?: string): Promise<StudentSubjectReport[]> => {
+    if (typeof window === 'undefined') return [];
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const payload: any = {};
+        if (studentNo) payload.student_no = studentNo;
+        if (academicYear) payload.academic_year = academicYear;
+        if (term) payload.term = term;
+        if (classId) payload.class_id = classId;
+
+        const body = JSON.stringify(payload);
+
+        const response = await fetch('/api/academic/scores/report/list', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: body
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch student report list via API:', response.status);
+            return [];
+        }
+
+        const result = await response.json();
+
+
+        if (result.success && Array.isArray(result.data)) {
+            return result.data;
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching student report list:', error);
+        return [];
+    }
+};
+
+export const fetchStudentSummaryScoresFromApi = async (studentNo: string, academicYear: string, term: string): Promise<StudentSummaryScore[]> => {
+    if (typeof window === 'undefined') return [];
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/academic/scores/summary/list', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                student_no: studentNo,
+                academic_year: academicYear,
+                term: term
+            })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch student summary scores via API:', response.status);
+            return [];
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            let data = [];
+            if (result.data?.success && Array.isArray(result.data.data)) {
+                data = result.data.data;
+            } else if (Array.isArray(result.data)) {
+                data = result.data;
+            }
+
+            return data.map((item: any) => ({
+                ...item,
+                percentage: item.percentage ?? item.percentage_score ?? item.score_percentage ?? 0
+            }));
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching student summary scores:', error);
+        return [];
+    }
+};
+
+export const saveScoreToApi = async (score: AssignmentScore): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+    const token = localStorage.getItem('campusconnect_token');
+    try {
+        const response = await fetch('/api/academic/scores/save', {
+            method: 'POST',
+            headers: getApiHeaders({
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+            }),
+            body: JSON.stringify(score)
+        });
+        const result = await response.json();
+        return result.success;
+    } catch (error) {
+        console.error('Error saving score:', error);
+        return false;
+    }
+};
+
 export const updateAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, newScore: number, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    if(studentIndex === -1) return null;
+    if (studentIndex === -1) return null;
 
     const student = profiles[studentIndex];
     if (!student.assignmentScores) return student;
 
     const scoreIndex = student.assignmentScores.findIndex(s => s.subject_id === subjectId && s.assignment_name === assignmentName);
-    if(scoreIndex !== -1) {
+    if (scoreIndex !== -1) {
         student.assignmentScores[scoreIndex].score = newScore;
     }
 
@@ -1518,7 +2791,7 @@ export const updateAssignmentScore = (studentId: string, subjectId: string, assi
 export const deleteAssignmentScore = (studentId: string, subjectId: string, assignmentName: string, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    if(studentIndex === -1) return null;
+    if (studentIndex === -1) return null;
 
     const student = profiles[studentIndex];
     if (student.assignmentScores) {
@@ -1533,7 +2806,7 @@ export const deleteAssignmentScore = (studentId: string, subjectId: string, assi
 export const deleteAllAssignmentScores = (studentId: string, editorId: string): StudentProfile | null => {
     const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    if(studentIndex === -1) return null;
+    if (studentIndex === -1) return null;
 
     profiles[studentIndex].assignmentScores = [];
     saveToStorage(STUDENTS_KEY, profiles);
@@ -1586,19 +2859,28 @@ async function fetchAllPages(url: URL, token: string, apiKey: string, userId?: s
                 'X-User-ID': userId || '',
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`Failed to fetch page ${currentPage}: ${response.statusText}`);
         }
-        
+
         const result = await response.json();
-        
-        if (result.success && result.data && Array.isArray(result.data.students)) {
-            allStudents.push(...result.data.students);
-            totalPages = result.data.pagination.pages;
+
+        if (result.success && result.data) {
+            let studentsData: any[] = [];
+            if (Array.isArray(result.data.students)) {
+                studentsData = result.data.students;
+                totalPages = result.data.pagination?.pages || 1;
+            } else if (Array.isArray(result.data)) {
+                studentsData = result.data;
+                totalPages = 1; // Assume single page if it's a direct array
+            }
+
+            allStudents.push(...studentsData);
             currentPage++;
         } else {
-            throw new Error(`API response for page ${currentPage} was not successful or malformed.`);
+            console.error(`Debug: Malformed student API response on page ${currentPage}:`, result);
+            break; // Stop loop if malformed
         }
     }
     return allStudents;
@@ -1610,11 +2892,12 @@ export async function getStudentProfiles(
     limit = 10,
     search = '',
     status?: string,
-    userId?: string
+    userId?: string,
+    classId?: string
 ): Promise<StudentAPIResponse> {
     const url = new URL('/api/students', typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002');
-    
-    console.log('Fetching students from:', url.toString());
+
+
     url.searchParams.append('page', String(page));
     url.searchParams.append('limit', String(limit));
     if (search) {
@@ -1623,7 +2906,10 @@ export async function getStudentProfiles(
     if (status) {
         url.searchParams.append('status', status);
     }
-    
+    if (classId) {
+        url.searchParams.append('class_id', classId);
+    }
+
     if (typeof window === 'undefined') {
         return { students: [], pagination: { total: 0, page: 1, limit, pages: 1 } };
     }
@@ -1656,7 +2942,7 @@ export async function getStudentProfiles(
                         student_no: apiStudent.student_no, emergency_name: apiStudent.emergency_contact?.emergency_name, emergency_phone: apiStudent.emergency_contact?.emergency_phone, emergency_relationship: apiStudent.emergency_contact?.emergency_relationship,
                     },
                     admissionDetails: {
-                        student_no: apiStudent.student_no, admission_no: apiStudent.admission_no, enrollment_date: apiStudent.enrollment_date, class_assigned: apiStudent.class_assigned, admission_status: apiStudent.admission_status === 'Active' ? 'Admitted' : apiStudent.admission_status,
+                        student_no: apiStudent.student_no, admission_no: apiStudent.admission_no, enrollment_date: apiStudent.enrollment_date, class_assigned: String(apiStudent.class_assigned), admission_status: apiStudent.admission_status === 'Active' ? 'Admitted' : apiStudent.admission_status,
                     },
                 };
             });
@@ -1669,25 +2955,22 @@ export async function getStudentProfiles(
 
         // Regular paginated request
         const apiUrl = url.toString();
-        console.log('Making request to:', apiUrl);
-        
-        const headers: HeadersInit = {
+        //console.log('Making request to:', apiUrl);
+
+        const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             'X-API-KEY': apiKey,
+            'X-User-ID': userId || '',
         };
-        
+
         // Only add Authorization header if token exists
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
-        
+
         const response = await fetch(apiUrl, {
             method: 'GET',
-            headers: {
-                'Authorization': token ? `Bearer ${token}` : undefined,
-                'X-API-KEY': apiKey,
-                'X-User-ID': userId || '',
-            }
+            headers: headers
         });
 
         if (!response.ok) {
@@ -1699,18 +2982,29 @@ export async function getStudentProfiles(
             const paginatedStudents = allStudents.slice((page - 1) * limit, page * limit);
             return { students: paginatedStudents, pagination: { total, page, limit, pages } };
         }
-        
+
         const result = await response.json();
 
-        console.log("Student List: " + result);
-        
-        
-        if (result.success && result.data && Array.isArray(result.data.students)) {
-            const transformedProfiles = result.data.students.map((apiStudent: any): StudentProfile => {
-                 const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
-                 const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
-                 const mother = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'mother') || {};
-                
+        if (result.success && result.data) {
+            let apiStudents: any[] = [];
+            let total = 0;
+            let pages = 1;
+
+            if (Array.isArray(result.data.students)) {
+                apiStudents = result.data.students;
+                total = result.data.pagination?.total || apiStudents.length;
+                pages = result.data.pagination?.pages || 1;
+            } else if (Array.isArray(result.data)) {
+                apiStudents = result.data;
+                total = apiStudents.length;
+                pages = 1;
+            }
+
+            const transformedProfiles = apiStudents.map((apiStudent: any): StudentProfile => {
+                const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
+                const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
+                const mother = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'mother') || {};
+
                 return {
                     student: {
                         student_no: apiStudent.student_no,
@@ -1779,14 +3073,126 @@ export async function getStudentProfiles(
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const errorDetails = error instanceof TypeError && error.message.includes('fetch')
-          ? `Network error: Unable to connect to ${apiBaseUrl}/students. Please ensure the backend server is running on port 8000.`
-          : `Error fetching students from API: ${errorMessage}`;
+            ? `Network error: Unable to connect to ${apiBaseUrl}/students. Please ensure the backend server is running on port 8000.`
+            : `Error fetching students from API: ${errorMessage}`;
         console.error(errorDetails, error);
         const allStudents = getStudentProfilesFromStorage();
         const total = allStudents.length;
         const pages = Math.ceil(total / limit);
         const paginatedStudents = allStudents.slice((page - 1) * limit, page * limit);
         return { students: paginatedStudents, pagination: { total, page, limit, pages } };
+    }
+}
+
+// Fetch students for a specific class using the class-specific endpoint
+export async function getStudentsByClass(
+    classId: string | number,
+    status: string = 'Admitted'
+): Promise<StudentProfile[]> {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const payload = {
+            class_id: typeof classId === 'string' ? parseInt(classId) : classId,
+            status: status
+        };
+
+        const response = await fetch('/api/students/class', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            console.error('Failed to fetch students by class:', response.status, response.statusText, errorText);
+            return [];
+        }
+
+        const responseText = await response.text();
+
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse students by class response as JSON. Raw response:', responseText);
+            return [];
+        }
+
+        if (result.success && Array.isArray(result.data)) {
+            const transformedProfiles = result.data.map((apiStudent: any): StudentProfile => {
+                const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father' || g.guardian_relationship === 'mother' || g.guardian_relationship) || apiStudent.guardians?.[0] || {};
+                const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
+                const mother = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'mother') || {};
+
+                return {
+                    student: {
+                        student_no: apiStudent.student_no,
+                        first_name: apiStudent.first_name,
+                        last_name: apiStudent.last_name,
+                        other_name: apiStudent.other_name,
+                        dob: apiStudent.dob,
+                        gender: apiStudent.gender,
+                        created_at: new Date().toISOString(),
+                        created_by: apiStudent.created_by,
+                        updated_at: new Date().toISOString(),
+                        updated_by: apiStudent.created_by,
+                        avatarUrl: `https://picsum.photos/seed/${apiStudent.student_no}/200/200`,
+                    },
+                    contactDetails: {
+                        student_no: apiStudent.student_no,
+                        email: apiStudent.email,
+                        phone: apiStudent.phone,
+                        country: apiStudent.country_id,
+                        city: apiStudent.city,
+                        hometown: apiStudent.hometown,
+                        residence: apiStudent.residence,
+                        house_no: apiStudent.house_no,
+                        gps_no: apiStudent.gps_no,
+                    },
+                    guardianInfo: {
+                        student_no: apiStudent.student_no,
+                        guardian_name: guardian.guardian_name,
+                        guardian_phone: guardian.guardian_phone,
+                        guardian_email: guardian.guardian_email,
+                        guardian_relationship: guardian.guardian_relationship,
+                        father_name: father.guardian_name,
+                        father_phone: father.guardian_phone,
+                        mother_name: mother.guardian_name,
+                        mother_phone: mother.guardian_phone,
+                    },
+                    emergencyContact: {
+                        student_no: apiStudent.student_no,
+                        emergency_name: apiStudent.emergency_contact?.emergency_name,
+                        emergency_phone: apiStudent.emergency_contact?.emergency_phone,
+                        emergency_relationship: apiStudent.emergency_contact?.emergency_relationship,
+                    },
+                    admissionDetails: {
+                        student_no: apiStudent.student_no,
+                        admission_no: apiStudent.admission_no,
+                        enrollment_date: apiStudent.enrollment_date,
+                        class_assigned: apiStudent.class_assigned,
+                        admission_status: apiStudent.admission_status === 'Active' ? 'Admitted' : apiStudent.admission_status,
+                    },
+                };
+            });
+            return transformedProfiles;
+        }
+
+        console.warn('Students by class fetch successful but data format invalid:', result);
+        return [];
+    } catch (error) {
+        console.error('Error fetching students by class:', error);
+        return [];
     }
 }
 
@@ -1799,13 +3205,14 @@ export async function getStudentProfileById(studentId: string, userId?: string):
 
     const token = localStorage.getItem('campusconnect_token');
     const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123'; // Fallback for development
+    const csrfToken = localStorage.getItem('csrf_token') || ''
 
     if (!token) {
         console.error("Auth token is missing. Cannot fetch student profile.");
         // Fallback to local storage
         return getStudentProfilesFromStorage().find(p => p.student.student_no === studentId) || null;
     }
-     try {
+    try {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -1813,6 +3220,7 @@ export async function getStudentProfileById(studentId: string, userId?: string):
                 'Authorization': `Bearer ${token}`,
                 'X-API-KEY': apiKey,
                 'X-User-ID': userId || '',
+                'X-CSRF-TOKEN': csrfToken,
             },
             body: JSON.stringify({ student_no: studentId })
         });
@@ -1829,7 +3237,7 @@ export async function getStudentProfileById(studentId: string, userId?: string):
             const guardian = apiStudent.guardians?.find((g: any) => g.guardian_relationship) || apiStudent.guardians?.[0] || {};
             const father = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'father') || {};
             const mother = apiStudent.guardians?.find((g: any) => g.guardian_relationship === 'mother') || {};
-            
+
             const profile: StudentProfile = {
                 student: {
                     student_no: apiStudent.student_info.student_no,
@@ -1900,17 +3308,17 @@ export async function getStudentProfileById(studentId: string, userId?: string):
 
 export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.student_no' | 'contactDetails.student_no' | 'guardianInfo.student_no' | 'emergencyContact.student_no' | 'admissionDetails.student_no' | 'admissionDetails.admission_no' | 'student.avatarUrl'>, creatorId: string, classes?: Class[]): StudentProfile => {
     const profiles = getStudentProfilesFromStorage();
-    
+
     // Generate student_no and admission_no
     const admissionYear = new Date(profileData.admissionDetails.enrollment_date).getFullYear();
     const studentsInYear = profiles.filter(p => new Date(p.admissionDetails.enrollment_date).getFullYear() === admissionYear);
     const nextInYear = studentsInYear.length + 1;
     const yearYY = admissionYear.toString().slice(-2);
     const nextNumberPadded = nextInYear.toString().padStart(3, '0');
-    
+
     const studentNo = `WR-TK001-LBA${yearYY}${nextNumberPadded}`;
     const admissionNo = `ADM${yearYY}${nextNumberPadded}`;
-    
+
     const className = classes?.find(c => c.id === profileData.admissionDetails.class_assigned)?.name || '';
     const avatarSeed = `${profileData.student.first_name}${className}`.replace(/\s/g, '');
 
@@ -1941,11 +3349,11 @@ export const addStudentProfile = (profileData: Omit<StudentProfile, 'student.stu
 export const updateStudentProfile = async (studentId: string, updatedData: Partial<StudentProfile>, editorId: string): Promise<StudentProfile | null> => {
     // First, try to get the current profile (from API or storage)
     let currentProfile: StudentProfile | null = null;
-    
+
     // Check local storage first
     const profiles = getStudentProfilesFromStorage();
     const studentIndex = profiles.findIndex(p => p.student.student_no === studentId);
-    
+
     if (studentIndex !== -1) {
         currentProfile = profiles[studentIndex];
     } else {
@@ -1972,34 +3380,34 @@ export const updateStudentProfile = async (studentId: string, updatedData: Parti
     const newProfile: StudentProfile = {
         ...currentProfile,
         ...updatedData,
-        student: { 
-            ...currentProfile.student, 
-            ...updatedData.student, 
-            updated_at: new Date().toISOString(), 
-            updated_by: editorId 
+        student: {
+            ...currentProfile.student,
+            ...updatedData.student,
+            updated_at: new Date().toISOString(),
+            updated_by: editorId
         },
-        contactDetails: { 
-            ...currentProfile.contactDetails, 
-            ...updatedData.contactDetails, 
-            student_no: studentId 
+        contactDetails: {
+            ...currentProfile.contactDetails,
+            ...updatedData.contactDetails,
+            student_no: studentId
         },
-        guardianInfo: { 
-            ...currentProfile.guardianInfo, 
-            ...updatedData.guardianInfo, 
-            student_no: studentId 
+        guardianInfo: {
+            ...currentProfile.guardianInfo,
+            ...updatedData.guardianInfo,
+            student_no: studentId
         },
-        emergencyContact: { 
-            ...currentProfile.emergencyContact, 
-            ...updatedData.emergencyContact, 
-            student_no: studentId 
+        emergencyContact: {
+            ...currentProfile.emergencyContact,
+            ...updatedData.emergencyContact,
+            student_no: studentId
         },
-        admissionDetails: { 
-            ...currentProfile.admissionDetails, 
-            ...updatedData.admissionDetails, 
-            student_no: studentId 
+        admissionDetails: {
+            ...currentProfile.admissionDetails,
+            ...updatedData.admissionDetails,
+            student_no: studentId
         }
     };
-    
+
     // Update in local storage
     const updatedProfiles = getStudentProfilesFromStorage();
     const updatedIndex = updatedProfiles.findIndex(p => p.student.student_no === studentId);
@@ -2009,10 +3417,10 @@ export const updateStudentProfile = async (studentId: string, updatedData: Parti
         updatedProfiles.push(newProfile);
     }
     saveToStorage(STUDENTS_KEY, updatedProfiles);
-    
+
     // TODO: Call API update endpoint when it's available
     // For now, we only update local storage
-    
+
     return newProfile;
 };
 
@@ -2030,6 +3438,7 @@ export const updateStudentStatus = async (studentId: string, status: AdmissionSt
 
     const token = localStorage.getItem('campusconnect_token');
     const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
 
     if (!token) {
         console.error('Auth token is missing. Cannot update student status.');
@@ -2043,6 +3452,7 @@ export const updateStudentStatus = async (studentId: string, status: AdmissionSt
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
                 'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
                 'X-User-ID': userId || '',
             },
             body: JSON.stringify({ student_no: studentId, status }),
@@ -2064,7 +3474,7 @@ export const updateStudentStatus = async (studentId: string, status: AdmissionSt
         }
 
         const result = await response.json().catch(() => null);
-        console.log('Server response when updating student status:', result);
+        //console.log('Server response when updating student status:', result);
 
         if (result?.success) {
             const successMessage = result.message || `Status updated to ${status}`;
@@ -2103,7 +3513,7 @@ export const promoteStudents = (studentIds: string[], toClassId: string, editorI
 };
 
 export const graduateStudents = (studentIds: string[], editorId: string): number => {
-     const profiles = getStudentProfilesFromStorage();
+    const profiles = getStudentProfilesFromStorage();
     let updatedCount = 0;
     studentIds.forEach(id => {
         const index = profiles.findIndex(p => p.student.student_no === id);
@@ -2126,6 +3536,7 @@ export const deleteStudentProfile = async (studentId: string, status: string = '
 
     const token = localStorage.getItem('campusconnect_token');
     const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
 
     if (!token) {
         console.error('Auth token is missing. Cannot delete student.');
@@ -2139,6 +3550,7 @@ export const deleteStudentProfile = async (studentId: string, status: string = '
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
                 'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
                 'X-User-ID': userId || '',
             },
             body: JSON.stringify({ student_no: studentId, status }),
@@ -2151,7 +3563,7 @@ export const deleteStudentProfile = async (studentId: string, status: string = '
         }
 
         const result = await response.json().catch(() => null);
-        console.log('Server response when deleting student:', result);
+        //console.log('Server response when deleting student:', result);
 
         if (result?.success) {
             // Keep local storage in sync for offline fallbacks
@@ -2230,7 +3642,7 @@ export const deleteUploadedDocument = (studentId: string, documentId: string, ed
     if (profiles[studentIndex].uploadedDocuments) {
         profiles[studentIndex].uploadedDocuments = profiles[studentIndex].uploadedDocuments!.filter(d => d.uploaded_at !== documentId);
     }
-    
+
     saveToStorage(STUDENTS_KEY, profiles);
     return profiles[studentIndex];
 }
@@ -2251,25 +3663,100 @@ export const updateHealthRecords = (studentId: string, records: HealthRecords, e
 // --- User & Role Management ---
 
 export const getUsers = (): User[] => {
-  const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
-  const roles = getRoles();
-  return users.map((user) => {
-    const role = roles.find((r) => r.id === user.role_id);
-    return {
-      ...user,
-      role: role?.name || 'Guest',
-    };
-  });
+    const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const roles = getRoles();
+    return users.map((user) => {
+        const role = roles.find((r) => r.id === user.role_id);
+        return {
+            ...user,
+            role: role?.name || ('Guest' as Role),
+        };
+    });
+};
+
+export const fetchUsersFromApi = async (): Promise<User[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch('/api/admin/users', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch users from API:', response.status, response.statusText);
+            return getUsers();
+        }
+
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data) && Array.isArray(result.data[0])) {
+            const apiUsers = result.data[0];
+            const roles = getRoles();
+
+            const mappedUsers: UserStorage[] = apiUsers.map((item: any) => {
+                // Try to map role_name to local role_id for consistency with existing UI logic
+                const localRole = roles.find(r => r.name.toLowerCase() === item.role_name?.toLowerCase());
+                const roleId = localRole ? localRole.id : (item.role_id?.toString() || null);
+
+                return {
+                    id: (item.id || item.user_id).toString(),
+                    user_id: item.user_id,
+                    name: item.username, // API does not provide a full name field in the sample
+                    username: item.username,
+                    email: item.email,
+                    role_id: roleId,
+                    is_super_admin: item.is_super_admin === "1" || item.is_super_admin === 1,
+                    avatarUrl: `https://picsum.photos/seed/${item.username}/40/40`,
+                    status: item.status === 'active' ? 'active' : 'frozen',
+                    created_at: item.created_at,
+                    updated_at: item.updated_at || item.created_at,
+                };
+            });
+
+            saveToStorage(USERS_KEY, mappedUsers);
+            return getUsers();
+        }
+        return getUsers();
+    } catch (error) {
+        console.error('Error fetching users from API:', error);
+        return getUsers();
+    }
 };
 
 export const getUserById = (id: string): User | null => {
-  const users = getUsers();
-  return users.find((user) => user.id === id) || null;
+    // First check if this is the currently authenticated user
+    if (typeof window !== 'undefined') {
+        try {
+            const sessionUser = localStorage.getItem('campusconnect_session');
+            if (sessionUser) {
+                const user = JSON.parse(sessionUser);
+                if (user.id === id) {
+                    return user;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse session user:', error);
+        }
+    }
+
+    // Fall back to searching the local storage users list
+    const users = getUsers();
+    return users.find((user) => user.id === id) || null;
 };
 
 export const getUserByEmail = (email: string): User | null => {
-  const users = getUsers();
-  return users.find((user) => user.email.toLowerCase() === email.toLowerCase()) || null;
+    const users = getUsers();
+    return users.find((user) => user.email.toLowerCase() === email.toLowerCase()) || null;
 };
 
 export const addUser = (userData: Omit<User, 'id' | 'avatarUrl' | 'created_at' | 'updated_at' | 'username' | 'is_super_admin' | 'role_id' | 'password' | 'status'> & { role: User['role'], password?: string, entityId?: string }): User => {
@@ -2281,12 +3768,12 @@ export const addUser = (userData: Omit<User, 'id' | 'avatarUrl' | 'created_at' |
     if (!roleId) {
         throw new Error(`Role "${userData.role}" not found.`);
     }
-    
+
     const existingUser = users.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
     if (existingUser) {
         throw new Error("A user with this email already exists.");
     }
-    
+
     const username = userData.email.split('@')[0];
     const avatarSeed = username.replace(/[^a-zA-Z0-9]/g, '');
 
@@ -2314,34 +3801,34 @@ export const addUser = (userData: Omit<User, 'id' | 'avatarUrl' | 'created_at' |
             saveToStorage(STAFF_KEY, staff);
         }
     }
-    
+
     return { ...newUser, role: userData.role };
 };
 
 export const updateUser = (updatedUser: User): User => {
-  const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
-  const roles = getRoles();
+    const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
+    const roles = getRoles();
 
-  const userIndex = users.findIndex((u) => u.id === updatedUser.id);
-  if (userIndex === -1) {
-    throw new Error('User not found');
-  }
+    const userIndex = users.findIndex((u) => u.id === updatedUser.id);
+    if (userIndex === -1) {
+        throw new Error('User not found');
+    }
 
-  const roleId = roles.find(r => r.name === updatedUser.role)?.id;
+    const roleId = roles.find(r => r.name === updatedUser.role)?.id;
 
-  const userToSave: UserStorage = {
-    ...users[userIndex],
-    name: updatedUser.name,
-    email: updatedUser.email,
-    role_id: roleId || users[userIndex].role_id,
-    updated_at: new Date().toISOString(),
-    signature: updatedUser.signature,
-  };
+    const userToSave: UserStorage = {
+        ...users[userIndex],
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role_id: roleId || users[userIndex].role_id,
+        updated_at: new Date().toISOString(),
+        signature: updatedUser.signature,
+    };
 
-  users[userIndex] = userToSave;
-  saveToStorage(USERS_KEY, users);
-  
-  return { ...userToSave, role: updatedUser.role };
+    users[userIndex] = userToSave;
+    saveToStorage(USERS_KEY, users);
+
+    return { ...userToSave, role: updatedUser.role };
 };
 
 export const deleteUser = (userId: string): boolean => {
@@ -2368,7 +3855,7 @@ export const toggleUserStatus = (userId: string): User | null => {
 
     users[userIndex].status = users[userIndex].status === 'active' ? 'frozen' : 'active';
     users[userIndex].updated_at = new Date().toISOString();
-    
+
     saveToStorage(USERS_KEY, users);
     return getUserById(userId);
 }
@@ -2377,7 +3864,7 @@ export const changePassword = (userId: string, currentPass: string, newPass: str
     const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex === -1) return false;
-    
+
     if (users[userIndex].password !== currentPass) return false;
 
     users[userIndex].password = newPass;
@@ -2389,10 +3876,141 @@ export const resetPassword = (userId: string, newPassword: string): boolean => {
     const users = getFromStorage<UserStorage[]>(USERS_KEY, []);
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex === -1) return false;
-    
+
     users[userIndex].password = newPassword;
     saveToStorage(USERS_KEY, users);
     return true;
+}
+
+export interface PasswordChangeResult {
+    success: boolean;
+    message?: string;
+}
+
+export const changePasswordViaApi = async (
+    userId: string,
+    newPassword: string,
+    confirmPassword: string
+): Promise<PasswordChangeResult> => {
+    const apiUrl = '/api/auth/reset-password';
+
+    if (typeof window === 'undefined') {
+        return { success: false, message: 'Cannot run on server' };
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    if (!token) {
+        console.error('Auth token is missing. Cannot change password.');
+        return { success: false, message: 'Authentication token is missing' };
+    }
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                new_password: newPassword,
+                confirm_password: confirmPassword,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+            } catch {
+                if (errorText) {
+                    errorMessage = errorText;
+                }
+            }
+            console.error('Failed to change password:', response.status, response.statusText, errorText);
+            return { success: false, message: errorMessage };
+        }
+
+        const result = await response.json().catch(() => null);
+
+        if (result?.success) {
+            const successMessage = result.message || 'Password changed successfully';
+            return { success: true, message: successMessage };
+        }
+
+        const errorMessage = result?.message || 'Failed to change password';
+        console.error('Failed to change password:', errorMessage);
+        return { success: false, message: errorMessage };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        console.error('Error changing password:', error);
+        return { success: false, message: errorMessage };
+    }
+};
+
+export interface RequestPasswordResetResult {
+    success: boolean;
+    message?: string;
+}
+
+export const requestPasswordReset = async (email: string): Promise<RequestPasswordResetResult> => {
+    const apiUrl = '/api/auth/forgot-password';
+
+    if (typeof window === 'undefined') {
+        return { success: false, message: 'Cannot run on server' };
+    }
+
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    // We might not have a token if the user is not logged in, but we still need CSRF if possible
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({ email }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+            } catch {
+                if (errorText) {
+                    errorMessage = errorText;
+                }
+            }
+            console.error('Failed to request password reset:', response.status, response.statusText, errorText);
+            return { success: false, message: errorMessage };
+        }
+
+        const result = await response.json().catch(() => null);
+
+        if (result?.success) {
+            return { success: true, message: result.message || 'Password reset link sent to your email.' };
+        }
+
+        const errorMessage = result?.message || 'Failed to request password reset.';
+        return { success: false, message: errorMessage };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        console.error('Error requesting password reset:', error);
+        return { success: false, message: errorMessage };
+    }
 }
 
 
@@ -2406,14 +4024,14 @@ export const getAuditLogs = (): AuditLog[] => {
 };
 
 export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>) => {
-  const logs = getAuditLogs();
-  const newLog: AuditLog = {
-    id: `log_${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    clientInfo: navigator.userAgent,
-    ...log,
-  };
-  saveToStorage(LOGS_KEY, [newLog, ...logs]);
+    const logs = getAuditLogs();
+    const newLog: AuditLog = {
+        id: `log_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        clientInfo: navigator.userAgent,
+        ...log,
+    };
+    saveToStorage(LOGS_KEY, [newLog, ...logs]);
 };
 
 export const deleteAuditLog = (logId: string): boolean => {
@@ -2439,18 +4057,18 @@ export const deleteAllAuditLogs = () => {
 
 export const getAuthLogs = (): AuthLog[] => {
     const logs = getFromStorage<AuthLog[]>(AUTH_LOGS_KEY, []);
-    return logs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 };
 
 export const addAuthLog = (log: Omit<AuthLog, 'id' | 'timestamp'>) => {
-  const logs = getAuthLogs();
-  const newLog: AuthLog = {
-    id: `authlog_${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    clientInfo: navigator.userAgent,
-    ...log,
-  };
-  saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
+    const logs = getAuthLogs();
+    const newLog: AuthLog = {
+        id: `authlog_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        clientInfo: navigator.userAgent,
+        ...log,
+    };
+    saveToStorage(AUTH_LOGS_KEY, [newLog, ...logs]);
 };
 
 export const deleteAuthLog = (logId: string): boolean => {
@@ -2479,61 +4097,78 @@ export const saveBooks = (books: Book[]): void => saveToStorage(BOOKS_KEY, books
 export const getBorrowingRecords = (): BorrowingRecord[] => getFromStorage<BorrowingRecord[]>(BORROWING_KEY, []);
 export const saveBorrowingRecords = (records: BorrowingRecord[]): void => saveToStorage(BORROWING_KEY, records);
 
-export interface ClassSubjectAssignmentApiResponse extends ApiResponse<ClassSubjectAssignment[]> {}
+export interface ClassSubjectAssignmentApiResponse extends ApiResponse<any[]> { }
 
 export const fetchClassSubjectAssignmentsFromApi = async (refetch: boolean = false, classId?: string): Promise<ClassSubjectAssignment[]> => {
     if (typeof window === 'undefined') return [];
 
+    //console.log('fetchClassSubjectAssignmentsFromApi: Called with refetch:', refetch, 'classId:', classId);
+
     const storedAssignments = getFromStorage<ClassSubjectAssignment[]>(CLASS_SUBJECT_ASSIGNMENTS_KEY, []);
     if (!refetch && !classId && storedAssignments.length > 0) {
+        //console.log('fetchClassSubjectAssignmentsFromApi: Returning stored assignments:', storedAssignments);
         return storedAssignments;
     }
 
     const token = localStorage.getItem('campusconnect_token');
     const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
 
     try {
+        const method = classId ? 'POST' : 'GET';
         const body = classId ? JSON.stringify({ class_id: classId }) : undefined;
 
-        alert(body);
+        //console.log('fetchClassSubjectAssignmentsFromApi: Making API request with method:', method, 'body:', body);
 
-        const response = await fetch('/api/academic/class-subjects/list', {
-            method: 'POST',
+        const options: RequestInit = {
+            method: method,
             headers: {
                 'Content-Type': 'application/json',
                 ...(token && { 'Authorization': `Bearer ${token}` }),
                 'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
             },
-            body: body,
-        });
+        };
+
+        if (body) {
+            options.body = body;
+        }
+
+        const response = await fetch('/api/academic/class-subjects/list', options);
+
+
+
+        //console.log('fetchClassSubjectAssignmentsFromApi: API response status:', response.status);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('Failed to fetch class-subject assignments from API:', response.statusText, 'Error Data:', errorData);
+            //console.error('Failed to fetch class-subject assignments from API:', response.statusText, 'Error Data:', errorData);
             return getFromStorage<ClassSubjectAssignment[]>(CLASS_SUBJECT_ASSIGNMENTS_KEY, []);
         }
 
         const result: ClassSubjectAssignmentApiResponse = await response.json();
 
-        console.log('Class-Subject Assignments API Response:', result);
+        // console.log('Class-Subject Assignments API Response:', result);
 
         if (result.success && Array.isArray(result.data)) {
-            const assignments = result.data.map(item => ({
-                id: item.id.toString(),
+            const assignments = result.data.map((item: any) => ({
+                id: item.id,
                 class_name: item.class_name,
                 subject_name: item.subject_name,
                 class_id: item.class_id,
                 subject_id: item.subject_id,
                 academic_year: item.academic_year,
-                semester: item.semester,
+                semester: item.term,
                 assigned_date: item.assigned_date,
-                is_active: item.is_active,
+                is_active: item.status === 'active' ? true : false,
             }));
             if (!classId) {
                 saveToStorage(CLASS_SUBJECT_ASSIGNMENTS_KEY, assignments);
             }
+            //console.log('fetchClassSubjectAssignmentsFromApi: Returning fetched assignments:', assignments);
             return assignments;
         }
+        //console.log('fetchClassSubjectAssignmentsFromApi: API call successful but no data or not an array.');
         return getFromStorage<ClassSubjectAssignment[]>(CLASS_SUBJECT_ASSIGNMENTS_KEY, []);
     } catch (error) {
         console.error('Error fetching class-subject assignments:', error);

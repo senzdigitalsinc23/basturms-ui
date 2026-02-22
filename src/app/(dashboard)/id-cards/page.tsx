@@ -15,9 +15,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
 type CardData = {
-  type: 'staff' | 'student';
-  data: Staff | StudentProfile;
-  user?: User;
+    type: 'staff' | 'student';
+    data: Staff | StudentProfile;
+    user?: User;
 };
 
 function IDCardGenerator() {
@@ -30,47 +30,54 @@ function IDCardGenerator() {
     const { toast } = useToast();
 
     useEffect(() => {
-        const type = searchParams.get('type') as 'staff' | 'student';
-        const idsParam = searchParams.get('ids');
-        const school = getSchoolProfile();
-        setSchoolProfile(school);
-        
-        if (idsParam) {
-            try {
-                const ids = JSON.parse(decodeURIComponent(idsParam));
-                const allUsers = getUsers();
-                const allClasses = getClasses();
-                setClasses(allClasses);
+        const fetchData = async () => {
+            const type = searchParams.get('type') as 'staff' | 'student';
+            const idsParam = searchParams.get('ids');
+            const school = getSchoolProfile();
+            setSchoolProfile(school);
 
-                const data: CardData[] = ids.map((id: string) => {
-                    if (type === 'staff') {
-                        const staffMember = getStaffByStaffId(id);
-                        if (staffMember) {
-                            const user = allUsers.find(u => u.id === staffMember.user_id);
-                            return { type, data: staffMember, user };
+            if (idsParam) {
+                try {
+                    const ids = JSON.parse(decodeURIComponent(idsParam));
+                    const allUsers = getUsers();
+                    const allClasses = getClasses();
+                    setClasses(allClasses);
+
+                    const dataPromises = ids.map(async (id: string) => {
+                        if (type === 'staff') {
+                            const staffMember = getStaffByStaffId(id);
+                            if (staffMember) {
+                                const user = allUsers.find(u => u.id === staffMember.user_id);
+                                return { type, data: staffMember, user } as CardData;
+                            }
+                        } else {
+                            const studentProfile = await getStudentProfileById(id);
+                            if (studentProfile) {
+                                return { type, data: studentProfile } as CardData;
+                            }
                         }
-                    } else {
-                        const studentProfile = getStudentProfileById(id);
-                        if (studentProfile) {
-                            return { type, data: studentProfile };
-                        }
-                    }
-                    return null;
-                }).filter((item: CardData | null): item is CardData => item !== null);
-                
-                setCardData(data);
-            } catch (e) {
-                console.error("Failed to parse IDs for ID card generation", e);
+                        return null;
+                    });
+
+                    const resolvedData = await Promise.all(dataPromises);
+                    const data = resolvedData.filter((item): item is CardData => item !== null);
+
+                    setCardData(data);
+                } catch (e) {
+                    console.error("Failed to parse IDs for ID card generation", e);
+                }
             }
-        }
-        setLoading(false);
+            setLoading(false);
+        };
+
+        fetchData();
     }, [searchParams]);
 
     const handlePrint = async (indexesToPrint?: number[]) => {
         setLoading(true);
         const pdf = new jsPDF('p', 'mm', 'a4');
         const cardElements = document.querySelectorAll<HTMLElement>('.id-card-container');
-        
+
         const indices = indexesToPrint ?? Array.from(cardElements.keys());
 
         if (indices.length === 0) {
@@ -115,7 +122,7 @@ function IDCardGenerator() {
 
             const x = marginX + col * (cardWidth + marginX);
             const y = marginY + row * (cardHeight + marginY);
-            
+
             pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, cardWidth, cardHeight);
         });
 
@@ -161,7 +168,7 @@ function IDCardGenerator() {
                         <Checkbox id="select-all" checked={isAllSelected} onCheckedChange={toggleSelectAll} />
                         <Label htmlFor="select-all">Select All</Label>
                     </div>
-                     <Button onClick={() => handlePrint(selectedIndexes)} disabled={loading || selectedIndexes.length === 0} size="sm" variant="secondary">
+                    <Button onClick={() => handlePrint(selectedIndexes)} disabled={loading || selectedIndexes.length === 0} size="sm" variant="secondary">
                         {loading ? <Loader2 className="mr-2 animate-spin" /> : <Printer className="mr-2" />}
                         Print Selected ({selectedIndexes.length})
                     </Button>
@@ -171,21 +178,21 @@ function IDCardGenerator() {
                     </Button>
                 </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-3 print:gap-0">
-                 {cardData.map((item, index) => (
+                {cardData.map((item, index) => (
                     <div key={index} className="relative break-inside-avoid">
                         <div className="absolute top-2 left-2 z-10 print:hidden">
-                            <Checkbox 
-                                id={`select-card-${index}`} 
-                                checked={!!selectedCards[index]} 
+                            <Checkbox
+                                id={`select-card-${index}`}
+                                checked={!!selectedCards[index]}
                                 onCheckedChange={() => toggleSelectCard(index)}
                                 className="bg-white border-primary"
                             />
                         </div>
                         <div className="id-card-container">
-                            <IDCardTemplate 
-                                cardData={item} 
+                            <IDCardTemplate
+                                cardData={item}
                                 schoolProfile={schoolProfile}
                                 classes={classes}
                             />

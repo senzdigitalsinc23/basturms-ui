@@ -1,73 +1,73 @@
 
 
 export type Role =
-  | 'Admin'
-  | 'Teacher'
-  | 'Student'
-  | 'Parent'
-  | 'Headmaster'
-  | 'Librarian'
-  | 'Security'
-  | 'Procurement Manager'
-  | 'Stores Manager'
-  | 'Proprietor'
-  | 'I.T Manager'
-  | 'I.T Support'
-  | 'Accountant'
-  | 'Guest';
+    | 'Admin'
+    | 'Teacher'
+    | 'Student'
+    | 'Parent'
+    | 'Headmaster'
+    | 'Librarian'
+    | 'Security'
+    | 'Procurement Manager'
+    | 'Stores Manager'
+    | 'Proprietor'
+    | 'I.T Manager'
+    | 'I.T Support'
+    | 'Accountant'
+    | 'Guest';
 
 export const ALL_ROLES: Role[] = [
-  'Admin',
-  'Teacher',
-  'Student',
-  'Parent',
-  'Headmaster',
-  'Librarian',
-  'Security',
-  'Procurement Manager',
-  'Stores Manager',
-  'Proprietor',
-  'I.T Manager',
-  'I.T Support',
-  'Accountant',
-  'Guest',
+    'Admin',
+    'Teacher',
+    'Student',
+    'Parent',
+    'Headmaster',
+    'Librarian',
+    'Security',
+    'Procurement Manager',
+    'Stores Manager',
+    'Proprietor',
+    'I.T Manager',
+    'I.T Support',
+    'Accountant',
+    'Guest',
 ];
 
 export const PERMISSIONS = {
-  'student:create': 'Create Student',
-  'student:view': 'View Student',
-  'student:update': 'Update Student',
-  'student:delete': 'Delete Student',
-  'student:promote': 'Promote/Graduate Student',
-  'staff:create': 'Create Staff',
-  'staff:view': 'View Staff',
-  'staff:update': 'Update Staff',
-  'staff:delete': 'Delete Staff',
-  'user:create': 'Create User',
-  'user:view': 'View User',
-  'user:update': 'Update User',
-  'user:delete': 'Delete User',
-  'attendance:student': 'Take Student Attendance',
-  'attendance:staff': 'Take Staff Attendance',
-  'attendance:view_history': 'View Attendance History',
-  'settings:edit': 'Manage System Settings',
-  'logs:view_audit': 'View Audit Logs',
-  'logs:view_auth': 'View Authentication Logs',
-  'notifications:view': 'View Notifications',
-  'leave:view': 'View Leave Requests',
-  'leave:create': 'Create Leave Request',
-  'leave:approve': 'Approve/Reject Leave Request',
-  'backup:create': 'Create Data Backup',
-  'backup:restore': 'Restore Data from Backup',
-  'financials:setup': 'Manage Fee Structures',
-  'financials:billing': 'Prepare and Send Bills',
-  'financials:collect': 'Record Fee Payments',
-  'financials:reports': 'View Financial Reports',
-  'inventory:view': 'View Inventory',
-  'inventory:create': 'Create Inventory Item',
-  'inventory:update': 'Update Inventory Item',
-  'inventory:delete': 'Delete Inventory Item',
-  'inventory:allocate': 'Allocate Inventory',
+    'student:create': 'Create Student',
+    'student:view': 'View Student',
+    'student:update': 'Update Student',
+    'student:delete': 'Delete Student',
+    'student:promote': 'Promote/Graduate Student',
+    'staff:create': 'Create Staff',
+    'staff:view': 'View Staff',
+    'staff:update': 'Update Staff',
+    'staff:delete': 'Delete Staff',
+    'user:create': 'Create User',
+    'user:view': 'View User',
+    'user:update': 'Update User',
+    'user:delete': 'Delete User',
+    'attendance:student': 'Take Student Attendance',
+    'attendance:staff': 'Take Staff Attendance',
+    'attendance:view_history': 'View Attendance History',
+    'settings:edit': 'Manage System Settings',
+    'logs:view_audit': 'View Audit Logs',
+    'logs:view_auth': 'View Authentication Logs',
+    'notifications:view': 'View Notifications',
+    'leave:view': 'View Leave Requests',
+    'leave:create': 'Create Leave Request',
+    'leave:approve': 'Approve/Reject Leave Request',
+    'backup:create': 'Create Data Backup',
+    'backup:restore': 'Restore Data from Backup',
+    'financials:setup': 'Manage Fee Structures',
+    'financials:billing': 'Prepare and Send Bills',
+    'financials:collect': 'Record Fee Payments',
+    'financials:reports': 'View Financial Reports',
+    'inventory:view': 'View Inventory',
+    'inventory:create': 'Create Inventory Item',
+    'inventory:update': 'Update Inventory Item',
+    'inventory:delete': 'Delete Inventory Item',
+    'inventory:allocate': 'Allocate Inventory',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -146,37 +146,37 @@ export interface DepartmentRequest {
 
 
 export type Club = {
-  id: string;
-  name: string;
-  description?: string;
-  teacher_id: string; // Staff ID
-  student_ids: string[]; // Student IDs
+    id: string;
+    name: string;
+    description?: string;
+    teacher_id: string; // Staff ID
+    student_ids: string[]; // Student IDs
 };
 
 export type Sport = {
-  id: string;
-  name: string;
-  description?: string;
-  coach_id: string; // Staff ID
-  student_ids: string[]; // Student IDs
+    id: string;
+    name: string;
+    description?: string;
+    coach_id: string; // Staff ID
+    student_ids: string[]; // Student IDs
 };
 
 export type Achievement = {
-  id: string;
-  title: string;
-  description: string;
-  date: string; // ISO string
+    id: string;
+    title: string;
+    description: string;
+    date: string; // ISO string
 };
 
 export type Audience = 'All School' | 'Teachers' | 'Parents' | 'Students';
 export type Announcement = {
-  id: string;
-  title: string;
-  content: string;
-  audience: Audience;
-  created_at: string; // ISO string
-  author_id: string; // user id
-  author_name: string; // user name for display
+    id: string;
+    title: string;
+    content: string;
+    audience: Audience;
+    created_at: string; // ISO string
+    author_id: string; // user id
+    author_name: string; // user name for display
 };
 
 export type PayrollStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -206,14 +206,14 @@ export interface Payroll {
 export type ExpenseCategory = 'Salaries' | 'Utilities' | 'Maintenance' | 'Supplies' | 'Procurement' | 'Miscellaneous';
 
 export interface Expense {
-  id: string;
-  date: string; // ISO string
-  description: string;
-  category: ExpenseCategory;
-  amount: number;
-  vendor?: string;
-  paymentMethod: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Cheque';
-  recorded_by: string; // user id
+    id: string;
+    date: string; // ISO string
+    description: string;
+    category: ExpenseCategory;
+    amount: number;
+    vendor?: string;
+    paymentMethod: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Cheque';
+    recorded_by: string; // user id
 }
 
 export type StudentReport = {
@@ -247,6 +247,7 @@ export type StudentReport = {
     headTeacherId?: string;
     classTeacherSignature?: string | null;
     headTeacherSignature?: string | null;
+    class_position?: number;
 };
 
 
@@ -275,42 +276,45 @@ export const ALL_SCHOOL_LEVELS: SchoolLevel[] = ['Pre-School', 'Lower Primary', 
 
 
 export interface User {
-  id: string; 
-  user_id?: string; // from API
-  name: string;
-  username: string;
-  email: string;
-  role: Role; // For easy access in the app
-  role_id: string | null;
-  avatarUrl: string;
-  signature?: string; // Data URL of the user's signature image
-  is_super_admin: boolean;
-  status: 'active' | 'frozen';
-  created_at: string;
-  updated_at: string;
-  password?: string;
+    id: string;
+    user_id?: string; // from API
+    name: string;
+    username: string;
+    email: string;
+    role: Role; // For easy access in the app
+    role_id: string | null;
+    avatarUrl: string;
+    signature?: string; // Data URL of the user's signature image
+    is_super_admin: boolean;
+    status: 'active' | 'frozen';
+    created_at: string;
+    updated_at: string;
+    password?: string;
+    academic_year?: string;
+    academic_term?: string;
+    academic_id?: string;
 }
 
-export interface UserStorage extends Omit<User, 'role'> {}
+export interface UserStorage extends Omit<User, 'role'> { }
 
 export interface AuditLog {
-  id: string;
-  timestamp: string;
-  user: string; // user email
-  name: string; // user's full name
-  action: string;
-  details: string;
-  clientInfo?: string;
+    id: string;
+    timestamp: string;
+    user: string; // user email
+    name: string; // user's full name
+    action: string;
+    details: string;
+    clientInfo?: string;
 }
 
 export interface AuthLog {
-  id: string;
-  timestamp: string;
-  email: string;
-  event: 'Login Success' | 'Login Failure' | 'Logout';
-  status: 'Success' | 'Failure';
-  details: string;
-  clientInfo?: string;
+    id: string;
+    timestamp: string;
+    email: string;
+    event: 'Login Success' | 'Login Failure' | 'Logout';
+    status: 'Success' | 'Failure';
+    details: string;
+    clientInfo?: string;
 }
 
 // Settings Types
@@ -345,16 +349,35 @@ export interface CalendarEvent {
 
 
 export interface GradeSetting {
+    id?: string;
     grade: string;
     range: string;
     remarks: string;
 }
 
+export interface SubActivity {
+    id: number;
+    act_id: string;
+    activity_name: string;
+    sub_activity_id: string;
+    status: string;
+    added_on: string;
+}
+
 export interface AssignmentActivity {
-    id: string;
+    id: string; // Internal UUID
+    activity_id?: string; // Database ID (string because it might be from a legacy system or merged)
     name: string;
+    act_name?: string;
     expected_per_term: number;
     weight: number;
+    academic_year: string;
+    term: string;
+    added_by: string;
+    is_active?: boolean;
+    is_standalone?: number; // 1 for true, 0 for false
+    sub_activities?: SubActivity[];
+    assigned_classes?: string[];
 }
 
 export interface ClassAssignmentActivity {
@@ -473,6 +496,8 @@ export interface AssignmentScore {
     subject_id: string;
     assignment_name: string;
     score: number;
+    activity_id?: string | number;
+    sub_activity_id?: string | number;
 }
 
 
@@ -695,12 +720,24 @@ export interface Subject {
     level: 'Creche' | 'KG' | 'Primary' | 'JHS';
     category: 'Core' | 'Elective';
     description?: string;
+    is_active?: boolean;
 }
 
 export interface ClassSubject {
     class_id: string;
     subject_id: string;
 }
+
+export interface ApiResponse<T> {
+    success: boolean;
+    message?: string;
+    data: T;
+}
+
+export interface ClassApiResponse extends ApiResponse<any[]> { }
+export interface SubjectApiResponse extends ApiResponse<any[]> { }
+export interface TeacherSubjectApiResponse extends ApiResponse<any[]> { }
+export interface StudentFeeApiResponse extends ApiResponse<any[]> { }
 
 export interface TeacherSubject {
     staff_id: string;
@@ -711,27 +748,87 @@ export interface TeacherSubject {
 export const ALL_ACCOUNTANT_ROLES: Role[] = ['Accountant'];
 
 export interface RoleStorage {
-  id: string;
-  name: Role;
+    id: string;
+    name: Role;
 }
 // Library Management Types
 export type Book = {
-  id: string;
-  title: string;
-  author: string;
-  isbn?: string;
-  category?: string;
-  quantity: number;
+    id: string;
+    title: string;
+    author: string;
+    isbn?: string;
+    category?: string;
+    quantity: number;
 };
 
 export type BorrowingRecord = {
-  id: string;
-  borrower_id: string; // Student or Staff ID
-  borrower_name: string;
-  book_id: string;
-  book_title: string;
-  borrow_date: string; // ISO string
-  due_date: string; // ISO string
-  return_date?: string; // ISO string
-  status: 'Borrowed' | 'Returned';
+    id: string;
+    borrower_id: string; // Student or Staff ID
+    borrower_name: string;
+    book_id: string;
+    book_title: string;
+    borrow_date: string; // ISO string
+    due_date: string; // ISO string
+    return_date?: string; // ISO string
+    status: 'Borrowed' | 'Returned';
 };
+
+export interface StudentActivityScore {
+    id: number;
+    student_no: string;
+    subject_id: number;
+    activity_id: number;
+    academic_year: string;
+    term: string;
+    class_id: number;
+    score: string;
+    subject_code: string;
+    subject_name: string;
+    class_code: string;
+    class_name: string;
+    activity_name: string;
+}
+
+export interface StudentSummaryScore {
+    id: number;
+    student_no: string;
+    subject_id: number;
+    class_id: number;
+    academic_year: string;
+    term: string;
+    assignment_activity_id: number;
+    total_score: string;
+    first_name: string;
+    other_name: string;
+    last_name: string;
+    subject_name: string;
+    subject_code: string;
+    class_name: string;
+    assignment_activity_name: string;
+    percentage?: string | number;
+}
+
+export interface StudentSubjectReport {
+    id: number;
+    student_no: string;
+    subject_id: number;
+    academic_year: string;
+    term: string;
+    class_id: number;
+    sba_raw_score: string;
+    "sba_50%": string;
+    exam_raw_score: string;
+    "exam_50%": string;
+    "total_score_100%": string;
+    grade: string;
+    remarks: string;
+    entered_by: string;
+    entered_on: string;
+    first_name: string;
+    other_name: string;
+    last_name: string;
+    subject_name: string;
+    subject_code: string;
+    class_name: string;
+    subject_position?: number;
+}

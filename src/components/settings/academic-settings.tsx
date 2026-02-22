@@ -25,10 +25,12 @@ import { DialogTrigger } from '@radix-ui/react-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClassManagement } from '@/components/academics/classes/class-management';
 
+const csrfToken = localStorage.getItem('csrf_token') || '';
+
 const termSchema = z.object({
     name: z.string().min(1, 'Term name is required.'),
-    startDate: z.date({ required_error: 'Start date is required.'}),
-    endDate: z.date({ required_error: 'End date is required.'}),
+    startDate: z.date({ required_error: 'Start date is required.' }),
+    endDate: z.date({ required_error: 'End date is required.' }),
     status: z.enum(['Upcoming', 'Active', 'Completed']),
 });
 
@@ -55,7 +57,7 @@ export function AcademicSettings() {
     const [isLoading, setIsLoading] = useState(true);
     const { user } = useAuth();
     const { toast } = useToast();
-    
+
     const form = useForm<z.infer<typeof academicYearSchema>>({
         resolver: zodResolver(academicYearSchema),
     });
@@ -64,10 +66,10 @@ export function AcademicSettings() {
         control: form.control,
         name: "terms",
     });
-    
+
     const addForm = useForm<z.infer<typeof addAcademicYearSchema>>({
         resolver: zodResolver(addAcademicYearSchema),
-         defaultValues: {
+        defaultValues: {
             year: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
             numberOfTerms: 3,
             status: 'Upcoming',
@@ -108,19 +110,19 @@ export function AcademicSettings() {
 
                 const years: AcademicYear[] = yearsData.map(item => ({
                     year: item.academic_year?.year || item.year,
-                    status: item.academic_year?.status || item.status || 'Upcoming',
+                    status: (item.academic_year?.status || item.status || 'Upcoming') as AcademicYearStatus,
                     number_of_terms: item.terms?.length || 0,
                     terms: (item.terms || []).map(term => ({
                         name: term.term || 'Unnamed Term',
                         startDate: term.start_date || new Date().toISOString(),
                         endDate: term.end_date || new Date().toISOString(),
-                        status: term.status || 'Upcoming',
+                        status: (term.status || 'Upcoming') as 'Upcoming' | 'Active' | 'Completed',
                         id: term.id,
                         added_by: term.added_by,
                         added_on: term.added_on,
                     })),
                 }));
-                
+
                 setAcademicYears(years);
 
             } catch (err: any) {
@@ -144,6 +146,7 @@ export function AcademicSettings() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     academic_year: values.year,
@@ -160,34 +163,34 @@ export function AcademicSettings() {
             const response = await res.json();
 
             // Update local state with the response data
-        const newYear: AcademicYear = {
+            const newYear: AcademicYear = {
                 year: response.data?.year || values.year,
                 status: response.data?.status || values.status,
                 number_of_terms: response.data?.number_of_terms || values.numberOfTerms,
                 terms: response.data?.terms || Array.from({ length: values.numberOfTerms }, (_, i) => ({
-                name: `Term ${i + 1}`,
-                startDate: new Date().toISOString(),
-                endDate: new Date().toISOString(),
-                status: 'Upcoming'
-            }))
-        };
+                    name: `Term ${i + 1}`,
+                    startDate: new Date().toISOString(),
+                    endDate: new Date().toISOString(),
+                    status: 'Upcoming'
+                }))
+            };
 
-        const newYears = [...academicYears, newYear];
-        saveAcademicYears(newYears);
-        setAcademicYears(newYears);
-        
-        if(user) {
-            addAuditLog({
-                user: user.email,
-                name: user.name,
-                action: 'Create Academic Year',
-                details: `Created new academic year: ${values.year}`,
-            });
-        }
-        
-        toast({ title: 'Academic Year Added', description: `The year ${values.year} has been created.` });
-        setIsAddDialogOpen(false);
-        addForm.reset();
+            const newYears = [...academicYears, newYear];
+            saveAcademicYears(newYears);
+            setAcademicYears(newYears);
+
+            if (user) {
+                addAuditLog({
+                    user: user.email,
+                    name: user.name,
+                    action: 'Create Academic Year',
+                    details: `Created new academic year: ${values.year}`,
+                });
+            }
+
+            toast({ title: 'Academic Year Added', description: `The year ${values.year} has been created.` });
+            setIsAddDialogOpen(false);
+            addForm.reset();
         } catch (err: any) {
             console.error('Failed to create academic year:', err);
             toast({
@@ -197,12 +200,12 @@ export function AcademicSettings() {
             });
         }
     };
-    
+
     const handleManageTerms = (year: AcademicYear) => {
         setSelectedYear(year);
         form.reset({
             ...year,
-            terms: Array.isArray(year.terms) ? year.terms.map(t => ({...t, startDate: parseISO(t.startDate), endDate: parseISO(t.endDate)})) : []
+            terms: Array.isArray(year.terms) ? year.terms.map(t => ({ ...t, startDate: parseISO(t.startDate), endDate: parseISO(t.endDate) })) : []
         });
         setIsManageTermsOpen(true);
     };
@@ -215,7 +218,7 @@ export function AcademicSettings() {
         });
         setIsEditYearOpen(true);
     }
-    
+
     const processYearUpdate = async (values: z.infer<typeof editAcademicYearSchema>) => {
         if (!selectedYear) return;
 
@@ -227,6 +230,7 @@ export function AcademicSettings() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     academic_year: selectedYear.year,
@@ -243,25 +247,25 @@ export function AcademicSettings() {
             const response = await res.json();
 
             // Update local state after successful API update
-        const updatedYears = academicYears.map(year => 
-            year.year === selectedYear.year ? { ...year, year: values.year, status: values.status } : year
-        );
-        
-        saveAcademicYears(updatedYears);
-        setAcademicYears(updatedYears);
-        
-        if(user) {
-             addAuditLog({
-                user: user.email,
-                name: user.name,
-                action: 'Update Academic Year',
-                details: `Updated academic year: ${selectedYear.year} to ${values.year}`,
-            });
-        }
-        
-        toast({ title: 'Academic Year Updated', description: `The year ${selectedYear.year} has been updated.` });
-        setIsEditYearOpen(false);
-        setSelectedYear(null);
+            const updatedYears = academicYears.map(year =>
+                year.year === selectedYear.year ? { ...year, year: values.year, status: values.status } : year
+            );
+
+            saveAcademicYears(updatedYears);
+            setAcademicYears(updatedYears);
+
+            if (user) {
+                addAuditLog({
+                    user: user.email,
+                    name: user.name,
+                    action: 'Update Academic Year',
+                    details: `Updated academic year: ${selectedYear.year} to ${values.year}`,
+                });
+            }
+
+            toast({ title: 'Academic Year Updated', description: `The year ${selectedYear.year} has been updated.` });
+            setIsEditYearOpen(false);
+            setSelectedYear(null);
         } catch (err: any) {
             console.error('Failed to update academic year:', err);
             toast({
@@ -275,14 +279,14 @@ export function AcademicSettings() {
     const handleUpdateYear = (values: z.infer<typeof academicYearSchema>) => {
         if (!selectedYear) return;
 
-        const updatedYears = academicYears.map(year => 
-            year.year === selectedYear.year ? { ...values, terms: (values.terms || []).map(t => ({...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString()})) } : year
+        const updatedYears = academicYears.map(year =>
+            year.year === selectedYear.year ? { ...values, terms: (values.terms || []).map(t => ({ ...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString() })) } : year
         );
 
         saveAcademicYears(updatedYears);
         setAcademicYears(updatedYears);
 
-        if(user) {
+        if (user) {
             addAuditLog({
                 user: user.email,
                 name: user.name,
@@ -290,7 +294,7 @@ export function AcademicSettings() {
                 details: `Updated terms for academic year: ${selectedYear.year}`,
             });
         }
-        
+
         toast({ title: 'Academic Year Updated', description: `The terms for ${selectedYear.year} have been updated.` });
         setIsManageTermsOpen(false);
         setSelectedYear(null);
@@ -309,6 +313,7 @@ export function AcademicSettings() {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` }),
                     'X-API-KEY': process.env.NEXT_PUBLIC_API_KEY || 'devKey123',
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     years: yearsToDelete,
@@ -323,12 +328,12 @@ export function AcademicSettings() {
             const response = await res.json();
 
             // Update local state after successful API deletion
-        const newYears = academicYears.filter(year => !yearsToDelete.includes(year.year));
-        saveAcademicYears(newYears);
-        setAcademicYears(newYears);
-        setRowSelection({});
+            const newYears = academicYears.filter(year => !yearsToDelete.includes(year.year));
+            saveAcademicYears(newYears);
+            setAcademicYears(newYears);
+            setRowSelection({});
 
-            if(user) {
+            if (user) {
                 addAuditLog({
                     user: user.email,
                     name: user.name,
@@ -337,10 +342,10 @@ export function AcademicSettings() {
                 });
             }
 
-        toast({
-            title: 'Academic Years Deleted',
-            description: `${yearsToDelete.length} academic year(s) have been deleted.`
-        });
+            toast({
+                title: 'Academic Years Deleted',
+                description: `${yearsToDelete.length} academic year(s) have been deleted.`
+            });
         } catch (err: any) {
             console.error('Failed to delete academic years:', err);
             toast({
@@ -398,7 +403,7 @@ export function AcademicSettings() {
                     </div>
                     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button size="sm"><PlusCircle className="mr-2"/> Add Academic Year</Button>
+                            <Button size="sm"><PlusCircle className="mr-2" /> Add Academic Year</Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
@@ -409,17 +414,17 @@ export function AcademicSettings() {
                                 <form onSubmit={addForm.handleSubmit(handleAddYear)} className="space-y-4">
                                     <FormField control={addForm.control} name="year" render={({ field }) => (
                                         <FormItem><FormLabel>Academic Year</FormLabel><FormControl><Input placeholder="e.g., 2024/2025" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
+                                    )} />
                                     <FormField control={addForm.control} name="numberOfTerms" render={({ field }) => (
                                         <FormItem><FormLabel>Number of Terms</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
+                                    )} />
                                     <FormField control={addForm.control} name="status" render={({ field }) => (
                                         <FormItem><FormLabel>Status</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                            <SelectContent>{ALL_ACADEMIC_YEAR_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
-                                        </Select><FormMessage /></FormItem>
-                                    )}/>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>{ALL_ACADEMIC_YEAR_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
+                                            </Select><FormMessage /></FormItem>
+                                    )} />
                                     <div className="flex justify-end"><Button type="submit">Create Year</Button></div>
                                 </form>
                             </Form>
@@ -432,13 +437,13 @@ export function AcademicSettings() {
                             <TableRow>
                                 <TableHead className="w-[50px]"><Checkbox checked={isAllSelected} onCheckedChange={checked => {
                                     const newRowSelection: Record<string, boolean> = {};
-                                    if (checked) { 
+                                    if (checked) {
                                         academicYears.forEach(y => {
                                             if (y.year) newRowSelection[y.year] = true;
-                                        }); 
+                                        });
                                     }
                                     setRowSelection(newRowSelection);
-                                }}/></TableHead>
+                                }} /></TableHead>
                                 <TableHead>Academic Year</TableHead>
                                 <TableHead>Number of Terms</TableHead>
                                 <TableHead>Status</TableHead>
@@ -448,12 +453,12 @@ export function AcademicSettings() {
                         <TableBody>
                             {academicYears.map((year) => (
                                 <TableRow key={year.year}>
-                                    <TableCell><Checkbox checked={rowSelection[year.year] || false} onCheckedChange={checked => setRowSelection(prev => ({...prev, [year.year]: !!checked}))} /></TableCell>
+                                    <TableCell><Checkbox checked={rowSelection[year.year] || false} onCheckedChange={checked => setRowSelection(prev => ({ ...prev, [year.year]: !!checked }))} /></TableCell>
                                     <TableCell>{year.year}</TableCell>
                                     <TableCell>{year.number_of_terms ?? (Array.isArray(year.terms) ? year.terms.length : 0)}</TableCell>
                                     <TableCell>{year.status}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm" onClick={() => handleEditYear(year)}><Edit className="mr-2 h-4 w-4"/> Edit</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => handleEditYear(year)}><Edit className="mr-2 h-4 w-4" /> Edit</Button>
                                         <Button variant="ghost" size="sm" onClick={() => handleManageTerms(year)}>Manage Terms</Button>
                                     </TableCell>
                                 </TableRow>
@@ -473,7 +478,7 @@ export function AcademicSettings() {
                 </div>
             </TabsContent>
 
-             <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>
+            <Dialog open={isManageTermsOpen} onOpenChange={setIsManageTermsOpen}>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>Manage Terms for {selectedYear?.year}</DialogTitle>
@@ -483,54 +488,54 @@ export function AcademicSettings() {
                         <form onSubmit={form.handleSubmit(handleUpdateYear)} className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
                             {fields.map((term, index) => (
                                 <div key={index} className="p-4 border rounded-lg space-y-4">
-                                     <FormField control={form.control} name={`terms.${index}.name`} render={({ field }) => (
+                                    <FormField control={form.control} name={`terms.${index}.name`} render={({ field }) => (
                                         <FormItem><FormLabel>Term Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                     )}/>
-                                     <div className="grid grid-cols-2 gap-4">
+                                    )} />
+                                    <div className="grid grid-cols-2 gap-4">
                                         <FormField control={form.control} name={`terms.${index}.startDate`} render={({ field }) => (
                                             <FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel>
-                                            <Popover><PopoverTrigger asChild>
-                                                <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button></FormControl>
-                                            </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 5} toYear={new Date().getFullYear() + 5} initialFocus />
-                                            </PopoverContent></Popover><FormMessage /></FormItem>
+                                                <Popover><PopoverTrigger asChild>
+                                                    <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button></FormControl>
+                                                </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
+                                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 5} toYear={new Date().getFullYear() + 5} initialFocus />
+                                                    </PopoverContent></Popover><FormMessage /></FormItem>
                                         )} />
                                         <FormField control={form.control} name={`terms.${index}.endDate`} render={({ field }) => (
                                             <FormItem className="flex flex-col"><FormLabel>End Date</FormLabel>
-                                             <Popover><PopoverTrigger asChild>
-                                                <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button></FormControl>
-                                            </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 5} toYear={new Date().getFullYear() + 5} initialFocus />
-                                            </PopoverContent></Popover><FormMessage /></FormItem>
+                                                <Popover><PopoverTrigger asChild>
+                                                    <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button></FormControl>
+                                                </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
+                                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear() - 5} toYear={new Date().getFullYear() + 5} initialFocus />
+                                                    </PopoverContent></Popover><FormMessage /></FormItem>
                                         )} />
-                                     </div>
-                                     <FormField control={form.control} name={`terms.${index}.status`} render={({ field }) => (
+                                    </div>
+                                    <FormField control={form.control} name={`terms.${index}.status`} render={({ field }) => (
                                         <FormItem><FormLabel>Status</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="Upcoming">Upcoming</SelectItem>
-                                                <SelectItem value="Active">Active</SelectItem>
-                                                <SelectItem value="Completed">Completed</SelectItem>
-                                            </SelectContent>
-                                        </Select><FormMessage /></FormItem>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Upcoming">Upcoming</SelectItem>
+                                                    <SelectItem value="Active">Active</SelectItem>
+                                                    <SelectItem value="Completed">Completed</SelectItem>
+                                                </SelectContent>
+                                            </Select><FormMessage /></FormItem>
                                     )} />
                                 </div>
                             ))}
-                             <DialogFooter className="pt-4 sticky bottom-0 bg-background/95 pb-1 -mx-1 px-1">
+                            <DialogFooter className="pt-4 sticky bottom-0 bg-background/95 pb-1 -mx-1 px-1">
                                 <Button type="submit">Save Changes</Button>
                             </DialogFooter>
                         </form>
                     </Form>
                 </DialogContent>
             </Dialog>
-             <Dialog open={isEditYearOpen} onOpenChange={setIsEditYearOpen}>
+            <Dialog open={isEditYearOpen} onOpenChange={setIsEditYearOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit Academic Year</DialogTitle>
@@ -538,25 +543,25 @@ export function AcademicSettings() {
                     </DialogHeader>
                     <Form {...editForm}>
                         <form onSubmit={editForm.handleSubmit(processYearUpdate)} className="space-y-4">
-                             <FormField control={editForm.control} name="year" render={({ field }) => (
+                            <FormField control={editForm.control} name="year" render={({ field }) => (
                                 <FormItem><FormLabel>Academic Year</FormLabel><FormControl><Input placeholder="e.g., 2024/2025" {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
+                            )} />
                             <FormField control={editForm.control} name="status" render={({ field }) => (
                                 <FormItem><FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                    <SelectContent>{ALL_ACADEMIC_YEAR_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
-                                </Select><FormMessage /></FormItem>
-                            )}/>
-                             <FormItem>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>{ALL_ACADEMIC_YEAR_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
+                                    </Select><FormMessage /></FormItem>
+                            )} />
+                            <FormItem>
                                 <FormLabel>Number of Terms</FormLabel>
                                 <FormControl><Input type="number" value={Array.isArray(selectedYear?.terms) ? selectedYear?.terms.length : 0} readOnly disabled /></FormControl>
-                             </FormItem>
+                            </FormItem>
                             <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
                         </form>
                     </Form>
                 </DialogContent>
-             </Dialog>
+            </Dialog>
         </Tabs>
     )
 }

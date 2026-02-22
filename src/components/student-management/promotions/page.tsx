@@ -37,7 +37,7 @@ export default function PromotionsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSpecialPromotion, setIsSpecialPromotion] = useState(false);
     const [specialPromotionReason, setSpecialPromotionReason] = useState('');
-    
+
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -49,24 +49,24 @@ export default function PromotionsPage() {
     }, []);
 
     useEffect(() => {
-      async function fetchStudents() {
-        if (fromClass) {
-            const allStudentProfiles = await getStudentProfiles();
-            const classMap = new Map(classes.map(c => [c.id, c.name]));
-            const filteredStudents = allStudentProfiles
-                .filter(p => p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
-                .map(p => ({
-                    id: p.student.student_no,
-                    name: `${p.student.first_name} ${p.student.last_name}`,
-                    currentClass: classMap.get(p.admissionDetails.class_assigned) || 'N/A'
-                }));
-            setStudentsInClass(filteredStudents);
-            setSelectedStudents({}); // Reset selection when class changes
-        } else {
-            setStudentsInClass([]);
+        async function fetchStudents() {
+            if (fromClass) {
+                const allStudentProfiles = await getStudentProfiles();
+                const classMap = new Map(classes.map(c => [c.id, c.name]));
+                const filteredStudents = allStudentProfiles
+                    .filter(p => p.admissionDetails.class_assigned === fromClass && p.admissionDetails.admission_status === 'Admitted')
+                    .map(p => ({
+                        id: p.student.student_no,
+                        name: `${p.student.first_name} ${p.student.last_name}`,
+                        currentClass: classMap.get(p.admissionDetails.class_assigned) || 'N/A'
+                    }));
+                setStudentsInClass(filteredStudents);
+                setSelectedStudents({}); // Reset selection when class changes
+            } else {
+                setStudentsInClass([]);
+            }
         }
-      }
-      fetchStudents();
+        fetchStudents();
     }, [fromClass, classes]);
 
     const isAllSelected = studentsInClass.length > 0 && Object.keys(selectedStudents).length === studentsInClass.length && Object.keys(selectedStudents).length === studentsInClass.length;
@@ -92,14 +92,14 @@ export default function PromotionsPage() {
         }
         setSelectedStudents(newSelection);
     }
-    
+
     const studentIdsToPromote = Object.keys(selectedStudents).filter(id => selectedStudents[id]);
-    
+
     const fromClassIndex = classes.findIndex(c => c.id === fromClass);
     const expectedToClass = classes[fromClassIndex + 1];
 
     const isInvalidStandardPromotion = !isSpecialPromotion && toClass && expectedToClass && toClass !== expectedToClass.id;
-    
+
     const fetchStudentData = () => {
         // This function re-triggers the useEffect that depends on fromClass
         // by resetting the value, which will then be set again, causing a refresh.
@@ -128,7 +128,7 @@ export default function PromotionsPage() {
             return;
         }
         if (isSpecialPromotion && !specialPromotionReason) {
-             toast({
+            toast({
                 variant: 'destructive',
                 title: 'Reason Required',
                 description: `A reason must be provided for a special promotion.`,
@@ -363,12 +363,12 @@ export default function PromotionsPage() {
             setIsLoading(false);
         }
     }
-    
+
     let isPromotionDisabled = isLoading || !fromClass || !toClass || studentIdsToPromote.length === 0 || fromClass === toClass || isInvalidStandardPromotion;
     if (isSpecialPromotion) {
         isPromotionDisabled = isLoading || !fromClass || !toClass || studentIdsToPromote.length === 0 || fromClass === toClass || !specialPromotionReason;
     }
-    
+
     const isGraduationDisabled = isLoading || !fromClass || fromClass !== FINAL_CLASS_ID || studentIdsToPromote.length === 0;
 
     return (
@@ -396,7 +396,7 @@ export default function PromotionsPage() {
                                     {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            
+
                             {fromClass !== FINAL_CLASS_ID && (
                                 <>
                                     <div className="flex justify-center">
@@ -416,14 +416,14 @@ export default function PromotionsPage() {
                                     </Select>
                                 </>
                             )}
-                             {fromClass === FINAL_CLASS_ID && (
+                            {fromClass === FINAL_CLASS_ID && (
                                 <div className="md:col-span-2 flex items-center justify-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-md">
                                     <GraduationCap className="h-8 w-8 text-blue-600" />
                                     <p className="font-medium text-blue-800">This is the final class. Selected students will be moved to the graduation workflow.</p>
                                 </div>
                             )}
                         </div>
-                         {(fromClass && fromClass === toClass) && (
+                        {(fromClass && fromClass === toClass) && (
                             <Alert variant="destructive" className="mt-4">
                                 <Info className="h-4 w-4" />
                                 <AlertTitle>Invalid Selection</AlertTitle>
@@ -505,7 +505,7 @@ export default function PromotionsPage() {
                             </div>
                         </CardContent>
                         <CardFooter className="justify-end gap-2">
-                             {fromClass === FINAL_CLASS_ID ? (
+                            {fromClass === FINAL_CLASS_ID ? (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button disabled={isGraduationDisabled} size="sm">
@@ -527,8 +527,8 @@ export default function PromotionsPage() {
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
-                             ) : (
-                                 <AlertDialog>
+                            ) : (
+                                <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button disabled={isPromotionDisabled} size="sm" onClick={() => console.log('Promotion button clicked (trigger)', { fromClass, toClass, count: studentIdsToPromote.length, isSpecialPromotion })}>
                                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -536,7 +536,7 @@ export default function PromotionsPage() {
                                             Promote Selected ({studentIdsToPromote.length})
                                         </Button>
                                     </AlertDialogTrigger>
-                                     <AlertDialogContent>
+                                    <AlertDialogContent>
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Confirm Promotion</AlertDialogTitle>
                                             <AlertDialogDescription>
@@ -549,7 +549,7 @@ export default function PromotionsPage() {
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
-                             )}
+                            )}
                         </CardFooter>
                     </Card>
                 )}

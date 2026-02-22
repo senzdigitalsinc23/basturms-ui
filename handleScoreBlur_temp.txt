@@ -1,0 +1,62 @@
+const handleScoreBlur = async (studentNo: string, subjectId: string, score: string) => {
+    if (!selectedClass || !assignmentName || !score || isTermFinalized) return;
+
+    const activity = activities.find(act => {
+        if (act.expected_per_term > 1) {
+            const match = assignmentName.match(/^(.+)\s+(\d+)$/);
+            if (match) return act.name === match[1];
+        }
+        return act.name === assignmentName;
+    });
+
+    if (!activity) {
+        console.error('Activity not found for assignment:', assignmentName);
+        return;
+    }
+
+    const payload = {
+        student_no: studentNo,
+        subject_id: parseInt(subjectId),
+        activity_id: parseInt(activity.activity_id || activity.id),
+        class_id: parseInt(selectedClass),
+        score: parseFloat(score)
+    };
+
+    try {
+        const token = localStorage.getItem('campusconnect_token');
+        const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+        const csrfToken = localStorage.getItem('csrf_token') || '';
+
+        const response = await fetch('/api/academic/scores/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to save score');
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            toast({
+                title: 'Score Saved',
+                description: 'Score saved successfully',
+                duration: 2000
+            });
+        }
+    } catch (error: any) {
+        console.error('Error saving score:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: error.message || 'Failed to save score. Please try again.',
+        });
+    }
+}
