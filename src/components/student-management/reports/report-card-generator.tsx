@@ -371,7 +371,8 @@ export function ReportCardGenerator() {
                     schoolProfile: getSchoolProfile(),
                     className: firstItem.class_name,
                     status: 'Provisional',
-                    class_position: studentRank?.class_position
+                    class_position: studentRank?.class_position,
+                    class_size: Array.isArray(classRankings) ? classRankings.length : 0
                 };
                 reports.push(mappedReport);
             });
@@ -468,24 +469,57 @@ export function ReportCardGenerator() {
         }
 
         setIsLoading(true);
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        // 'l' for landscape, 'mm' for millimeters, 'a4' for size
+        const pdf = new jsPDF('l', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
 
-        for (let i = 0; i < reportIdsToPrint.length; i++) {
-            const reportId = reportIdsToPrint[i];
-            const cardElement = document.getElementById(`report-card-${reportId}`);
-            if (cardElement) {
-                const canvas = await html2canvas(cardElement, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const ratio = canvas.width / canvas.height;
-                const width = pdfWidth - 20;
-                const height = width / ratio;
+        for (let i = 0; i < reportIdsToPrint.length; i += 2) {
+            if (i > 0) {
+                pdf.addPage();
+            }
 
-                if (i > 0) {
-                    pdf.addPage();
+            // Group processing for 2 reports per page
+            for (let j = 0; j < 2; j++) {
+                const reportIdx = i + j;
+                if (reportIdx >= reportIdsToPrint.length) break;
+
+                const reportId = reportIdsToPrint[reportIdx];
+                const cardElement = document.getElementById(`report-card-${reportId}`);
+
+                if (cardElement) {
+                    const canvas = await html2canvas(cardElement, {
+                        scale: 3, // 3 is usually enough for high quality without excessive memory
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                    });
+                    const imgData = canvas.toDataURL('image/png');
+                    const ratio = canvas.width / canvas.height;
+
+                    const halfPageWidth = pdfWidth / 2;
+                    const halfPageHeight = pdfHeight;
+
+                    // We want to fill the half-page as much as possible
+                    // Allow 2mm margin on edges
+                    const safeWidth = halfPageWidth - 4;
+                    const safeHeight = halfPageHeight - 4;
+
+                    let width = safeWidth;
+                    let height = width / ratio;
+
+                    if (height > safeHeight) {
+                        height = safeHeight;
+                        width = height * ratio;
+                    }
+
+                    // Centering within the half-page
+                    const xOffset = j === 0 ? 0 : halfPageWidth;
+                    const xPos = xOffset + (halfPageWidth - width) / 2;
+                    const yPos = (halfPageHeight - height) / 2;
+
+                    pdf.addImage(imgData, 'PNG', xPos, yPos, width, height);
                 }
-                pdf.addImage(imgData, 'PNG', 10, 10, width, height < pdfHeight - 20 ? height : pdfHeight - 20);
             }
         }
 
@@ -625,7 +659,7 @@ export function ReportCardGenerator() {
                                         <Pencil className="mr-2 h-4 w-4" /> Edit
                                     </Button>
                                 </div>
-                                <div id={`report-card-${report.student.student.student_no}`}>
+                                <div id={`report-card-${report.student.student.student_no}`} className="w-fit bg-white">
                                     <ReportCard reportData={report} />
                                 </div>
                             </div>

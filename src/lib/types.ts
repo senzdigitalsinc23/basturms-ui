@@ -248,6 +248,7 @@ export type StudentReport = {
     classTeacherSignature?: string | null;
     headTeacherSignature?: string | null;
     class_position?: number;
+    class_size?: number;
 };
 
 

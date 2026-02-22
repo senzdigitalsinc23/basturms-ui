@@ -14,7 +14,12 @@ const getOrdinal = (n: number) => {
 }
 
 export function ReportCard({ reportData }: { reportData: StudentReport }) {
-    const { student, term, year, nextTermBegins, subjects, attendance, talentAndInterest, conduct, classTeacherRemarks, headTeacherRemarks, status, classTeacherSignature, headTeacherSignature } = reportData;
+    const {
+        student, term, year, nextTermBegins, subjects, attendance,
+        talentAndInterest, conduct, classTeacherRemarks, headTeacherRemarks,
+        status, classTeacherSignature, headTeacherSignature,
+        class_position, class_size
+    } = reportData;
     const studentName = `${student.student.first_name} ${student.student.last_name}`;
     const initials = studentName.split(' ').map(n => n[0]).join('');
 
@@ -25,7 +30,7 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
 
 
     return (
-        <Card className="w-[210mm] min-h-[297mm] mx-auto p-6 report-card relative font-sans">
+        <Card className="w-[800px] p-0 report-card relative font-sans border-none shadow-none bg-white">
 
             <CardContent className="p-4 border-2 border-black h-full flex flex-col relative">
                 {(classTeacherSignature || headTeacherSignature) && (
@@ -35,47 +40,47 @@ export function ReportCard({ reportData }: { reportData: StudentReport }) {
                 )}
 
                 <div className="relative z-10">
-                    <div className="text-center mb-4">
+                    <div className="text-center mb-6">
                         <h1 className="text-2xl font-bold uppercase">{reportData.schoolProfile?.schoolName || "Metoxi School"}</h1>
                         <h2 className="text-lg font-semibold uppercase">TERMINAL REPORT</h2>
                     </div>
 
-                    <div className="flex justify-between items-start mb-4 text-sm uppercase">
-                        <div className="space-y-1">
-                            <p><strong>NAME:</strong> {studentName}</p>
-                            <p><strong>STUDENT ID:</strong> {student.student.student_no}</p>
-                            <p><strong>CLASS:</strong> {reportData.className}</p>
-                            <p><strong>CLASS POSITION:</strong> {getOrdinal(reportData.class_position as number)}</p>
+                    <div className="flex justify-between items-start mb-6 text-sm uppercase">
+                        <div className="space-y-2">
+                            <p><strong className="inline-block w-40">NAME:</strong> {studentName}</p>
+                            <p><strong className="inline-block w-40">STUDENT ID:</strong> {student.student.student_no}</p>
+                            <p><strong className="inline-block w-40">CLASS:</strong> {reportData.className}</p>
+                            <p><strong className="inline-block w-40">CLASS POSITION:</strong> {getOrdinal(class_position as number)} OUT OF {class_size || 'N/A'}</p>
                         </div>
-                        <div className="text-right space-y-1">
-                            <p><strong>TERM:</strong> {reportTerm}</p>
-                            <p><strong>DATE:</strong> {reportDate}</p>
-                            <p><strong>NEXT TERM BEGINS:</strong> {nextTermBegins ? format(new Date(nextTermBegins), 'PPP') : 'TBA'}</p>
+                        <div className="space-y-2">
+                            <p><strong className="inline-block w-32">TERM:</strong> {reportTerm}</p>
+                            <p><strong className="inline-block w-32">DATE:</strong> {reportDate}</p>
+                            <p><strong className="inline-block w-32">NEXT TERM BEGINS:</strong> {nextTermBegins ? format(new Date(nextTermBegins), 'PPP') : 'TBA'}</p>
                         </div>
                     </div>
 
-                    <table className="w-full border-collapse border border-black text-sm uppercase">
+                    <table className="w-full border-collapse border border-black text-sm uppercase mb-6">
                         <thead>
                             <tr className="bg-gray-100">
-                                <th className="border border-black p-1 font-bold">SUBJECT</th>
-                                <th className="border border-black p-1 font-bold w-[70px]">SBA (50%)</th>
-                                <th className="border border-black p-1 font-bold w-[70px]">EXAM (50%)</th>
-                                <th className="border border-black p-1 font-bold w-[60px]">TOTAL (100)</th>
-                                <th className="border border-black p-1 font-bold w-[50px]">GRADE</th>
-                                <th className="border border-black p-1 font-bold w-[60px]">POSITION</th>
-                                <th className="border border-black p-1 font-bold">REMARKS</th>
+                                <th className="border border-black p-2 font-bold align-middle">SUBJECT</th>
+                                <th className="border border-black p-2 font-bold w-[70px] align-middle">SBA (50%)</th>
+                                <th className="border border-black p-2 font-bold w-[70px] align-middle">EXAM (50%)</th>
+                                <th className="border border-black p-2 font-bold w-[60px] align-middle">TOTAL (100)</th>
+                                <th className="border border-black p-2 font-bold w-[50px] align-middle">GRADE</th>
+                                <th className="border border-black p-2 font-bold w-[60px] align-middle">POSITION</th>
+                                <th className="border border-black p-2 font-bold align-middle">REMARKS</th>
                             </tr>
                         </thead>
                         <tbody>
                             {subjects.map((subj, index) => (
                                 <tr key={index}>
-                                    <td className="border border-black p-1 font-medium">{subj.subjectName}</td>
-                                    <td className="border border-black p-1 text-center">{subj.sbaScore.toFixed(1)}</td>
-                                    <td className="border border-black p-1 text-center">{subj.examScore.toFixed(1)}</td>
-                                    <td className="border border-black p-1 text-center font-bold">{subj.totalScore}</td>
-                                    <td className="border border-black p-1 text-center">{subj.grade}</td>
-                                    <td className="border border-black p-1 text-center">{getOrdinal(subj.position)}</td>
-                                    <td className="border border-black p-1">{subj.remarks}</td>
+                                    <td className="border border-black p-2 font-medium align-middle">{subj.subjectName}</td>
+                                    <td className="border border-black p-2 text-center align-middle">{subj.sbaScore.toFixed(1)}</td>
+                                    <td className="border border-black p-2 text-center align-middle">{subj.examScore.toFixed(1)}</td>
+                                    <td className="border border-black p-2 text-center font-bold align-middle">{subj.totalScore}</td>
+                                    <td className="border border-black p-2 text-center align-middle">{subj.grade}</td>
+                                    <td className="border border-black p-2 text-center align-middle">{getOrdinal(subj.position)}</td>
+                                    <td className="border border-black p-2 align-middle">{subj.remarks}</td>
                                 </tr>
                             ))}
                         </tbody>
