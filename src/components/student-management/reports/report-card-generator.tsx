@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ReportCard } from './report-card';
-import { Loader2, Printer, Pencil, FileSignature, Trash2 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { Input } from '@/components/ui/input';
+import { Search, Loader2, Printer, Pencil, FileSignature, Trash2 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -184,6 +185,7 @@ export function ReportCardGenerator() {
     const [isBulkSignAlertOpen, setIsBulkSignAlertOpen] = useState(false);
     const [generateForDefaulters, setGenerateForDefaulters] = useState(false);
     const [hasDefaulterPerm, setHasDefaulterPerm] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [availableTerms, setAvailableTerms] = useState<{ value: string; label: string }[]>([]);
 
@@ -531,19 +533,31 @@ export function ReportCardGenerator() {
         setSelectedReports(prev => ({ ...prev, [studentId]: checked }));
     }
 
+    const filteredReports = studentReports.filter(report => {
+        const query = searchQuery.toLowerCase();
+        const student = report.student.student;
+        const fullName = `${student.first_name} ${student.last_name} ${student.other_name || ''}`.toLowerCase();
+        const studentId = student.student_no.toLowerCase();
+        return fullName.includes(query) || studentId.includes(query);
+    });
+
+    const isAllSelected = filteredReports.length > 0 && filteredReports.every(report => selectedReports[report.student.student.student_no]);
+
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const newSelection = studentReports.reduce((acc, report) => {
-                acc[report.student.student.student_no] = true;
-                return acc;
-            }, {} as Record<string, boolean>);
+            const newSelection = { ...selectedReports };
+            filteredReports.forEach(report => {
+                newSelection[report.student.student.student_no] = true;
+            });
             setSelectedReports(newSelection);
         } else {
-            setSelectedReports({});
+            const newSelection = { ...selectedReports };
+            filteredReports.forEach(report => {
+                delete newSelection[report.student.student.student_no];
+            });
+            setSelectedReports(newSelection);
         }
     }
-
-    const isAllSelected = studentReports.length > 0 && Object.values(selectedReports).every(v => v) && Object.keys(selectedReports).length === studentReports.length;
 
     const handleEditClick = (report: StudentReport) => {
         if (report.status === 'Final' && user?.role !== 'Admin' && user?.role !== 'Headmaster') {
@@ -593,50 +607,62 @@ export function ReportCardGenerator() {
                         <Checkbox id="generate-for-defaulters" checked={generateForDefaulters} onCheckedChange={(checked) => setGenerateForDefaulters(!!checked)} disabled={!hasDefaulterPerm} />
                         <Label htmlFor="generate-for-defaulters" className={!hasDefaulterPerm ? 'text-muted-foreground' : ''}>Generate for defaulters</Label>
                     </div>
-                    {studentReports.length > 0 && (
-                        <div className="flex-1 flex justify-end gap-2">
-                            <AlertDialog open={isBulkSignAlertOpen} onOpenChange={setIsBulkSignAlertOpen}>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="outline"><FileSignature className="mr-2 h-4 w-4" /> Sign All</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirm Bulk Signature</AlertDialogTitle>
-                                        <AlertDialogDescription>Are you sure you want to append your signature to all {studentReports.length} generated reports? This action cannot be undone.</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleBulkSign}>Confirm & Sign</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                            {(user?.role === 'Admin' || user?.role === 'Headmaster') && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Remove All Signatures</Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>This will remove all teacher and headmaster signatures from all {studentReports.length} reports, resetting them to a provisional state.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleBulkRemoveSignatures}>Confirm</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                            <Button variant="secondary" onClick={handlePrintSelected} disabled={isLoading}>
-                                <Printer className="mr-2 h-4 w-4" />
-                                Print Selected ({Object.values(selectedReports).filter(Boolean).length})
-                            </Button>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
 
             {studentReports.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center gap-4 bg-muted/30 p-4 rounded-lg border">
+                    <div className="relative flex-1 w-full">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by student name or ID..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
+                        <AlertDialog open={isBulkSignAlertOpen} onOpenChange={setIsBulkSignAlertOpen}>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm"><FileSignature className="mr-2 h-4 w-4" /> Sign All</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirm Bulk Signature</AlertDialogTitle>
+                                    <AlertDialogDescription>Are you sure you want to append your signature to all {studentReports.length} generated reports? This action cannot be undone.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleBulkSign}>Confirm & Sign</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        {(user?.role === 'Admin' || user?.role === 'Headmaster') && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Remove Signs</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>This will remove all teacher and headmaster signatures from all {studentReports.length} reports.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleBulkRemoveSignatures}>Confirm</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                        <Button variant="secondary" size="sm" onClick={handlePrintSelected} disabled={isLoading}>
+                            <Printer className="mr-2 h-4 w-4" />
+                            Print ({Object.values(selectedReports).filter(Boolean).length})
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {filteredReports.length > 0 && (
                 <div>
                     <div className="flex items-center space-x-2 py-4">
                         <Checkbox
@@ -644,10 +670,10 @@ export function ReportCardGenerator() {
                             checked={isAllSelected}
                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
                         />
-                        <Label htmlFor="select-all-reports">Select All ({studentReports.length})</Label>
+                        <Label htmlFor="select-all-reports">Select All ({filteredReports.length === studentReports.length ? filteredReports.length : `${filteredReports.length} of ${studentReports.length}`})</Label>
                     </div>
                     <div className="space-y-8">
-                        {studentReports.map(report => (
+                        {filteredReports.map(report => (
                             <div key={report.student.student.student_no} className="relative group">
                                 <div className="absolute top-2 left-2 z-20 flex items-center space-x-2">
                                     <Checkbox

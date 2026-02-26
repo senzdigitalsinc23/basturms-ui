@@ -2534,6 +2534,42 @@ export const fetchClassesFromApi = async (): Promise<Class[]> => {
     }
 };
 
+export const uploadFileViaApi = async (file: File, docId: string, docType: 'profile_picture' | 'signature'): Promise<{ success: boolean; message: string; url?: string }> => {
+    if (typeof window === 'undefined') return { success: false, message: 'Window is undefined' };
+
+    const token = localStorage.getItem('campusconnect_token');
+    // Get headers and remove Content-Type to let the browser set it for FormData
+    const apiHeaders = getApiHeaders();
+    const headers: any = { ...apiHeaders };
+    delete headers['Content-Type'];
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('doc_id', docId);
+        formData.append('doc_type', docType);
+
+        const response = await fetch('/api/uploads', {
+            method: 'POST',
+            headers: {
+                ...headers,
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+            },
+            body: formData
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || 'Upload failed');
+        }
+
+        return result;
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        throw error;
+    }
+};
+
 export const getClasses = (): Class[] => getFromStorage<Class[]>(CLASSES_KEY, []);
 
 export const addSubject = (subjectName: string): void => {
@@ -3887,6 +3923,133 @@ export interface PasswordChangeResult {
     success: boolean;
     message?: string;
 }
+
+export const updateUserProfileViaApi = async (
+    username: string,
+    email: string
+): Promise<{ success: boolean; message: string; user?: User }> => {
+    const apiUrl = '/api/profile/update';
+
+    if (typeof window === 'undefined') {
+        return { success: false, message: 'Cannot run on server' };
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    if (!token) {
+        console.error('Auth token is missing. Cannot update profile.');
+        return { success: false, message: 'Authentication token is missing' };
+    }
+
+    console.log(username + " " + email);
+    
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+            } catch {
+                if (errorText) {
+                    errorMessage = errorText;
+                }
+            }
+            console.error('Failed to update profile:', response.status, response.statusText, errorText);
+            return { success: false, message: errorMessage };
+        }
+
+        const result = await response.json().catch(() => null);
+
+        if (result?.success) {
+            const successMessage = result.message || 'Profile updated successfully';
+            return { success: true, message: successMessage, user: result.user };
+        }
+
+        const errorMessage = result?.message || 'Failed to update profile';
+        console.error('Failed to update profile:', errorMessage);
+        return { success: false, message: errorMessage };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        console.error('Error updating profile:', error);
+        return { success: false, message: errorMessage };
+    }
+};
+
+export const fetchUserProfileViaApi = async (): Promise<{ success: boolean; message: string; data?: any }> => {
+    const apiUrl = '/api/profile/details';
+
+    if (typeof window === 'undefined') {
+        return { success: false, message: 'Cannot run on server' };
+    }
+
+    const token = localStorage.getItem('campusconnect_token');
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'devKey123';
+    const csrfToken = localStorage.getItem('csrf_token') || '';
+
+    if (!token) {
+        console.error('Auth token is missing. Cannot fetch profile.');
+        return { success: false, message: 'Authentication token is missing' };
+    }
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-API-KEY': apiKey,
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+            } catch {
+                if (errorText) {
+                    errorMessage = errorText;
+                }
+            }
+            console.error('Failed to fetch profile:', response.status, response.statusText, errorText);
+            return { success: false, message: errorMessage };
+        }
+
+        const result = await response.json().catch(() => null);
+
+        if (result?.success) {
+            return { success: true, message: result.message || 'Profile fetched successfully', data: result.data };
+        }
+
+        const errorMessage = result?.message || 'Failed to fetch profile';
+        console.error('Failed to fetch profile:', errorMessage);
+        return { success: false, message: errorMessage };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        console.error('Error fetching profile:', error);
+        return { success: false, message: errorMessage };
+    }
+};
 
 export const changePasswordViaApi = async (
     userId: string,

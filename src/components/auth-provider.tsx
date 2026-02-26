@@ -118,7 +118,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
+        // Listen for user session updates
+        const handleSessionUpdate = () => {
+            try {
+                const storedUser = localStorage.getItem(USER_SESSION_KEY);
+                if (storedUser) {
+                    const updatedUser = JSON.parse(storedUser);
+                    setUser(updatedUser);
+                }
+            } catch (error) {
+                console.error('Failed to parse updated user session', error);
+            }
+        };
+
+        window.addEventListener('userSessionUpdated', handleSessionUpdate);
+
         initAuth();
+        
+        return () => {
+            window.removeEventListener('userSessionUpdated', handleSessionUpdate);
+        };
     }, [fetchCsrfToken]);
 
     const login = useCallback(

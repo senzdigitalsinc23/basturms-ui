@@ -37,6 +37,7 @@ const createSchema = z.object({
 
 const editSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.').optional(),
+  username: z.string().min(2, 'Username must be at least 2 characters.').optional(),
   email: z.string().email('Invalid email address.').optional(),
   role: z.enum(ALL_ROLES).optional(),
 });
@@ -65,6 +66,7 @@ export function UserForm({
     defaultValues: isEditMode
       ? {
           name: defaultValues?.name,
+          username: defaultValues?.username,
           email: defaultValues?.email,
           role: defaultValues?.role,
         }
@@ -222,6 +224,23 @@ export function UserForm({
             </FormItem>
         )}
         />
+        
+        {isEditMode && (
+          <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+              <FormItem>
+              <FormLabel>Username</FormLabel>
+              <FormControl>
+                  <Input placeholder="Enter username" {...field} />
+              </FormControl>
+              <FormMessage />
+              </FormItem>
+          )}
+          />
+        )}
+        
         <FormField
         control={form.control}
         name="email"

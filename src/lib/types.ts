@@ -282,6 +282,7 @@ export interface User {
     name: string;
     username: string;
     email: string;
+    phone?: string; // Phone number from API
     role: Role; // For easy access in the app
     role_id: string | null;
     avatarUrl: string;
